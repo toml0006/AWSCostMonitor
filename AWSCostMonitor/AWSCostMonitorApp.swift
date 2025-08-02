@@ -423,9 +423,16 @@ struct AWSCostMonitorApp: App {
     }
     
     var body: some Scene {
-        MenuBarExtra(menuBarTitle, systemImage: "dollarsign.circle.fill") {
+        MenuBarExtra {
             ContentView()
                 .environmentObject(awsManager)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "dollarsign.circle.fill")
+                if awsManager.displayFormat != .iconOnly {
+                    Text(menuBarTitle)
+                }
+            }
         }
         .onChange(of: awsManager.costData) { _, _ in
             // Force menu bar update when cost data changes
