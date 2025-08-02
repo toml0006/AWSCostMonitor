@@ -664,14 +664,10 @@ struct ContentView: View {
             Divider()
             
             Button("Settings...") {
-                // Open Settings window using the standard macOS approach
-                if let settingsWindowController = NSApp.windows.first(where: { $0.identifier?.rawValue == "com_apple_SwiftUI_Settings_window" }) {
-                    settingsWindowController.makeKeyAndOrderFront(nil)
-                } else {
-                    // If settings window doesn't exist, the Settings scene will create it
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                }
+                // Open Settings window using the Preferences action
+                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
             }
+            .keyboardShortcut(",", modifiers: .command)
             .frame(maxWidth: .infinity)
             
             Divider()
