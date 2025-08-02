@@ -414,11 +414,21 @@ struct AWSCostMonitorApp: App {
                 currency: cost.currency,
                 format: awsManager.displayFormat
             )
-            return awsManager.displayFormat == .iconOnly ? "" : formattedCost
+            return formattedCost
         } else if awsManager.isLoading {
             return "Loading..."
         } else {
-            return awsManager.displayFormat == .iconOnly ? "" : "AWS"
+            return ""
+        }
+    }
+    
+    var menuBarIcon: String {
+        if awsManager.errorMessage != nil {
+            return "exclamationmark.triangle.fill"
+        } else if awsManager.displayFormat == .iconOnly || awsManager.costData.isEmpty {
+            return "dollarsign.circle.fill"
+        } else {
+            return "" // No icon when showing dollar amount
         }
     }
     
@@ -428,8 +438,11 @@ struct AWSCostMonitorApp: App {
                 .environmentObject(awsManager)
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: "dollarsign.circle.fill")
-                if awsManager.displayFormat != .iconOnly {
+                if !menuBarIcon.isEmpty {
+                    Image(systemName: menuBarIcon)
+                        .foregroundColor(awsManager.errorMessage != nil ? .yellow : nil)
+                }
+                if !menuBarTitle.isEmpty && awsManager.displayFormat != .iconOnly {
                     Text(menuBarTitle)
                 }
             }
