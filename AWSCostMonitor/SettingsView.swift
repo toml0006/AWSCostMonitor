@@ -42,6 +42,11 @@ struct SettingsView: View {
             .tabItem {
                 Label("AWS", systemImage: "cloud")
             }
+            
+            BudgetSettingsTab()
+            .tabItem {
+                Label("Budget", systemImage: "dollarsign.circle")
+            }
         }
         .frame(width: 400, height: 300)
         .onAppear {
@@ -231,6 +236,130 @@ struct AWSSettingsTab: View {
             Spacer()
         }
         .padding()
+    }
+}
+
+struct BudgetSettingsTab: View {
+    @EnvironmentObject var awsManager: AWSManager
+    @State private var selectedProfile: AWSProfile?
+    @State private var monthlyBudget: String = "100"
+    @State private var alertThreshold: Double = 0.8
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Budget Configuration")
+                .font(.headline)
+            
+            if !awsManager.profiles.isEmpty {
+                // Profile selector
+                Picker("Select Profile:", selection: $selectedProfile) {
+                    Text("Choose a profile").tag(nil as AWSProfile?)
+                    ForEach(awsManager.profiles, id: \.self) { profile in
+                        Text(profile.name).tag(Optional(profile))
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: selectedProfile) { _, newProfile in
+                    if let profile = newProfile {
+                        loadBudgetForProfile(profile)
+                    }
+                }
+                
+                if selectedProfile != nil {
+                    Divider()
+                    
+                    // Budget amount
+                    HStack {
+                        Text("Monthly Budget:")
+                        TextField("Budget", text: $monthlyBudget)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        Text("USD")
+                    }
+                    
+                    // Alert threshold
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Alert Threshold:")
+                        HStack {
+                            Slider(value: $alertThreshold, in: 0.5...1.0, step: 0.05)
+                                .frame(width: 200)
+                            Text("\(Int(alertThreshold * 100))%")
+                                .frame(width: 50, alignment: .leading)
+                        }
+                        Text("Alert when spending reaches this percentage of budget")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Divider()
+                    
+                    // Save button
+                    HStack {
+                        Spacer()
+                        Button("Save Budget") {
+                            saveBudget()
+                        }
+                        .disabled(selectedProfile == nil)
+                    }
+                    
+                    // Current status if data available
+                    if let profile = selectedProfile,
+                       let cost = awsManager.costData.first(where: { $0.profileName == profile.name }) {
+                        Divider()
+                        
+                        let budget = awsManager.getBudget(for: profile.name)
+                        let status = awsManager.calculateBudgetStatus(cost: cost.amount, budget: budget)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Current Status")
+                                .font(.headline)
+                            
+                            HStack {
+                                Text("Spending:")
+                                Text(String(format: "%.1f%% of budget", status.percentage * 100))
+                                    .foregroundColor(status.isOverBudget ? .red : (status.isNearThreshold ? .orange : .green))
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            if status.isOverBudget {
+                                Label("Over budget!", systemImage: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.red)
+                            } else if status.isNearThreshold {
+                                Label("Approaching budget limit", systemImage: "exclamationmark.circle.fill")
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("No AWS profiles available")
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding()
+        .onAppear {
+            if selectedProfile == nil && !awsManager.profiles.isEmpty {
+                selectedProfile = awsManager.selectedProfile ?? awsManager.profiles.first
+                if let profile = selectedProfile {
+                    loadBudgetForProfile(profile)
+                }
+            }
+        }
+    }
+    
+    private func loadBudgetForProfile(_ profile: AWSProfile) {
+        let budget = awsManager.getBudget(for: profile.name)
+        monthlyBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.monthlyBudget).doubleValue)
+        alertThreshold = budget.alertThreshold
+    }
+    
+    private func saveBudget() {
+        guard let profile = selectedProfile,
+              let budgetValue = Decimal(string: monthlyBudget) else { return }
+        
+        awsManager.updateBudget(for: profile.name, monthlyBudget: budgetValue, alertThreshold: alertThreshold)
     }
 }
 

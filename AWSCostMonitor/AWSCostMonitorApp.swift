@@ -16,10 +16,15 @@ extension Array {
 // MARK: - AWS Configuration & Data Models
 
 // A simple structure to hold the parsed AWS profile data.
-struct AWSProfile: Identifiable, Hashable {
+struct AWSProfile: Identifiable, Hashable, Codable {
     let id = UUID()
     let name: String
     let region: String?
+    
+    // Make it Codable for storage
+    enum CodingKeys: String, CodingKey {
+        case name, region
+    }
 }
 
 // A structure to hold the cost data for a single profile.
@@ -28,6 +33,24 @@ struct CostData: Identifiable, Equatable {
     let profileName: String
     let amount: Decimal
     let currency: String
+}
+
+// Budget configuration for each profile
+struct ProfileBudget: Codable, Identifiable {
+    let id = UUID()
+    let profileName: String
+    var monthlyBudget: Decimal
+    var alertThreshold: Double // Percentage (0.0 - 1.0)
+    
+    enum CodingKeys: String, CodingKey {
+        case profileName, monthlyBudget, alertThreshold
+    }
+    
+    init(profileName: String, monthlyBudget: Decimal = 100.0, alertThreshold: Double = 0.8) {
+        self.profileName = profileName
+        self.monthlyBudget = monthlyBudget
+        self.alertThreshold = alertThreshold
+    }
 }
 
 // MARK: - Display Format Configuration
@@ -156,6 +179,10 @@ class AWSManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var displayFormat: MenuBarDisplayFormat = .full
+    @Published var profileBudgets: [String: ProfileBudget] = [:]
+    @Published var lastAPICallTime: Date?
+    @Published var isRateLimited: Bool = false
+    @Published var nextRefreshTime: Date?
     @Published var refreshInterval: Int = 5 { // minutes
         didSet {
             // Automatically recreate timer when interval changes
@@ -183,6 +210,8 @@ class AWSManager: ObservableObject {
         // Load the display format preference
         loadDisplayFormat()
         print("DEBUG: Display format loaded: \(displayFormat.rawValue)")
+        // Load profile budgets
+        loadBudgets()
     }
     
     // Function to find the AWS config file and parse profiles.
@@ -252,16 +281,102 @@ class AWSManager: ObservableObject {
         self.displayFormat = format
     }
     
+    // MARK: - Budget Management
+    
+    // Load budgets from UserDefaults
+    func loadBudgets() {
+        if let data = UserDefaults.standard.data(forKey: "ProfileBudgets"),
+           let budgets = try? JSONDecoder().decode([String: ProfileBudget].self, from: data) {
+            self.profileBudgets = budgets
+        }
+    }
+    
+    // Save budgets to UserDefaults
+    func saveBudgets() {
+        if let data = try? JSONEncoder().encode(profileBudgets) {
+            UserDefaults.standard.set(data, forKey: "ProfileBudgets")
+        }
+    }
+    
+    // Get or create budget for a profile
+    func getBudget(for profileName: String) -> ProfileBudget {
+        if let budget = profileBudgets[profileName] {
+            return budget
+        } else {
+            let newBudget = ProfileBudget(profileName: profileName)
+            profileBudgets[profileName] = newBudget
+            saveBudgets()
+            return newBudget
+        }
+    }
+    
+    // Update budget for a profile
+    func updateBudget(for profileName: String, monthlyBudget: Decimal, alertThreshold: Double) {
+        var budget = getBudget(for: profileName)
+        budget.monthlyBudget = monthlyBudget
+        budget.alertThreshold = alertThreshold
+        profileBudgets[profileName] = budget
+        saveBudgets()
+    }
+    
+    // Calculate budget status for current cost
+    func calculateBudgetStatus(cost: Decimal, budget: ProfileBudget) -> (percentage: Double, isOverBudget: Bool, isNearThreshold: Bool) {
+        let percentage = NSDecimalNumber(decimal: cost).dividing(by: NSDecimalNumber(decimal: budget.monthlyBudget)).doubleValue
+        let isOverBudget = cost > budget.monthlyBudget
+        let isNearThreshold = percentage >= budget.alertThreshold
+        return (percentage, isOverBudget, isNearThreshold)
+    }
+    
     // MARK: - Timer Management
+    
+    // Calculate smart refresh interval based on budget usage
+    func calculateSmartRefreshInterval() -> Int {
+        guard let profile = selectedProfile,
+              let cost = costData.first else {
+            return refreshInterval // Use default if no data
+        }
+        
+        let budget = getBudget(for: profile.name)
+        let status = calculateBudgetStatus(cost: cost.amount, budget: budget)
+        
+        // Adjust refresh interval based on budget usage
+        if status.isOverBudget {
+            // Over budget: refresh every 5 minutes (minimum)
+            return 5
+        } else if status.percentage >= 0.9 {
+            // 90%+ of budget: refresh every 10 minutes
+            return 10
+        } else if status.percentage >= 0.8 {
+            // 80-90% of budget: refresh every 15 minutes
+            return 15
+        } else if status.percentage >= 0.7 {
+            // 70-80% of budget: refresh every 30 minutes
+            return 30
+        } else {
+            // Under 70%: use configured interval (max 60 minutes)
+            return min(refreshInterval, 60)
+        }
+    }
     
     // Starts automatic refresh based on the current refresh interval
     func startAutomaticRefresh() {
         stopAutomaticRefresh() // Stop any existing timer
         
-        let interval = TimeInterval(refreshInterval * 60) // Convert minutes to seconds
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        let smartInterval = calculateSmartRefreshInterval()
+        let interval = TimeInterval(smartInterval * 60) // Convert minutes to seconds
+        
+        print("Smart refresh: Using \(smartInterval) minute interval based on budget usage")
+        
+        // Calculate and store next refresh time
+        nextRefreshTime = Date().addingTimeInterval(interval)
+        
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             Task {
                 await self?.fetchCostForSelectedProfile()
+                // After fetch, recalculate interval and restart timer
+                await MainActor.run {
+                    self?.startAutomaticRefresh()
+                }
             }
         }
     }
@@ -270,6 +385,7 @@ class AWSManager: ObservableObject {
     func stopAutomaticRefresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        nextRefreshTime = nil
     }
     
     // Updates refresh interval and recreates timer if running
@@ -283,12 +399,49 @@ class AWSManager: ObservableObject {
         }
     }
     
+    // Check if API call is allowed based on rate limit
+    func canMakeAPICall() -> Bool {
+        guard let lastCall = lastAPICallTime else {
+            return true // No previous call
+        }
+        
+        let timeSinceLastCall = Date().timeIntervalSince(lastCall)
+        return timeSinceLastCall >= 60.0 // 1 minute = 60 seconds
+    }
+    
+    // Get seconds until next API call is allowed
+    func secondsUntilNextAllowedCall() -> Int {
+        guard let lastCall = lastAPICallTime else {
+            return 0
+        }
+        
+        let timeSinceLastCall = Date().timeIntervalSince(lastCall)
+        let remainingTime = 60.0 - timeSinceLastCall
+        return max(0, Int(ceil(remainingTime)))
+    }
+    
+    // Force refresh, bypassing rate limit (with warning)
+    func forceRefresh() async {
+        print("WARNING: Force refresh invoked, bypassing rate limit!")
+        await fetchCostForSelectedProfile(force: true)
+    }
+    
     // Asynchronously fetches MTD cost for the selected profile.
-    func fetchCostForSelectedProfile() async {
+    func fetchCostForSelectedProfile(force: Bool = false) async {
+        // Check rate limit first (unless forced)
+        if !force && !canMakeAPICall() {
+            await MainActor.run {
+                self.errorMessage = "Rate limited. Please wait \(secondsUntilNextAllowedCall()) seconds."
+                self.isRateLimited = true
+            }
+            return
+        }
+        
         await MainActor.run {
             self.isLoading = true
             self.errorMessage = nil
             self.costData = []
+            self.isRateLimited = false
         }
         
         guard let profile = selectedProfile else {
@@ -333,6 +486,11 @@ class AWSManager: ObservableObject {
                     start: dateFormatter.string(from: startOfMonth)
                 )
             )
+            
+            // Record API call time BEFORE making the request
+            await MainActor.run {
+                self.lastAPICallTime = Date()
+            }
             
             let output = try await client.getCostAndUsage(input: input)
             
@@ -408,20 +566,49 @@ struct ContentView: View {
                 Text(errorMessage)
                     .foregroundColor(.red)
             } else if let cost = awsManager.costData.first {
-                HStack {
-                    Text(cost.profileName)
-                        .font(.system(.body, design: .monospaced))
-                    Spacer()
-                    // Use the same formatter settings as menu bar
-                    Text(CostDisplayFormatter.format(
-                        amount: cost.amount,
-                        currency: cost.currency,
-                        format: .full,
-                        showCurrencySymbol: UserDefaults.standard.bool(forKey: "ShowCurrencySymbol"),
-                        decimalPlaces: UserDefaults.standard.integer(forKey: "DecimalPlaces") == 0 ? 2 : UserDefaults.standard.integer(forKey: "DecimalPlaces"),
-                        useThousandsSeparator: UserDefaults.standard.bool(forKey: "UseThousandsSeparator")
-                    ))
-                    .fontWeight(.bold)
+                VStack(spacing: 8) {
+                    HStack {
+                        Text(cost.profileName)
+                            .font(.system(.body, design: .monospaced))
+                        Spacer()
+                        // Use the same formatter settings as menu bar
+                        Text(CostDisplayFormatter.format(
+                            amount: cost.amount,
+                            currency: cost.currency,
+                            format: .full,
+                            showCurrencySymbol: UserDefaults.standard.bool(forKey: "ShowCurrencySymbol"),
+                            decimalPlaces: UserDefaults.standard.integer(forKey: "DecimalPlaces") == 0 ? 2 : UserDefaults.standard.integer(forKey: "DecimalPlaces"),
+                            useThousandsSeparator: UserDefaults.standard.bool(forKey: "UseThousandsSeparator")
+                        ))
+                        .fontWeight(.bold)
+                    }
+                    
+                    // Budget status indicator
+                    if let profile = awsManager.selectedProfile {
+                        let budget = awsManager.getBudget(for: profile.name)
+                        let status = awsManager.calculateBudgetStatus(cost: cost.amount, budget: budget)
+                        
+                        HStack {
+                            ProgressView(value: status.percentage, total: 1.0)
+                                .progressViewStyle(.linear)
+                                .tint(status.isOverBudget ? .red : (status.isNearThreshold ? .orange : .green))
+                            
+                            Text("\(Int(status.percentage * 100))%")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .frame(width: 40)
+                        }
+                        
+                        if status.isOverBudget {
+                            Label("Over budget!", systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        } else if status.isNearThreshold {
+                            Label("Approaching limit", systemImage: "exclamationmark.circle.fill")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
+                    }
                 }
             } else {
                 Text("No cost data available. Select a profile and refresh.")
@@ -430,6 +617,22 @@ struct ContentView: View {
 
             Divider()
             
+            // Show next refresh time if auto-refresh is active
+            if let nextRefresh = awsManager.nextRefreshTime {
+                HStack {
+                    Image(systemName: "clock")
+                        .foregroundColor(.secondary)
+                    Text("Next refresh:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(nextRefresh, style: .relative)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+            
             Button("Refresh") {
                 Task {
                     await awsManager.fetchCostForSelectedProfile()
@@ -437,6 +640,26 @@ struct ContentView: View {
             }
             .keyboardShortcut("r", modifiers: .command)
             .frame(maxWidth: .infinity)
+            
+            // Show rate limit warning and override option
+            if awsManager.isRateLimited {
+                HStack {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundColor(.orange)
+                    Text("Rate limited (\(awsManager.secondsUntilNextAllowedCall())s)")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Spacer()
+                    Button("Override") {
+                        Task {
+                            await awsManager.forceRefresh()
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                }
+                .padding(.vertical, 4)
+            }
             
             Divider()
             
@@ -520,6 +743,29 @@ struct AWSCostMonitorApp: App {
         }
     }
     
+    var menuBarColor: Color? {
+        // Determine color based on budget status
+        if awsManager.errorMessage != nil {
+            return .yellow
+        }
+        
+        guard let profile = awsManager.selectedProfile,
+              let cost = awsManager.costData.first else {
+            return nil
+        }
+        
+        let budget = awsManager.getBudget(for: profile.name)
+        let status = awsManager.calculateBudgetStatus(cost: cost.amount, budget: budget)
+        
+        if status.isOverBudget {
+            return .red
+        } else if status.isNearThreshold {
+            return .orange
+        } else {
+            return nil // Default color
+        }
+    }
+    
     var body: some Scene {
         MenuBarExtra {
             ContentView()
@@ -528,10 +774,11 @@ struct AWSCostMonitorApp: App {
             HStack(spacing: 4) {
                 if !menuBarIcon.isEmpty {
                     Image(systemName: menuBarIcon)
-                        .foregroundColor(awsManager.errorMessage != nil ? .yellow : nil)
+                        .foregroundColor(menuBarColor)
                 }
                 if !menuBarTitle.isEmpty && awsManager.displayFormat != .iconOnly {
                     Text(menuBarTitle)
+                        .foregroundColor(menuBarColor)
                 }
             }
         }
