@@ -68,6 +68,9 @@ struct SettingsView: View {
 
 struct DisplaySettingsTab: View {
     @Binding var displayFormat: MenuBarDisplayFormat
+    @AppStorage("ShowCurrencySymbol") private var showCurrencySymbol: Bool = true
+    @AppStorage("DecimalPlaces") private var decimalPlaces: Int = 2
+    @AppStorage("UseThousandsSeparator") private var useThousandsSeparator: Bool = true
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -94,6 +97,31 @@ struct DisplaySettingsTab: View {
                             }
                         }
                         .buttonStyle(.plain)
+                    }
+                }
+            }
+            
+            Divider()
+            
+            // Additional Format Options
+            Text("Format Options")
+                .font(.headline)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle("Show currency symbol", isOn: $showCurrencySymbol)
+                
+                Toggle("Use thousands separator", isOn: $useThousandsSeparator)
+                
+                if displayFormat != .abbreviated {
+                    HStack {
+                        Text("Decimal places:")
+                        Picker("", selection: $decimalPlaces) {
+                            Text("0").tag(0)
+                            Text("1").tag(1)
+                            Text("2").tag(2)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 120)
                     }
                 }
             }

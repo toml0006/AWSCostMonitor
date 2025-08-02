@@ -5,6 +5,14 @@ import AWSSTS
 import AWSSDKIdentity
 import Foundation
 
+// MARK: - Extensions
+
+extension Array {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+
 // MARK: - AWS Configuration & Data Models
 
 // A simple structure to hold the parsed AWS profile data.
@@ -44,25 +52,43 @@ enum MenuBarDisplayFormat: String, CaseIterable {
 
 // Service to handle cost display formatting
 class CostDisplayFormatter {
-    static func format(amount: Decimal, currency: String, format: MenuBarDisplayFormat) -> String {
+    static func format(
+        amount: Decimal,
+        currency: String,
+        format: MenuBarDisplayFormat,
+        showCurrencySymbol: Bool = true,
+        decimalPlaces: Int = 2,
+        useThousandsSeparator: Bool = true
+    ) -> String {
         switch format {
         case .full:
-            // Full format: $123.45
+            // Full format with customizable options
             let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
+            formatter.numberStyle = showCurrencySymbol ? .currency : .decimal
             formatter.currencyCode = currency
-            formatter.maximumFractionDigits = 2
-            formatter.minimumFractionDigits = 2
-            return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
+            formatter.maximumFractionDigits = decimalPlaces
+            formatter.minimumFractionDigits = decimalPlaces
+            formatter.usesGroupingSeparator = useThousandsSeparator
+            
+            let formattedAmount = formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "0"
+            
+            // If not showing currency symbol but we used decimal style, prepend the symbol manually if needed
+            if !showCurrencySymbol && formatter.numberStyle == .decimal {
+                return formattedAmount
+            }
+            
+            return formattedAmount
             
         case .abbreviated:
-            // Abbreviated format: $123 (rounded to nearest dollar)
+            // Abbreviated format: always round to nearest dollar
             let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
+            formatter.numberStyle = showCurrencySymbol ? .currency : .decimal
             formatter.currencyCode = currency
             formatter.maximumFractionDigits = 0
             formatter.minimumFractionDigits = 0
-            return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0"
+            formatter.usesGroupingSeparator = useThousandsSeparator
+            
+            return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "0"
             
         case .iconOnly:
             // Icon only: empty string (the icon is shown by the MenuBarExtra)
@@ -386,11 +412,16 @@ struct ContentView: View {
                     Text(cost.profileName)
                         .font(.system(.body, design: .monospaced))
                     Spacer()
-                    // Fixed: Convert Decimal to Double for string formatting
-                    Text(String(format: "%.2f", NSDecimalNumber(decimal: cost.amount).doubleValue))
-                        .fontWeight(.bold)
-                    Text(cost.currency)
-                        .foregroundColor(.secondary)
+                    // Use the same formatter settings as menu bar
+                    Text(CostDisplayFormatter.format(
+                        amount: cost.amount,
+                        currency: cost.currency,
+                        format: .full,
+                        showCurrencySymbol: UserDefaults.standard.bool(forKey: "ShowCurrencySymbol"),
+                        decimalPlaces: UserDefaults.standard.integer(forKey: "DecimalPlaces") == 0 ? 2 : UserDefaults.standard.integer(forKey: "DecimalPlaces"),
+                        useThousandsSeparator: UserDefaults.standard.bool(forKey: "UseThousandsSeparator")
+                    ))
+                    .fontWeight(.bold)
                 }
             } else {
                 Text("No cost data available. Select a profile and refresh.")
@@ -404,6 +435,7 @@ struct ContentView: View {
                     await awsManager.fetchCostForSelectedProfile()
                 }
             }
+            .keyboardShortcut("r", modifiers: .command)
             .frame(maxWidth: .infinity)
             
             Divider()
@@ -434,6 +466,20 @@ struct ContentView: View {
                 await awsManager.fetchCostForSelectedProfile()
             }
         }
+        // Add keyboard shortcuts for profile switching (1-9)
+        .background(
+            ForEach(0..<min(awsManager.profiles.count, 9), id: \.self) { index in
+                Color.clear
+                    .onKeyPress(keys: [.init(Character("\(index + 1)"))]) { _ in
+                        if let profile = awsManager.profiles[safe: index] {
+                            awsManager.selectedProfile = profile
+                            awsManager.saveSelectedProfile(profile: profile)
+                            Task { await awsManager.fetchCostForSelectedProfile() }
+                        }
+                        return .handled
+                    }
+            }
+        )
     }
 }
 
@@ -442,13 +488,19 @@ struct ContentView: View {
 @main
 struct AWSCostMonitorApp: App {
     @StateObject private var awsManager = AWSManager()
+    @AppStorage("ShowCurrencySymbol") private var showCurrencySymbol: Bool = true
+    @AppStorage("DecimalPlaces") private var decimalPlaces: Int = 2
+    @AppStorage("UseThousandsSeparator") private var useThousandsSeparator: Bool = true
     
     var menuBarTitle: String {
         if let cost = awsManager.costData.first {
             let formattedCost = CostDisplayFormatter.format(
                 amount: cost.amount,
                 currency: cost.currency,
-                format: awsManager.displayFormat
+                format: awsManager.displayFormat,
+                showCurrencySymbol: showCurrencySymbol,
+                decimalPlaces: decimalPlaces,
+                useThousandsSeparator: useThousandsSeparator
             )
             return formattedCost
         } else if awsManager.isLoading {
