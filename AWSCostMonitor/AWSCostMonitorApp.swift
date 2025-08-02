@@ -2,6 +2,7 @@ import SwiftUI
 import AWSCostExplorer
 import AWSClientRuntime
 import AWSSTS
+import AWSSDKIdentity
 import Foundation
 
 // MARK: - AWS Configuration & Data Models
@@ -231,8 +232,13 @@ class AWSManager: ObservableObject {
         }
         
         do {
-            // Fixed: Correct client configuration for the latest AWS SDK
+            // Configure AWS credentials provider to use the specific profile
+            let credentialsProvider = try ProfileAWSCredentialIdentityResolver(
+                profileName: profile.name
+            )
+            
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region ?? "us-east-1"
             )
             let client = CostExplorerClient(config: config)
