@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7A8F6BFD2E3D716300A26D48 /* AWSCostExplorer in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6BFC2E3D716300A26D48 /* AWSCostExplorer */; };
+		7A8F6BFF2E3D716300A26D48 /* AWSSTS in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6BFE2E3D716300A26D48 /* AWSSTS */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7A8F6BDF2E3D701000A26D48 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A8F6BFD2E3D716300A26D48 /* AWSCostExplorer in Frameworks */,
+				7A8F6BFF2E3D716300A26D48 /* AWSSTS in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +119,8 @@
 			);
 			name = AWSCostMonitor;
 			packageProductDependencies = (
+				7A8F6BFC2E3D716300A26D48 /* AWSCostExplorer */,
+				7A8F6BFE2E3D716300A26D48 /* AWSSTS */,
 			);
 			productName = AWSCostMonitor;
 			productReference = 7A8F6BD02E3D700F00A26D48 /* AWSCostMonitor.app */;
@@ -195,6 +204,9 @@
 			);
 			mainGroup = 7A8F6BC72E3D700F00A26D48;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7A8F6BD12E3D700F00A26D48 /* Products */;
 			projectDirPath = "";
@@ -402,6 +414,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -429,6 +442,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -551,6 +565,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/awslabs/aws-sdk-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.12;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7A8F6BFC2E3D716300A26D48 /* AWSCostExplorer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
+			productName = AWSCostExplorer;
+		};
+		7A8F6BFE2E3D716300A26D48 /* AWSSTS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
+			productName = AWSSTS;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7A8F6BC82E3D700F00A26D48 /* Project object */;
 }

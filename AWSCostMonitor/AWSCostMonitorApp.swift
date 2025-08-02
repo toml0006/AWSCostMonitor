@@ -130,8 +130,19 @@ class AWSManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var displayFormat: MenuBarDisplayFormat = .full
+    @Published var refreshInterval: Int = 5 { // minutes
+        didSet {
+            // Automatically recreate timer when interval changes
+            let wasRunning = refreshTimer != nil
+            if wasRunning {
+                stopAutomaticRefresh()
+                startAutomaticRefresh()
+            }
+        }
+    }
+    @Published var refreshTimer: Timer?
     
-    // Keys for UserDefaults
+    // Keys for UserDefaults (legacy - will be replaced with @AppStorage)
     private let selectedProfileKey = "SelectedAWSProfileName"
     private let displayFormatKey = "MenuBarDisplayFormat"
 
@@ -213,6 +224,37 @@ class AWSManager: ObservableObject {
     func saveDisplayFormat(_ format: MenuBarDisplayFormat) {
         UserDefaults.standard.set(format.rawValue, forKey: displayFormatKey)
         self.displayFormat = format
+    }
+    
+    // MARK: - Timer Management
+    
+    // Starts automatic refresh based on the current refresh interval
+    func startAutomaticRefresh() {
+        stopAutomaticRefresh() // Stop any existing timer
+        
+        let interval = TimeInterval(refreshInterval * 60) // Convert minutes to seconds
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task {
+                await self?.fetchCostForSelectedProfile()
+            }
+        }
+    }
+    
+    // Stops automatic refresh
+    func stopAutomaticRefresh() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+    
+    // Updates refresh interval and recreates timer if running
+    func updateRefreshInterval(_ newInterval: Int) {
+        let wasRunning = refreshTimer != nil
+        stopAutomaticRefresh() // Always stop first
+        refreshInterval = newInterval
+        
+        if wasRunning {
+            startAutomaticRefresh() // Restart with new interval
+        }
     }
     
     // Asynchronously fetches MTD cost for the selected profile.
@@ -366,19 +408,13 @@ struct ContentView: View {
             
             Divider()
             
-            // Display Format Submenu
-            Menu("Display Format") {
-                ForEach(MenuBarDisplayFormat.allCases, id: \.self) { format in
-                    Button(action: {
-                        awsManager.saveDisplayFormat(format)
-                    }) {
-                        HStack {
-                            Text(format.displayName)
-                            if awsManager.displayFormat == format {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
+            Button("Settings...") {
+                // Open Settings window using the standard macOS approach
+                if let settingsWindowController = NSApp.windows.first(where: { $0.identifier?.rawValue == "com_apple_SwiftUI_Settings_window" }) {
+                    settingsWindowController.makeKeyAndOrderFront(nil)
+                } else {
+                    // If settings window doesn't exist, the Settings scene will create it
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -452,6 +488,11 @@ struct AWSCostMonitorApp: App {
         }
         .onChange(of: awsManager.displayFormat) { _, _ in
             // Force menu bar update when display format changes
+        }
+        
+        Settings {
+            SettingsView()
+                .environmentObject(awsManager)
         }
     }
 }

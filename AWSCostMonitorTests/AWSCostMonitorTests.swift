@@ -109,5 +109,70 @@ struct AWSCostMonitorTests {
         #expect(CostDisplayFormatter.previewText(for: .abbreviated) == "$123")
         #expect(CostDisplayFormatter.previewText(for: .iconOnly) == "(icon only)")
     }
+    
+    // MARK: - Settings Tests
+    
+    @Test func testAWSManagerRefreshInterval() async throws {
+        let awsManager = AWSManager()
+        
+        // Test default refresh interval
+        #expect(awsManager.refreshInterval == 5)
+        
+        // Test refresh interval bounds
+        awsManager.refreshInterval = 1
+        #expect(awsManager.refreshInterval == 1)
+        
+        awsManager.refreshInterval = 60
+        #expect(awsManager.refreshInterval == 60)
+    }
+    
+    @Test func testAWSManagerTimerManagement() async throws {
+        let awsManager = AWSManager()
+        
+        // Test timer is nil initially
+        #expect(awsManager.refreshTimer == nil)
+        
+        // Test starting automatic refresh
+        awsManager.startAutomaticRefresh()
+        #expect(awsManager.refreshTimer != nil)
+        
+        // Test stopping automatic refresh
+        awsManager.stopAutomaticRefresh()
+        #expect(awsManager.refreshTimer == nil)
+    }
+    
+    @Test func testRefreshIntervalChangesUpdateTimer() async throws {
+        let awsManager = AWSManager()
+        
+        // Start timer with default interval
+        awsManager.startAutomaticRefresh()
+        let originalTimer = awsManager.refreshTimer
+        
+        // Change interval - should recreate timer
+        awsManager.refreshInterval = 10
+        #expect(awsManager.refreshTimer !== originalTimer)
+        #expect(awsManager.refreshTimer != nil)
+        
+        awsManager.stopAutomaticRefresh()
+    }
+    
+    @Test func testAppStorageDefaultValues() async throws {
+        // Test that default values are set correctly for @AppStorage properties
+        let testDefaults = UserDefaults.standard
+        
+        // Clear any existing values
+        testDefaults.removeObject(forKey: "MenuBarDisplayFormat")
+        testDefaults.removeObject(forKey: "RefreshIntervalMinutes")
+        testDefaults.removeObject(forKey: "SelectedAWSProfileName")
+        
+        // Create a new manager instance to test defaults
+        let awsManager = AWSManager()
+        
+        // Display format should default to .full
+        #expect(awsManager.displayFormat == .full)
+        
+        // Refresh interval should default to 5 minutes
+        #expect(awsManager.refreshInterval == 5)
+    }
 
 }
