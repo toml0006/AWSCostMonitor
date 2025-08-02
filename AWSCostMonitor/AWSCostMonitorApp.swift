@@ -366,37 +366,22 @@ struct ContentView: View {
             
             Divider()
             
-            // Settings Section
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Display Format")
-                    .font(.headline)
-                    .padding(.bottom, 4)
-                
+            // Display Format Submenu
+            Menu("Display Format") {
                 ForEach(MenuBarDisplayFormat.allCases, id: \.self) { format in
-                    HStack {
-                        Image(systemName: awsManager.displayFormat == format ? "circle.inset.filled" : "circle")
-                            .foregroundColor(awsManager.displayFormat == format ? .accentColor : .secondary)
-                            .onTapGesture {
-                                awsManager.saveDisplayFormat(format)
-                            }
-                        
-                        Text(format.displayName)
-                            .onTapGesture {
-                                awsManager.saveDisplayFormat(format)
-                            }
-                        
-                        Spacer()
-                        
-                        Text(CostDisplayFormatter.previewText(for: format))
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button(action: {
                         awsManager.saveDisplayFormat(format)
+                    }) {
+                        HStack {
+                            Text(format.displayName)
+                            if awsManager.displayFormat == format {
+                                Image(systemName: "checkmark")
+                            }
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity)
             
             Divider()
             
