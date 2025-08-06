@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "D9661FAC-1691-4F32-8EE7-8EB86745B2DE"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "D33F960B-57D0-4431-BF6D-9A75BE9397C2"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "AWSCostMonitor/AWSCostMonitorApp.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1794"
+            endingLineNumber = "1794"
+            landmarkName = "fetchCostForProfile(_:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "D33F960B-57D0-4431-BF6D-9A75BE9397C2 - 6a11f96ec9410e1a"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for AWSCostMonitor.AWSManager.fetchCostForProfile(AWSCostMonitor.AWSProfile) async throws -&gt; __C.NSDecimal"
+                  moduleName = "AWSCostMonitor.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jackson/dev/middleout/AWSCostMonitor/packages/app/AWSCostMonitor/AWSCostMonitor/AWSCostMonitorApp.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1796"
+                  endingLineNumber = "1796">
+               </Location>
+               <Location
+                  uuid = "D33F960B-57D0-4431-BF6D-9A75BE9397C2 - b9bc5cb0dbb0f616"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(7) suspend resume partial function for AWSCostMonitor.AWSManager.fetchCostForProfile(AWSCostMonitor.AWSProfile) async throws -&gt; __C.NSDecimal"
+                  moduleName = "AWSCostMonitor.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jackson/dev/middleout/AWSCostMonitor/packages/app/AWSCostMonitor/AWSCostMonitor/AWSCostMonitorApp.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1796"
+                  endingLineNumber = "1796">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "B9181B8D-705D-4A0F-82CB-2CE599BD2C38"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "AWSCostMonitor/AWSCostMonitorApp.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1796"
+            endingLineNumber = "1796"
+            landmarkName = "fetchCostForProfile(_:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "B9181B8D-705D-4A0F-82CB-2CE599BD2C38 - 6a11f96ec9410e1a"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for AWSCostMonitor.AWSManager.fetchCostForProfile(AWSCostMonitor.AWSProfile) async throws -&gt; __C.NSDecimal"
+                  moduleName = "AWSCostMonitor.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jackson/dev/middleout/AWSCostMonitor/packages/app/AWSCostMonitor/AWSCostMonitor/AWSCostMonitorApp.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1796"
+                  endingLineNumber = "1796">
+               </Location>
+               <Location
+                  uuid = "B9181B8D-705D-4A0F-82CB-2CE599BD2C38 - b9bc5cb0dbb0f616"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(7) suspend resume partial function for AWSCostMonitor.AWSManager.fetchCostForProfile(AWSCostMonitor.AWSProfile) async throws -&gt; __C.NSDecimal"
+                  moduleName = "AWSCostMonitor.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jackson/dev/middleout/AWSCostMonitor/packages/app/AWSCostMonitor/AWSCostMonitor/AWSCostMonitorApp.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1796"
+                  endingLineNumber = "1796">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

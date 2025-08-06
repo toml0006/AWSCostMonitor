@@ -174,5 +174,73 @@ struct AWSCostMonitorTests {
         // Refresh interval should default to 5 minutes
         #expect(awsManager.refreshInterval == 5)
     }
+    
+    // MARK: - Anomaly Detection Tests
+    
+    @Test func testAnomalyDetectionDefaultSettings() async throws {
+        let awsManager = AWSManager()
+        
+        // Test default settings
+        #expect(awsManager.enableAnomalyDetection == true)
+        #expect(awsManager.anomalyThreshold == 25.0)
+        
+        // Test empty anomalies initially
+        #expect(awsManager.anomalies.isEmpty)
+    }
+    
+    @Test func testBudgetVelocityAnomaly() async throws {
+        let awsManager = AWSManager()
+        
+        // Set up a budget
+        awsManager.updateBudget(for: "test-profile", monthlyBudget: 100, alertThreshold: 0.8)
+        
+        // Test that spending 90% of budget on day 5 triggers velocity anomaly
+        let calendar = Calendar.current
+        let now = Date()
+        let dayOfMonth = calendar.component(.day, from: now)
+        
+        // Only run this test if we're not too late in the month
+        if dayOfMonth <= 10 {
+            awsManager.detectAnomalies(for: "test-profile", currentAmount: 90, serviceCosts: [])
+            
+            // Should have at least one budget velocity anomaly
+            let velocityAnomalies = awsManager.anomalies.filter { $0.type == .budgetVelocity }
+            #expect(!velocityAnomalies.isEmpty)
+        }
+    }
+    
+    @Test func testServiceCostAnomaly() async throws {
+        let awsManager = AWSManager()
+        
+        // Create service costs where one service is >30% of total
+        let services = [
+            ServiceCost(serviceName: "EC2", amount: 50, currency: "USD"),
+            ServiceCost(serviceName: "S3", amount: 10, currency: "USD"),
+            ServiceCost(serviceName: "RDS", amount: 5, currency: "USD")
+        ]
+        
+        awsManager.detectAnomalies(for: "test-profile", currentAmount: 65, serviceCosts: services)
+        
+        // Should detect EC2 as a high-cost service (50/65 = ~77%)
+        let serviceAnomalies = awsManager.anomalies.filter { $0.type == .newService }
+        #expect(!serviceAnomalies.isEmpty)
+        #expect(serviceAnomalies.first?.message.contains("EC2") ?? false)
+    }
+    
+    @Test func testAnomalyDetectionDisabled() async throws {
+        let awsManager = AWSManager()
+        awsManager.enableAnomalyDetection = false
+        
+        // Add some test data that would normally trigger anomalies
+        let services = [
+            ServiceCost(serviceName: "EC2", amount: 90, currency: "USD"),
+            ServiceCost(serviceName: "S3", amount: 10, currency: "USD")
+        ]
+        
+        awsManager.detectAnomalies(for: "test-profile", currentAmount: 100, serviceCosts: services)
+        
+        // Should have no anomalies when detection is disabled
+        #expect(awsManager.anomalies.isEmpty)
+    }
 
 }
