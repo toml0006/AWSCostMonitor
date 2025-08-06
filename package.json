@@ -1,0 +1,35 @@
+{
+  "name": "awscostmonitor-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AWSCostMonitor - macOS menu bar app for AWS cost tracking",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:website": "npm run dev --workspace=packages/website",
+    "build:website": "npm run build --workspace=packages/website",
+    "preview:website": "npm run preview --workspace=packages/website",
+    "build:app": "cd packages/app/AWSCostMonitor && xcodebuild -scheme AWSCostMonitor -configuration Release build",
+    "clean": "rm -rf node_modules packages/*/node_modules",
+    "install:all": "npm install"
+  },
+  "keywords": [
+    "aws",
+    "cost-monitoring",
+    "macos",
+    "menu-bar",
+    "swift",
+    "swiftui"
+  ],
+  "author": "",
+  "license": "MIT",
+  "homepage": "https://github.com/yourusername/awscostmonitor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/awscostmonitor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/awscostmonitor/issues"
+  }
+}

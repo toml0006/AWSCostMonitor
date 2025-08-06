@@ -1,0 +1,106 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main, settings-window ]
+    paths:
+      - 'packages/app/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'packages/app/**'
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode Version
+      run: sudo xcode-select -switch /Applications/Xcode_15.2.app/Contents/Developer
+      
+    - name: Show Xcode Version
+      run: xcodebuild -version
+      
+    - name: Show Available Destinations
+      run: xcodebuild -project packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -showdestinations
+      
+    - name: Build App
+      run: |
+        cd packages/app/AWSCostMonitor
+        xcodebuild -project AWSCostMonitor.xcodeproj \
+                   -scheme AWSCostMonitor \
+                   -destination 'platform=macOS' \
+                   -configuration Release \
+                   clean build
+    
+    - name: Run Tests
+      run: |
+        cd packages/app/AWSCostMonitor
+        xcodebuild -project AWSCostMonitor.xcodeproj \
+                   -scheme AWSCostMonitor \
+                   -destination 'platform=macOS' \
+                   -configuration Debug \
+                   test
+                   
+    - name: Archive App
+      if: github.ref == 'refs/heads/main'
+      run: |
+        cd packages/app/AWSCostMonitor
+        xcodebuild -project AWSCostMonitor.xcodeproj \
+                   -scheme AWSCostMonitor \
+                   -destination 'platform=macOS' \
+                   -configuration Release \
+                   -archivePath AWSCostMonitor.xcarchive \
+                   archive
+                   
+    - name: Export App
+      if: github.ref == 'refs/heads/main'
+      run: |
+        cd packages/app/AWSCostMonitor
+        # Create export options plist
+        cat > ExportOptions.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>mac-application</string>
+            <key>destination</key>
+            <string>export</string>
+        </dict>
+        </plist>
+        EOF
+        
+        xcodebuild -exportArchive \
+                   -archivePath AWSCostMonitor.xcarchive \
+                   -exportOptionsPlist ExportOptions.plist \
+                   -exportPath ./export
+    
+    - name: Create DMG
+      if: github.ref == 'refs/heads/main'
+      run: |
+        cd packages/app/AWSCostMonitor
+        # Create a temporary directory for DMG contents
+        mkdir dmg-contents
+        cp -R export/AWSCostMonitor.app dmg-contents/
+        
+        # Create Applications symlink
+        ln -s /Applications dmg-contents/Applications
+        
+        # Create DMG
+        hdiutil create -volname "AWS Cost Monitor" \
+                      -srcfolder dmg-contents \
+                      -ov -format UDZO \
+                      AWSCostMonitor.dmg
+    
+    - name: Upload App Artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: AWSCostMonitor-macOS
+        path: packages/app/AWSCostMonitor/AWSCostMonitor.dmg
+        retention-days: 30

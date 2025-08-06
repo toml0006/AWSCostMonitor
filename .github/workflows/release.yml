@@ -1,0 +1,130 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode Version
+      run: sudo xcode-select -switch /Applications/Xcode_15.2.app/Contents/Developer
+      
+    - name: Get Version from Tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Build and Archive App
+      run: |
+        cd packages/app/AWSCostMonitor
+        
+        # Build and archive
+        xcodebuild -project AWSCostMonitor.xcodeproj \
+                   -scheme AWSCostMonitor \
+                   -destination 'platform=macOS' \
+                   -configuration Release \
+                   -archivePath AWSCostMonitor.xcarchive \
+                   archive
+        
+        # Create export options
+        cat > ExportOptions.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>mac-application</string>
+            <key>destination</key>
+            <string>export</string>
+        </dict>
+        </plist>
+        EOF
+        
+        # Export app
+        xcodebuild -exportArchive \
+                   -archivePath AWSCostMonitor.xcarchive \
+                   -exportOptionsPlist ExportOptions.plist \
+                   -exportPath ./export
+    
+    - name: Create DMG
+      run: |
+        cd packages/app/AWSCostMonitor
+        
+        # Create DMG staging directory
+        mkdir dmg-staging
+        cp -R export/AWSCostMonitor.app dmg-staging/
+        ln -s /Applications dmg-staging/Applications
+        
+        # Create DMG with proper naming
+        hdiutil create -volname "AWS Cost Monitor ${{ steps.version.outputs.VERSION }}" \
+                      -srcfolder dmg-staging \
+                      -ov -format UDZO \
+                      "AWSCostMonitor-${{ steps.version.outputs.VERSION }}.dmg"
+    
+    - name: Create Zip Archive
+      run: |
+        cd packages/app/AWSCostMonitor/export
+        zip -r "../AWSCostMonitor-${{ steps.version.outputs.VERSION }}.zip" AWSCostMonitor.app
+    
+    - name: Generate Release Notes
+      id: notes
+      run: |
+        cat > release_notes.md << EOF
+        # AWS Cost Monitor ${{ steps.version.outputs.VERSION }}
+        
+        ## Installation
+        
+        ### Option 1: DMG Installer (Recommended)
+        1. Download \`AWSCostMonitor-${{ steps.version.outputs.VERSION }}.dmg\`
+        2. Open the DMG file
+        3. Drag AWS Cost Monitor to Applications folder
+        4. Launch from Applications
+        
+        ### Option 2: Zip Archive
+        1. Download \`AWSCostMonitor-${{ steps.version.outputs.VERSION }}.zip\`
+        2. Extract the zip file
+        3. Move AWSCostMonitor.app to Applications folder
+        4. Launch from Applications
+        
+        ## Requirements
+        
+        - macOS 13.0 (Ventura) or later
+        - AWS CLI configured with profiles
+        - Cost Explorer API permissions
+        
+        ## What's New in This Release
+        
+        - Enhanced UI with improved settings organization
+        - Comprehensive help system with keyboard shortcuts
+        - Privacy-first design with local data storage
+        - Smart API rate limiting to protect your AWS costs
+        - 14-day spending histograms with service breakdown
+        
+        ## Documentation
+        
+        Visit our [website](https://toml0006.github.io/AWSCostMonitor/) for installation guides and documentation.
+        EOF
+        
+        echo "NOTES_FILE=release_notes.md" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.version.outputs.VERSION }}
+        name: AWS Cost Monitor ${{ steps.version.outputs.VERSION }}
+        body_path: ${{ steps.notes.outputs.NOTES_FILE }}
+        files: |
+          packages/app/AWSCostMonitor/AWSCostMonitor-${{ steps.version.outputs.VERSION }}.dmg
+          packages/app/AWSCostMonitor/AWSCostMonitor-${{ steps.version.outputs.VERSION }}.zip
+        draft: false
+        prerelease: false
