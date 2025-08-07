@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "analyze": "vite build --mode analyze",
+    "clean": "rm -rf dist",
+    "serve": "vite preview --port 4173",
+    "typecheck": "echo 'TypeScript not configured - consider adding TypeScript for better DX'"
   },
   "dependencies": {
     "framer-motion": "^12.23.12",

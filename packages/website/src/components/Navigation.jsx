@@ -16,6 +16,8 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
           
           <div className={`nav-menu ${isMenuOpen ? 'active' : ''}`}>
             <a href="#features" onClick={() => setIsMenuOpen(false)}>Features</a>
+            <a href="#screenshots" onClick={() => setIsMenuOpen(false)}>Screenshots</a>
+            <a href="#installation" onClick={() => setIsMenuOpen(false)}>Get Started</a>
             <a href="#how-it-works" onClick={() => setIsMenuOpen(false)}>How It Works</a>
             <a href="#pricing" onClick={() => setIsMenuOpen(false)}>Pricing</a>
             <a href="https://github.com/toml0006/AWSCostMonitor" className="nav-github">

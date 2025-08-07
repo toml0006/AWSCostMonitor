@@ -462,6 +462,212 @@
   backdrop-filter: blur(10px);
 }
 
+.screenshots-content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 4rem;
+  margin-top: 3rem;
+  align-items: start;
+}
+
+.screenshot-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.screenshot-tab {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 4px 4px 0 var(--color-black);
+}
+
+.screenshot-tab:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--color-black);
+}
+
+.screenshot-tab.active {
+  background: var(--color-primary);
+  color: white;
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--color-black);
+}
+
+.tab-number {
+  min-width: 40px;
+  height: 40px;
+  background: var(--color-light);
+  color: var(--color-dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.screenshot-tab.active .tab-number {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.tab-content {
+  flex: 1;
+}
+
+.tab-content h4 {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  color: inherit;
+}
+
+.tab-content p {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  color: inherit;
+  margin: 0;
+}
+
+.screenshot-display {
+  position: sticky;
+  top: 2rem;
+}
+
+.screenshot-frame {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: 12px 12px 0 var(--color-black);
+  border: 3px solid var(--color-black);
+}
+
+.frame-dots {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  justify-content: flex-start;
+}
+
+.frame-dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: block;
+}
+
+.frame-dots span:nth-child(1) {
+  background: #ff5f56;
+}
+
+.frame-dots span:nth-child(2) {
+  background: #ffbd2e;
+}
+
+.frame-dots span:nth-child(3) {
+  background: #27ca3f;
+}
+
+.screenshot-image {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.actual-screenshot {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+}
+
+.screenshot-placeholder {
+  color: white;
+  text-align: center;
+  padding: 2rem;
+}
+
+.screenshot-placeholder h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.screenshot-placeholder p {
+  opacity: 0.9;
+  font-size: 1rem;
+}
+
+.screenshot-features {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--color-light);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-black);
+}
+
+.screenshot-features h5 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-dark);
+  font-weight: 600;
+}
+
+.screenshot-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.screenshot-features li {
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--color-dark);
+  opacity: 0.8;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.screenshot-features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .screenshots-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .screenshot-tabs {
+    order: 2;
+  }
+  
+  .screenshot-display {
+    order: 1;
+    position: static;
+  }
+  
+  .screenshot-tab {
+    padding: 1rem;
+  }
+}
+
 .screenshots-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -594,6 +800,242 @@
   position: relative;
   z-index: 1;
   backdrop-filter: blur(10px);
+}
+
+.installation-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  margin-top: 3rem;
+  align-items: start;
+}
+
+.installation-steps {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 3rem;
+  box-shadow: 12px 12px 0 var(--color-black);
+}
+
+.installation-steps h3 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: var(--color-dark);
+  text-align: center;
+}
+
+.step {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 2px solid var(--color-light);
+}
+
+.step:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.step-number {
+  min-width: 50px;
+  height: 50px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: 4px 4px 0 var(--color-black);
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-content h4 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-dark);
+}
+
+.step-content p {
+  margin-bottom: 1rem;
+  color: var(--color-dark);
+  opacity: 0.8;
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 4px 4px 0 var(--color-black);
+}
+
+.download-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--color-black);
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.link-btn:hover {
+  color: var(--color-dark);
+}
+
+.link-btn.small {
+  font-size: 0.9rem;
+}
+
+.code-snippet {
+  background: var(--color-dark);
+  color: var(--color-accent);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  margin: 1rem 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  border: 3px solid var(--color-black);
+}
+
+.permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.permission {
+  background: var(--color-light);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  border: 2px solid var(--color-black);
+}
+
+.installation-benefits {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+.benefit-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: 8px 8px 0 var(--color-black);
+  transition: all 0.3s ease;
+  border: 3px solid var(--color-black);
+}
+
+.benefit-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 10px 10px 0 var(--color-black);
+}
+
+.benefit-icon {
+  width: 60px;
+  height: 60px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: 4px 4px 0 var(--color-black);
+}
+
+.benefit-card h4 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-dark);
+}
+
+.benefit-card p {
+  color: var(--color-dark);
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+.api-cost-info {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: var(--radius-xl);
+  padding: 3rem;
+  margin-top: 3rem;
+  box-shadow: 12px 12px 0 var(--color-black);
+}
+
+.api-cost-info h3 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.cost-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.cost-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+}
+
+.cost-guarantee {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+}
+
+.cost-guarantee strong {
+  color: var(--color-accent);
+}
+
+@media (max-width: 768px) {
+  .installation-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .step {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .step-number {
+    margin-bottom: 1rem;
+  }
 }
 
 .installation-methods {

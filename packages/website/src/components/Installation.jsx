@@ -1,15 +1,14 @@
 import { motion } from 'framer-motion'
 import { Download, ExternalLink, Shield, DollarSign, Clock, Lock } from 'lucide-react'
+import { EXTERNAL_LINKS, AWS_PERMISSIONS, AWS_API_COSTS, ANIMATION_VARIANTS } from '../utils/constants'
+import { formatCurrency } from '../utils/helpers'
 
 const Installation = () => {
   return (
     <section id="installation" className="installation">
       <div className="container">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
+          {...ANIMATION_VARIANTS.fadeInUp}
           className="section-header"
         >
           <h2>Get <span className="text-gradient">Started</span></h2>
@@ -32,7 +31,10 @@ const Installation = () => {
               <div className="step-content">
                 <h4>Download AWS Cost Monitor</h4>
                 <p>Get the latest release for macOS (requires macOS 13.0+)</p>
-                <button className="download-btn">
+                <button 
+                  className="download-btn"
+                  onClick={() => alert('Download will be available when the app is released!')}
+                >
                   <Download size={20} />
                   Download for macOS
                 </button>
@@ -44,7 +46,7 @@ const Installation = () => {
               <div className="step-content">
                 <h4>Install AWS CLI</h4>
                 <p>Configure AWS CLI with your credentials and profiles</p>
-                <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" 
+                <a href={EXTERNAL_LINKS.awsCLIInstall} 
                    target="_blank" 
                    rel="noopener noreferrer"
                    className="link-btn">
@@ -61,7 +63,7 @@ const Installation = () => {
                 <div className="code-snippet">
                   <code>aws configure --profile your-profile</code>
                 </div>
-                <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html" 
+                <a href={EXTERNAL_LINKS.awsCLIConfig} 
                    target="_blank" 
                    rel="noopener noreferrer"
                    className="link-btn small">
@@ -76,10 +78,11 @@ const Installation = () => {
                 <h4>Required Permissions</h4>
                 <p>Ensure your IAM user/role has Cost Explorer access</p>
                 <div className="permissions-list">
-                  <div className="permission">ce:GetCostAndUsage</div>
-                  <div className="permission">ce:GetUsageReport</div>
+                  {AWS_PERMISSIONS.map((permission, index) => (
+                    <div key={index} className="permission">{permission}</div>
+                  ))}
                 </div>
-                <a href="https://docs.aws.amazon.com/cost-management/latest/userguide/ce-access.html" 
+                <a href={EXTERNAL_LINKS.costExplorerPermissions} 
                    target="_blank" 
                    rel="noopener noreferrer"
                    className="link-btn small">
@@ -142,16 +145,16 @@ const Installation = () => {
           <h3>Understanding API Costs</h3>
           <div className="cost-breakdown">
             <div className="cost-item">
-              <strong>Cost Explorer API:</strong> $0.01 per request
+              <strong>Cost Explorer API:</strong> {formatCurrency(AWS_API_COSTS.costExplorerPerRequest)} per request
             </div>
             <div className="cost-item">
-              <strong>Our Rate Limit:</strong> Maximum 1 request per minute
+              <strong>Our Rate Limit:</strong> Maximum {AWS_API_COSTS.maxRequestsPerMinute} request per minute
             </div>
             <div className="cost-item">
-              <strong>Monthly Maximum:</strong> ~$4.32 (43,200 minutes × $0.01)
+              <strong>Monthly Maximum:</strong> ~{formatCurrency(AWS_API_COSTS.maxMonthlyCost)} ({AWS_API_COSTS.maxMonthlyRequests.toLocaleString()} minutes × {formatCurrency(AWS_API_COSTS.costExplorerPerRequest)})
             </div>
             <div className="cost-item">
-              <strong>Typical Usage:</strong> $0.50-$2.00/month with smart refresh
+              <strong>Typical Usage:</strong> {formatCurrency(AWS_API_COSTS.typicalMonthlyCost.min)}-{formatCurrency(AWS_API_COSTS.typicalMonthlyCost.max)}/month with smart refresh
             </div>
           </div>
           <div className="cost-guarantee">

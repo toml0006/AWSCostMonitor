@@ -4,23 +4,27 @@ import { useState } from 'react'
 const screenshots = [
   {
     title: "Menu Bar Display",
-    description: "Always visible cost tracking in your menu bar",
-    image: "/screenshots/menu-bar.png"
+    description: "Always visible cost tracking in your macOS menu bar with real-time updates",
+    image: "/screenshots/placeholder.svg",
+    features: ["Real-time cost display", "Profile switching", "Quick refresh"]
   },
   {
     title: "Main Interface",
-    description: "Detailed cost breakdown with 14-day histograms",
-    image: "/screenshots/main-interface.png"
+    description: "Detailed cost breakdown with interactive charts and spending trends",
+    image: "/screenshots/placeholder.svg",
+    features: ["14-day cost history", "Service breakdown", "Forecast projections"]
   },
   {
     title: "Settings & Configuration",
-    description: "Customize refresh rates, budgets, and display options",
-    image: "/screenshots/settings-window.png"
+    description: "Customize refresh rates, budgets, and display options to fit your workflow",
+    image: "/screenshots/placeholder.svg",
+    features: ["Per-profile budgets", "Smart refresh rates", "Display customization"]
   },
   {
     title: "Help & Documentation",
-    description: "Comprehensive help system with keyboard shortcuts",
-    image: "/screenshots/help-dialog.png"
+    description: "Built-in help system with keyboard shortcuts and troubleshooting guides",
+    image: "/screenshots/placeholder.svg",
+    features: ["Keyboard shortcuts", "API usage tracking", "Troubleshooting"]
   }
 ]
 
@@ -76,7 +80,27 @@ const Screenshots = () => {
                   src={screenshots[activeIndex].image} 
                   alt={screenshots[activeIndex].title}
                   className="actual-screenshot"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'block';
+                  }}
                 />
+                <div className="screenshot-placeholder" style={{ display: 'none' }}>
+                  <h4>{screenshots[activeIndex].title}</h4>
+                  <p>{screenshots[activeIndex].description}</p>
+                  <p style={{ marginTop: '1rem', fontSize: '0.9rem', opacity: 0.7 }}>
+                    Screenshot preview coming soon
+                  </p>
+                </div>
+              </div>
+              
+              <div className="screenshot-features">
+                <h5>Key Features:</h5>
+                <ul>
+                  {screenshots[activeIndex].features.map((feature, index) => (
+                    <li key={index}>{feature}</li>
+                  ))}
+                </ul>
               </div>
             </div>
           </motion.div>
