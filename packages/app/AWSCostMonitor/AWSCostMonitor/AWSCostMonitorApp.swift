@@ -585,13 +585,20 @@ class AWSManager: ObservableObject {
         log(.info, category: "Config", "Found \(parsedProfiles.count) profiles in AWS config")
         
         // Populate the profiles array from the parsed data.
-        self.profiles = parsedProfiles.keys.map { profileName in
+        var profileList = parsedProfiles.keys.map { profileName in
             let profileConfig = parsedProfiles[profileName]
             let region = profileConfig?["region"]
             return AWSProfile(name: profileName, region: region)
-        }.sorted { $0.name < $1.name }
+        }
         
-        log(.info, category: "Config", "Loaded \(self.profiles.count) AWS profiles")
+        // Add the ACME demo profile
+        let acmeProfile = AWSProfile(name: "acme", region: "us-east-1")
+        profileList.append(acmeProfile)
+        
+        // Sort profiles alphabetically
+        self.profiles = profileList.sorted { $0.name < $1.name }
+        
+        log(.info, category: "Config", "Loaded \(self.profiles.count) AWS profiles (including demo)")
         
         if self.profiles.isEmpty {
             let error = "No AWS profiles found in config file."
@@ -1385,6 +1392,12 @@ class AWSManager: ObservableObject {
             return
         }
         
+        // Check if this is the ACME demo profile
+        if profile.name.lowercased() == "acme" {
+            await loadDemoDataForACME()
+            return
+        }
+        
         // Check cache first (unless forced)
         if !force {
             if let cachedData = costCache[profile.name] {
@@ -1818,6 +1831,143 @@ class AWSManager: ObservableObject {
             log(.error, category: "API", "Error fetching cost for \(profile.name): \(errorMessage)")
             recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage", success: false, duration: duration, error: errorMessage)
             throw error
+        }
+    }
+    
+    // Load demo data for ACME profile
+    func loadDemoDataForACME() async {
+        log(.info, category: "Demo", "Loading demo data for ACME profile")
+        
+        await MainActor.run {
+            self.isLoading = true
+            self.isLoadingServices = true
+            self.errorMessage = nil
+            self.isRateLimited = false
+        }
+        
+        // Simulate a brief loading delay for realism
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+        let dayOfMonth = calendar.component(.day, from: now)
+        
+        // Generate impressive but realistic cost data
+        let mtdTotal = Decimal(87234.56) // Month-to-date total
+        let lastMonthTotal = Decimal(124892.34) // Last month's total
+        let projectedTotal = Decimal(268543.21) // Projected month-end
+        
+        // Create daily costs with realistic variation
+        var dailyCosts: [DailyCost] = []
+        var dailyServiceCosts: [DailyServiceCost] = []
+        let baseDaily = mtdTotal / Decimal(dayOfMonth)
+        
+        for day in 1...dayOfMonth {
+            guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { continue }
+            
+            // Add some realistic variation (±30%)
+            let variation = Decimal(0.7 + Double.random(in: 0...0.6))
+            let dailyAmount = baseDaily * variation
+            
+            dailyCosts.append(DailyCost(
+                date: date,
+                amount: dailyAmount,
+                currency: "USD"
+            ))
+            
+            // Distribute across services
+            let ec2Amount = dailyAmount * Decimal(0.35)
+            let rdsAmount = dailyAmount * Decimal(0.25)
+            let s3Amount = dailyAmount * Decimal(0.15)
+            let lambdaAmount = dailyAmount * Decimal(0.10)
+            let cloudFrontAmount = dailyAmount * Decimal(0.08)
+            let otherAmount = dailyAmount * Decimal(0.07)
+            
+            dailyServiceCosts.append(contentsOf: [
+                DailyServiceCost(date: date, serviceName: "Amazon Elastic Compute Cloud - Compute", amount: ec2Amount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Amazon Relational Database Service", amount: rdsAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Amazon Simple Storage Service", amount: s3Amount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "AWS Lambda", amount: lambdaAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Amazon CloudFront", amount: cloudFrontAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Other Services", amount: otherAmount, currency: "USD")
+            ])
+        }
+        
+        // Create service breakdown
+        let serviceCosts = [
+            ServiceCost(serviceName: "Amazon Elastic Compute Cloud - Compute", amount: mtdTotal * Decimal(0.35), currency: "USD"),
+            ServiceCost(serviceName: "Amazon Relational Database Service", amount: mtdTotal * Decimal(0.25), currency: "USD"),
+            ServiceCost(serviceName: "Amazon Simple Storage Service", amount: mtdTotal * Decimal(0.15), currency: "USD"),
+            ServiceCost(serviceName: "AWS Lambda", amount: mtdTotal * Decimal(0.10), currency: "USD"),
+            ServiceCost(serviceName: "Amazon CloudFront", amount: mtdTotal * Decimal(0.08), currency: "USD"),
+            ServiceCost(serviceName: "Amazon DynamoDB", amount: mtdTotal * Decimal(0.03), currency: "USD"),
+            ServiceCost(serviceName: "Amazon API Gateway", amount: mtdTotal * Decimal(0.02), currency: "USD"),
+            ServiceCost(serviceName: "AWS Key Management Service", amount: mtdTotal * Decimal(0.01), currency: "USD"),
+            ServiceCost(serviceName: "Amazon Simple Notification Service", amount: mtdTotal * Decimal(0.005), currency: "USD"),
+            ServiceCost(serviceName: "AWS Cost Explorer", amount: mtdTotal * Decimal(0.005), currency: "USD")
+        ].sorted(by: { $0.amount > $1.amount })
+        
+        // Create cache entry
+        let cacheEntry = CostCacheEntry(
+            profileName: "acme",
+            fetchDate: Date(),
+            mtdTotal: mtdTotal,
+            currency: "USD",
+            dailyCosts: dailyCosts,
+            serviceCosts: serviceCosts,
+            startDate: startOfMonth,
+            endDate: Date()
+        )
+        
+        await MainActor.run {
+            // Store in cache
+            self.costCache["acme"] = cacheEntry
+            self.dailyCostsByProfile["acme"] = dailyCosts
+            self.dailyServiceCostsByProfile["acme"] = dailyServiceCosts
+            self.cacheStatus["acme"] = Date()
+            
+            // Update UI data
+            self.costData.removeAll()
+            self.costData.append(CostData(
+                profileName: "acme",
+                amount: mtdTotal,
+                currency: "USD"
+            ))
+            
+            // Update service costs
+            self.serviceCosts = serviceCosts
+            
+            // Calculate analytics
+            self.projectedMonthlyTotal = projectedTotal
+            
+            // Set comparison data
+            self.lastMonthData["acme"] = CostData(
+                profileName: "acme",
+                amount: lastMonthTotal,
+                currency: "USD"
+            )
+            self.lastMonthDataFetchDate["acme"] = Date()
+            self.lastMonthServiceCosts["acme"] = serviceCosts.map { service in
+                ServiceCost(
+                    serviceName: service.serviceName,
+                    amount: service.amount * Decimal(1.43), // Last month was 43% higher
+                    currency: service.currency
+                )
+            }
+            
+            // Clear loading states
+            self.isLoading = false
+            self.isLoadingServices = false
+            self.errorMessage = nil
+            
+            // Record successful "API" request for demo
+            self.recordAPIRequest(profile: "acme", endpoint: "Demo Data", success: true, duration: 0.5)
+            
+            // Mark API call time
+            self.lastAPICallTime = Date()
+            
+            log(.info, category: "Demo", "Demo data loaded successfully for ACME profile")
         }
     }
     
