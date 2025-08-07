@@ -2,11 +2,25 @@
 
 To enable GitHub Pages deployment for this repository, follow these steps:
 
-## 1. Enable GitHub Pages
+## IMPORTANT: First Time Setup
+
+### 1. Enable GitHub Pages
 
 1. Go to your repository settings: https://github.com/toml0006/AWSCostMonitor/settings/pages
-2. Under "Source", select **GitHub Actions**
-3. Click Save
+2. Under "Build and deployment", find "Source"
+3. Select **GitHub Actions** from the dropdown
+4. Click Save
+
+### 2. Remove Environment Protection (if exists)
+
+If you see "environment protection rules" errors:
+
+1. Go to Settings → Environments: https://github.com/toml0006/AWSCostMonitor/settings/environments
+2. If "github-pages" environment exists, click on it
+3. Either:
+   - Delete the environment entirely (click trash icon), OR
+   - Under "Deployment branches", ensure "main" is allowed, OR
+   - Remove all protection rules
 
 ## 2. Configure Environment (Optional)
 
