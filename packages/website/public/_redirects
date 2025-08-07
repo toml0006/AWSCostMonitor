@@ -1,0 +1,13 @@
+# Netlify redirects file for AWSCostMonitor
+
+# SPA fallback - handle client-side routing
+/*    /index.html   200
+
+# Redirect www to non-www
+https://www.awscostmonitor.io/* https://awscostmonitor.io/:splat 301!
+
+# Handle common old URLs (if any)
+/home              /                   301
+/features          /#features          301
+/pricing           /#pricing           301
+/download          /#installation      301

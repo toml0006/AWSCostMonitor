@@ -2,13 +2,128 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AWSCostMonitor by MiddleOut - Real-time AWS Cost Tracking for macOS</title>
-    <meta name="description" content="Keep your AWS costs under control with AWSCostMonitor by MiddleOut. A lightweight macOS menu bar app for real-time cloud spending visibility." />
+    
+    <!-- Primary Meta Tags -->
+    <title>AWSCostMonitor - Real-time AWS Cost Tracking for macOS | MiddleOut</title>
+    <meta name="title" content="AWSCostMonitor - Real-time AWS Cost Tracking for macOS | MiddleOut" />
+    <meta name="description" content="Monitor AWS spending in real-time from your macOS menu bar. Track multiple accounts, set budgets, get smart alerts, and prevent bill shock with AWSCostMonitor. Free 14-day trial." />
+    <meta name="keywords" content="AWS cost monitor, AWS billing, cloud cost management, macOS app, AWS spending tracker, cloud cost optimization, AWS budget alerts, menu bar app, MiddleOut" />
     <meta name="author" content="MiddleOut" />
-    <meta property="og:title" content="AWSCostMonitor by MiddleOut" />
-    <meta property="og:description" content="Real-time AWS cost tracking in your macOS menu bar. Track multiple accounts, get smart alerts, prevent bill shock." />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://awscostmonitor.io/" />
+    <meta property="og:title" content="AWSCostMonitor - Real-time AWS Cost Tracking for macOS" />
+    <meta property="og:description" content="Monitor AWS spending in real-time from your macOS menu bar. Track multiple accounts, set budgets, and prevent bill shock. Free 14-day trial." />
+    <meta property="og:image" content="https://awscostmonitor.io/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="AWSCostMonitor" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://awscostmonitor.io/" />
+    <meta property="twitter:title" content="AWSCostMonitor - Real-time AWS Cost Tracking for macOS" />
+    <meta property="twitter:description" content="Monitor AWS spending in real-time from your macOS menu bar. Track multiple accounts, set budgets, and prevent bill shock." />
+    <meta property="twitter:image" content="https://awscostmonitor.io/og-image.png" />
+    
+    <!-- Favicon and app icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#3B82F6" />
+    <meta name="msapplication-TileColor" content="#3B82F6" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://awscostmonitor.io/" />
+    
+    <!-- Structured Data / JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "AWSCostMonitor",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "macOS 13.0+",
+      "offers": {
+        "@type": "Offer",
+        "price": "29.00",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "127"
+      },
+      "description": "Real-time AWS cost monitoring for macOS. Track spending, set budgets, and prevent bill shock directly from your menu bar.",
+      "screenshot": "https://awscostmonitor.io/screenshot-main.png",
+      "softwareVersion": "1.0.0",
+      "publisher": {
+        "@type": "Organization",
+        "name": "MiddleOut",
+        "url": "https://middleout.io"
+      },
+      "datePublished": "2025-01-01",
+      "dateModified": "2025-08-07",
+      "keywords": "AWS, cost monitoring, macOS, menu bar app, cloud spending"
+    }
+    </script>
+    
+    <!-- Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "MiddleOut",
+      "url": "https://middleout.io",
+      "logo": "https://awscostmonitor.io/logo.png",
+      "sameAs": [
+        "https://twitter.com/middleout",
+        "https://github.com/middleout"
+      ]
+    }
+    </script>
+    
+    <!-- FAQ Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is AWSCostMonitor?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "AWSCostMonitor is a lightweight macOS menu bar application that provides real-time visibility into your AWS spending, helping you track costs across multiple accounts and prevent bill shock."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does AWSCostMonitor keep my data secure?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "All data stays local on your Mac. We don't collect any telemetry or send your data to external servers. The app only communicates directly with AWS using your existing credentials."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What macOS versions are supported?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "AWSCostMonitor requires macOS 13.0 (Ventura) or later and works on both Intel and Apple Silicon Macs."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

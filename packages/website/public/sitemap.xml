@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+    
+    <!-- Homepage -->
+    <url>
+        <loc>https://awscostmonitor.io/</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+    </url>
+    
+    <!-- Features Section -->
+    <url>
+        <loc>https://awscostmonitor.io/#features</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <!-- Screenshots Section -->
+    <url>
+        <loc>https://awscostmonitor.io/#screenshots</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <!-- Installation Section -->
+    <url>
+        <loc>https://awscostmonitor.io/#installation</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    
+    <!-- How It Works Section -->
+    <url>
+        <loc>https://awscostmonitor.io/#how-it-works</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <!-- Pricing Section -->
+    <url>
+        <loc>https://awscostmonitor.io/#pricing</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    
+    <!-- Download Page (future) -->
+    <url>
+        <loc>https://awscostmonitor.io/download</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    
+    <!-- Documentation (future) -->
+    <url>
+        <loc>https://awscostmonitor.io/docs</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <!-- Privacy Policy -->
+    <url>
+        <loc>https://awscostmonitor.io/privacy</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+    
+    <!-- Terms of Service -->
+    <url>
+        <loc>https://awscostmonitor.io/terms</loc>
+        <lastmod>2025-08-07</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+</urlset>
