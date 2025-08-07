@@ -1,0 +1,44 @@
+name: Test iOS App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'packages/app/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'packages/app/**'
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode Version
+      run: sudo xcode-select -switch /Applications/Xcode_15.2.app/Contents/Developer
+      
+    - name: Show Xcode Version
+      run: xcodebuild -version
+      
+    - name: Build App
+      run: |
+        cd packages/app/AWSCostMonitor
+        xcodebuild -project AWSCostMonitor.xcodeproj \
+                   -scheme AWSCostMonitor \
+                   -destination 'platform=macOS' \
+                   -configuration Debug \
+                   clean build
+    
+    - name: Run Tests
+      run: |
+        cd packages/app/AWSCostMonitor
+        xcodebuild -project AWSCostMonitor.xcodeproj \
+                   -scheme AWSCostMonitor \
+                   -destination 'platform=macOS' \
+                   -configuration Debug \
+                   test
