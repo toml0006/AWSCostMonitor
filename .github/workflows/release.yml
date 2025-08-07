@@ -17,8 +17,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       
-    - name: Select Xcode Version
-      run: sudo xcode-select -switch /Applications/Xcode_15.2.app/Contents/Developer
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
       
     - name: Get Version from Tag
       id: version
@@ -28,12 +30,18 @@ jobs:
       run: |
         cd packages/app/AWSCostMonitor
         
+        # Clean build folder
+        xcodebuild clean -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor
+        
         # Build and archive
         xcodebuild -project AWSCostMonitor.xcodeproj \
                    -scheme AWSCostMonitor \
                    -destination 'platform=macOS' \
                    -configuration Release \
                    -archivePath AWSCostMonitor.xcarchive \
+                   -allowProvisioningUpdates \
+                   CODE_SIGN_IDENTITY="" \
+                   CODE_SIGNING_REQUIRED=NO \
                    archive
         
         # Create export options
@@ -117,7 +125,7 @@ jobs:
         
         echo "NOTES_FILE=release_notes.md" >> $GITHUB_OUTPUT
     
-    - name: Create Release
+    - name: Upload Release Assets
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.version.outputs.VERSION }}
@@ -128,3 +136,4 @@ jobs:
           packages/app/AWSCostMonitor/AWSCostMonitor-${{ steps.version.outputs.VERSION }}.zip
         draft: false
         prerelease: false
+        fail_on_unmatched_files: true
