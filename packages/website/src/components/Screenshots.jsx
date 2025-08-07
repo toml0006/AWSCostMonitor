@@ -3,28 +3,44 @@ import { useState } from 'react'
 
 const screenshots = [
   {
-    title: "Menu Bar Display",
-    description: "Always visible cost tracking in your macOS menu bar with real-time updates",
-    image: "/screenshots/placeholder.svg",
-    features: ["Real-time cost display", "Profile switching", "Quick refresh"]
-  },
-  {
     title: "Main Interface",
-    description: "Detailed cost breakdown with interactive charts and spending trends",
-    image: "/screenshots/placeholder.svg",
-    features: ["14-day cost history", "Service breakdown", "Forecast projections"]
+    description: "Clean menu bar display showing your current AWS costs with trend indicators",
+    image: "/screenshots/main-interface.png",
+    width: 864,
+    height: 1158,
+    features: ["Real-time cost display", "Profile switching", "Trend indicators"]
   },
   {
-    title: "Settings & Configuration",
-    description: "Customize refresh rates, budgets, and display options to fit your workflow",
-    image: "/screenshots/placeholder.svg",
-    features: ["Per-profile budgets", "Smart refresh rates", "Display customization"]
+    title: "Settings - Refresh Rate",
+    description: "Configure intelligent refresh rates based on your budget and spending patterns",
+    image: "/screenshots/settings-refresh-rate.png",
+    width: 1724,
+    height: 1180,
+    features: ["Smart refresh rates", "API usage tracking", "Budget-based polling"]
   },
   {
-    title: "Help & Documentation",
-    description: "Built-in help system with keyboard shortcuts and troubleshooting guides",
-    image: "/screenshots/placeholder.svg",
-    features: ["Keyboard shortcuts", "API usage tracking", "Troubleshooting"]
+    title: "Settings - Display Format",
+    description: "Customize how costs appear in your menu bar with various formatting options",
+    image: "/screenshots/settings-display-format.png",
+    width: 1724,
+    height: 1180,
+    features: ["Currency formatting", "Display modes", "Visual customization"]
+  },
+  {
+    title: "Help & Getting Started",
+    description: "Built-in help system with setup guides and troubleshooting information",
+    image: "/screenshots/help-getting-started.png",
+    width: 1624,
+    height: 1280,
+    features: ["Setup guide", "Keyboard shortcuts", "Troubleshooting tips"]
+  },
+  {
+    title: "Settings - Anomaly Detection",
+    description: "Set up intelligent alerts for unusual spending patterns and budget overages",
+    image: "/screenshots/settings-anomaly-detection.png",
+    width: 1724,
+    height: 1180,
+    features: ["Smart alerts", "Budget monitoring", "Spending anomalies"]
   }
 ]
 
@@ -78,8 +94,11 @@ const Screenshots = () => {
               <div className="screenshot-image">
                 <img 
                   src={screenshots[activeIndex].image} 
-                  alt={screenshots[activeIndex].title}
+                  alt={`AWSCostMonitor ${screenshots[activeIndex].title} - ${screenshots[activeIndex].description}`}
+                  width={screenshots[activeIndex].width}
+                  height={screenshots[activeIndex].height}
                   className="actual-screenshot"
+                  loading="lazy"
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'block';

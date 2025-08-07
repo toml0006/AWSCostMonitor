@@ -65,30 +65,21 @@ const Hero = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="hero-visual"
           >
-            <div className="app-mockup">
-              <div className="menu-bar-mockup">
-                <div className="menu-bar-item">
-                  <DollarSign size={16} />
-                  <span>$66.19</span>
-                  <span className="trend-indicator trend-down">↓</span>
-                </div>
+            <div className="hero-screenshot-frame">
+              <div className="frame-dots">
+                <span></span>
+                <span></span>
+                <span></span>
               </div>
-              <div className="dropdown-mockup">
-                <div className="dropdown-header">AWS MTD Spend</div>
-                <div className="dropdown-profile">ecoengineers</div>
-                <div className="dropdown-stats">
-                  <div className="stat-row">
-                    <span>Current Month (MTD)</span>
-                    <span className="stat-value">66.19</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>Last Month</span>
-                    <span className="stat-value">1272.23 <span className="trend-down">↓</span></span>
-                  </div>
-                  <div className="stat-row cached">
-                    <span>Cached: 1 day, 1 hr</span>
-                  </div>
-                </div>
+              <div className="hero-screenshot-image">
+                <img 
+                  src="/screenshots/main-interface.png" 
+                  alt="AWSCostMonitor main interface showing menu bar cost display"
+                  className="hero-screenshot"
+                  width="864"
+                  height="1158"
+                  fetchPriority="high"
+                />
               </div>
             </div>
           </motion.div>
