@@ -7,6 +7,7 @@ const Footer = () => {
         <div className="footer-content">
           <div className="footer-brand">
             <h3>AWSCostMonitor</h3>
+            <p>by MiddleOut</p>
             <p>Keep your AWS costs under control.</p>
             <p className="footer-tagline">
               Made with <Heart size={16} /> for developers who care about their AWS bills.
@@ -47,7 +48,7 @@ const Footer = () => {
         </div>
         
         <div className="footer-bottom">
-          <p>© 2024 AWSCostMonitor. Open source under MIT License.</p>
+          <p>© 2025 MiddleOut. AWSCostMonitor is open source under MIT License.</p>
           <p>Not affiliated with Amazon Web Services.</p>
         </div>
       </div>

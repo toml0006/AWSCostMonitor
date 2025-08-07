@@ -25,7 +25,7 @@ const Hero = () => {
             </h1>
             
             <p className="hero-description">
-              AWSCostMonitor lives in your macOS menu bar, providing real-time visibility 
+              AWSCostMonitor by MiddleOut lives in your macOS menu bar, providing real-time visibility 
               into your cloud spending. Track multiple AWS accounts, get smart alerts, 
               and prevent bill shock — all with zero setup complexity.
             </p>

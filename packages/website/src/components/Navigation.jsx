@@ -8,7 +8,10 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
         <div className="nav-content">
           <div className="nav-logo">
             <DollarSign size={32} />
-            <span>AWSCostMonitor</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span>AWSCostMonitor</span>
+              <span style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '-4px' }}>by MiddleOut</span>
+            </div>
           </div>
           
           <div className={`nav-menu ${isMenuOpen ? 'active' : ''}`}>

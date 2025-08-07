@@ -40,15 +40,18 @@ function App() {
   return (
     <div className="app">
       <MemphisPatterns />
+      <div className="app-background" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--color-light)', zIndex: -2 }} />
       <GeometricShapes />
-      <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
-      <Hero />
-      <Features />
-      <Screenshots />
-      <Installation />
-      <HowItWorks />
-      <Pricing />
-      <Footer />
+      <div className="app-content" style={{ position: 'relative', zIndex: 1 }}>
+        <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
+        <Hero />
+        <Features />
+        <Screenshots />
+        <Installation />
+        <HowItWorks />
+        <Pricing />
+        <Footer />
+      </div>
     </div>
   )
 }
