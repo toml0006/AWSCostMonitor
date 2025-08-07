@@ -73,7 +73,7 @@ const Pricing = () => {
             </div>
           </div>
           
-          <a href="https://github.com/yourusername/awscostmonitor/releases" 
+          <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
              className="btn btn-primary price-cta">
             Download Now
           </a>
@@ -93,7 +93,7 @@ const Pricing = () => {
             or sharing it with your team. Your support helps keep the project alive!
           </p>
           <div className="support-actions">
-            <a href="https://github.com/yourusername/awscostmonitor" 
+            <a href="https://github.com/toml0006/AWSCostMonitor" 
                className="btn btn-outline">
               ⭐ Star on GitHub
             </a>

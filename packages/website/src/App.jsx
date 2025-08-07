@@ -19,6 +19,7 @@ import {
   Monitor
 } from 'lucide-react'
 import './App.css'
+import './styles/components.css'
 
 // Components
 import Hero from './components/Hero'

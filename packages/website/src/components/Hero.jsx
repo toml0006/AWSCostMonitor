@@ -29,12 +29,12 @@ const Hero = () => {
             </p>
             
             <div className="hero-cta">
-              <a href="https://github.com/yourusername/awscostmonitor/releases" 
+              <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
                  className="btn btn-primary">
                 <Download size={20} />
                 Download for macOS
               </a>
-              <a href="https://github.com/yourusername/awscostmonitor" 
+              <a href="https://github.com/toml0006/AWSCostMonitor" 
                  className="btn btn-outline">
                 <Github size={20} />
                 View on GitHub

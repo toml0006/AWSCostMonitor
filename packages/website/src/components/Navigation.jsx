@@ -15,7 +15,7 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
             <a href="#features" onClick={() => setIsMenuOpen(false)}>Features</a>
             <a href="#how-it-works" onClick={() => setIsMenuOpen(false)}>How It Works</a>
             <a href="#pricing" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-            <a href="https://github.com/yourusername/awscostmonitor" className="nav-github">
+            <a href="https://github.com/toml0006/AWSCostMonitor" className="nav-github">
               GitHub
             </a>
           </div>
