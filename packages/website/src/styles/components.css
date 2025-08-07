@@ -296,10 +296,10 @@
 /* Features Component */
 .features {
   padding: 4rem 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.70);
   position: relative;
   z-index: 1;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(4px);
 }
 
 .section-header {
@@ -484,10 +484,10 @@
 /* Screenshots Component */
 .screenshots {
   padding: 4rem 0;
-  background: rgba(255, 248, 231, 0.92);
+  background: rgba(255, 248, 231, 0.60);
   position: relative;
   z-index: 1;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
 }
 
 .screenshots-content {
@@ -779,7 +779,7 @@
 /* How It Works Component */
 .how-it-works {
   padding: 4rem 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.40);
   position: relative;
   z-index: 1;
   backdrop-filter: blur(10px);
@@ -851,10 +851,10 @@
 /* Installation Component */
 .installation {
   padding: 4rem 0;
-  background: rgba(255, 248, 231, 0.92);
+  background: rgba(255, 248, 231, 0.50);
   position: relative;
   z-index: 1;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
 }
 
 .installation-content {
@@ -1206,10 +1206,10 @@
 /* Pricing Component */
 .pricing {
   padding: 4rem 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.30);
   position: relative;
   z-index: 1;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
 .pricing-card {
@@ -1357,13 +1357,13 @@
 
 /* Footer Component */
 .footer {
-  background: rgba(34, 34, 34, 0.95);
+  background: rgba(34, 34, 34, 0.85);
   color: var(--color-white);
   padding: 3rem 0 1.5rem;
   border-top: 3px solid var(--color-black);
   position: relative;
   z-index: 1;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(14px);
 }
 
 .footer-content {
