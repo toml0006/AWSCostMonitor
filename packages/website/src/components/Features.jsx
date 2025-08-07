@@ -173,7 +173,7 @@ const Features = () => {
         </motion.div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .features {
           background: var(--color-white);
           position: relative;

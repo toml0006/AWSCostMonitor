@@ -93,7 +93,7 @@ const Hero = () => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .hero {
           min-height: 100vh;
           display: flex;

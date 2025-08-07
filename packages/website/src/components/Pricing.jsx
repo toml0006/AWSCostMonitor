@@ -105,7 +105,7 @@ const Pricing = () => {
         </motion.div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .pricing {
           background: var(--color-white);
         }

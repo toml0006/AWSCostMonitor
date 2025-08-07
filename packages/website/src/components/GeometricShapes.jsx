@@ -65,7 +65,7 @@ const GeometricShapes = () => {
         }}
       />
       
-      <style jsx>{`
+      <style>{`
         .geometric-shapes {
           position: fixed;
           top: 0;

@@ -83,7 +83,7 @@ const Screenshots = () => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .screenshots {
           background: var(--color-white);
         }

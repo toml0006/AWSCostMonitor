@@ -95,7 +95,7 @@ const HowItWorks = () => {
         </motion.div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .how-it-works {
           background: linear-gradient(135deg, var(--color-light) 0%, var(--color-white) 100%);
           position: relative;

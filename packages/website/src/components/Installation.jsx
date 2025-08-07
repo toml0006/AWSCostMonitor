@@ -164,7 +164,7 @@ const Installation = () => {
         </motion.div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .installation {
           background: var(--color-light);
         }

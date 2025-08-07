@@ -29,7 +29,7 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .navigation {
           position: fixed;
           top: 0;
