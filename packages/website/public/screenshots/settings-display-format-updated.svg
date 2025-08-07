@@ -1,0 +1,168 @@
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Window shadow -->
+    <filter id="windowShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="12"/>
+      <feOffset dx="0" dy="12" result="offset"/>
+      <feFlood flood-color="#000000" flood-opacity="0.4"/>
+      <feComposite in2="offset" operator="in"/>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#1e1e1e"/>
+  
+  <!-- Main window -->
+  <g filter="url(#windowShadow)">
+    <rect x="80" y="60" width="1040" height="680" rx="12" ry="12" fill="#2d2d2d" stroke="#404040" stroke-width="1"/>
+    
+    <!-- Title bar -->
+    <rect x="80" y="60" width="1040" height="50" rx="12" ry="12" fill="#3a3a3a"/>
+    <rect x="80" y="95" width="1040" height="15" fill="#3a3a3a"/>
+    
+    <!-- Traffic light buttons -->
+    <circle cx="105" cy="85" r="7" fill="#FF5F57"/>
+    <circle cx="125" cy="85" r="7" fill="#FFBD2E"/>
+    <circle cx="145" cy="85" r="7" fill="#28CA42"/>
+    
+    <!-- Title -->
+    <text x="600" y="90" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="600">AWS Cost Monitor Settings</text>
+    
+    <!-- Left sidebar -->
+    <rect x="80" y="110" width="350" height="630" fill="#2d2d2d"/>
+    
+    <!-- Settings section title -->
+    <text x="100" y="150" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="24" font-weight="600">Settings</text>
+    
+    <!-- Refresh Rate -->
+    <rect x="100" y="170" width="310" height="50" rx="8" ry="8" fill="transparent"/>
+    <g>
+      <circle cx="125" cy="195" r="8" fill="none" stroke="#ffffff" stroke-width="2"/>
+      <path d="M 120,195 A 5,5 0 1,1 130,195" stroke="#ffffff" stroke-width="2" fill="none"/>
+      <polygon points="128,192 132,195 128,198" fill="#ffffff"/>
+      <text x="145" y="200" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Refresh Rate</text>
+    </g>
+    
+    <!-- Display (selected) -->
+    <rect x="100" y="230" width="310" height="50" rx="8" ry="8" fill="#007AFF"/>
+    <text x="125" y="250" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="14" font-weight="500">Aa</text>
+    <text x="145" y="260" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="500">Display</text>
+    
+    <!-- AWS -->
+    <rect x="100" y="290" width="310" height="50" rx="8" ry="8" fill="transparent"/>
+    <path d="M 115,310 Q 125,300 135,310 Q 125,320 115,310" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <text x="145" y="320" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">AWS</text>
+    
+    <!-- Alerts -->
+    <rect x="100" y="350" width="310" height="50" rx="8" ry="8" fill="transparent"/>
+    <polygon points="115,370 135,370 125,385" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="125" cy="375" r="3" fill="#ffffff"/>
+    <text x="145" y="380" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Alerts</text>
+    
+    <!-- Notifications -->
+    <rect x="100" y="410" width="310" height="50" rx="8" ry="8" fill="transparent"/>
+    <path d="M 115,425 Q 125,420 135,425 L 135,435 Q 125,440 115,435 Z" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="135" cy="420" r="2" fill="#ffffff"/>
+    <text x="145" y="440" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Notifications</text>
+    
+    <!-- CloudWatch -->
+    <rect x="100" y="470" width="310" height="50" rx="8" ry="8" fill="transparent"/>
+    <path d="M 115,485 L 135,485 L 130,495 L 120,495 Z M 118,490 L 132,490" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <text x="145" y="500" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">CloudWatch</text>
+    
+    <!-- Debug -->
+    <rect x="100" y="530" width="310" height="50" rx="8" ry="8" fill="transparent"/>
+    <circle cx="125" cy="555" r="12" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="125" cy="555" r="4" fill="#ffffff"/>
+    <text x="145" y="560" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Debug</text>
+    
+    <!-- Footer -->
+    <text x="100" y="720" fill="#666" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="14">🌐 toml0006.github.io/aight</text>
+    
+    <!-- Separator line -->
+    <line x1="430" y1="110" x2="430" y2="740" stroke="#404040" stroke-width="1"/>
+    
+    <!-- Right content area -->
+    <rect x="430" y="110" width="690" height="630" fill="#2d2d2d"/>
+    
+    <!-- Content header -->
+    <text x="460" y="150" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="24" font-weight="600">Menu Bar Display Format</text>
+    
+    <!-- Display format options -->
+    
+    <!-- Full format (selected) -->
+    <g transform="translate(460, 180)">
+      <circle cx="15" cy="20" r="10" fill="#007AFF" stroke="#007AFF" stroke-width="2"/>
+      <circle cx="15" cy="20" r="4" fill="#ffffff"/>
+      <text x="35" y="18" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="20" font-weight="500">Full ($4,287.32)</text>
+      <text x="35" y="38" fill="#888" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="16">Preview: $4,287.32</text>
+    </g>
+    
+    <!-- Abbreviated format -->
+    <g transform="translate(460, 240)">
+      <circle cx="15" cy="20" r="10" fill="transparent" stroke="#666" stroke-width="2"/>
+      <text x="35" y="18" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="20" font-weight="400">Abbreviated ($4.3K)</text>
+      <text x="35" y="38" fill="#888" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="16">Preview: $4.3K</text>
+    </g>
+    
+    <!-- Icon Only format -->
+    <g transform="translate(460, 300)">
+      <circle cx="15" cy="20" r="10" fill="transparent" stroke="#666" stroke-width="2"/>
+      <text x="35" y="18" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="20" font-weight="400">Icon Only</text>
+      <text x="35" y="38" fill="#888" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="16">Preview: (icon only)</text>
+    </g>
+    
+    <!-- Separator line -->
+    <line x1="460" y1="370" x2="1080" y2="370" stroke="#404040" stroke-width="1"/>
+    
+    <!-- Format Options section -->
+    <text x="460" y="410" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="24" font-weight="600">Format Options</text>
+    
+    <!-- Show currency symbol checkbox -->
+    <g transform="translate(460, 440)">
+      <rect x="0" y="0" width="20" height="20" rx="4" ry="4" fill="#007AFF" stroke="#007AFF" stroke-width="2"/>
+      <path d="M 4,10 L 9,15 L 16,5" stroke="#ffffff" stroke-width="2" fill="none"/>
+      <text x="30" y="15" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Show currency symbol</text>
+    </g>
+    
+    <!-- Use thousands separator checkbox -->
+    <g transform="translate(460, 480)">
+      <rect x="0" y="0" width="20" height="20" rx="4" ry="4" fill="#007AFF" stroke="#007AFF" stroke-width="2"/>
+      <path d="M 4,10 L 9,15 L 16,5" stroke="#ffffff" stroke-width="2" fill="none"/>
+      <text x="30" y="15" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Use thousands separator</text>
+    </g>
+    
+    <!-- Show trend colors checkbox -->
+    <g transform="translate(460, 520)">
+      <rect x="0" y="0" width="20" height="20" rx="4" ry="4" fill="#007AFF" stroke="#007AFF" stroke-width="2"/>
+      <path d="M 4,10 L 9,15 L 16,5" stroke="#ffffff" stroke-width="2" fill="none"/>
+      <text x="30" y="15" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Show trend colors in menu bar</text>
+    </g>
+    
+    <!-- Decimal places section -->
+    <text x="460" y="580" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="500">Decimal places:</text>
+    
+    <!-- Decimal places buttons -->
+    <g transform="translate(620, 555)">
+      <!-- 0 -->
+      <rect x="0" y="0" width="40" height="35" rx="6" ry="6" fill="#4a4a4a" stroke="#5a5a5a" stroke-width="1"/>
+      <text x="20" y="22" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="16" font-weight="500">0</text>
+      
+      <!-- 1 -->
+      <rect x="50" y="0" width="40" height="35" rx="6" ry="6" fill="#4a4a4a" stroke="#5a5a5a" stroke-width="1"/>
+      <text x="70" y="22" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="16" font-weight="500">1</text>
+      
+      <!-- 2 (selected) -->
+      <rect x="100" y="0" width="40" height="35" rx="6" ry="6" fill="#666" stroke="#888" stroke-width="2"/>
+      <text x="120" y="22" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="16" font-weight="600">2</text>
+    </g>
+    
+    <!-- Scrollbar -->
+    <rect x="1100" y="150" width="8" height="550" rx="4" ry="4" fill="#404040"/>
+    <rect x="1102" y="150" width="4" height="100" rx="2" ry="2" fill="#666"/>
+  </g>
+</svg>

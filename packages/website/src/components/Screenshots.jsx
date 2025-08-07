@@ -5,7 +5,7 @@ const screenshots = [
   {
     title: "Main Interface",
     description: "Clean menu bar display showing your current AWS costs with trend indicators",
-    image: "/AWSCostMonitor/screenshots/main-interface.png",
+    image: "/AWSCostMonitor/screenshots/main-interface-updated.svg",
     width: 864,
     height: 1158,
     features: ["Real-time cost display", "Profile switching", "Trend indicators"]
@@ -13,7 +13,7 @@ const screenshots = [
   {
     title: "Settings - Refresh Rate",
     description: "Configure intelligent refresh rates based on your budget and spending patterns",
-    image: "/AWSCostMonitor/screenshots/settings-refresh-rate.png",
+    image: "/AWSCostMonitor/screenshots/settings-refresh-rate-updated.svg",
     width: 1724,
     height: 1180,
     features: ["Smart refresh rates", "API usage tracking", "Budget-based polling"]
@@ -21,7 +21,7 @@ const screenshots = [
   {
     title: "Settings - Display Format",
     description: "Customize how costs appear in your menu bar with various formatting options",
-    image: "/AWSCostMonitor/screenshots/settings-display-format.png",
+    image: "/AWSCostMonitor/screenshots/settings-display-format-updated.svg",
     width: 1724,
     height: 1180,
     features: ["Currency formatting", "Display modes", "Visual customization"]
