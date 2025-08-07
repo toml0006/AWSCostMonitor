@@ -100,7 +100,7 @@
 .hero {
   padding-top: 8rem;
   padding-bottom: 4rem;
-  background: var(--color-light);
+  background: transparent;
   position: relative;
   overflow: hidden;
   z-index: 1;
@@ -268,9 +268,10 @@
 /* Features Component */
 .features {
   padding: 4rem 0;
-  background: var(--color-white);
+  background: rgba(255, 255, 255, 0.92);
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(10px);
 }
 
 .section-header {
@@ -455,9 +456,10 @@
 /* Screenshots Component */
 .screenshots {
   padding: 4rem 0;
-  background: var(--color-light);
+  background: rgba(255, 248, 231, 0.92);
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(10px);
 }
 
 .screenshots-grid {
@@ -516,9 +518,10 @@
 /* How It Works Component */
 .how-it-works {
   padding: 4rem 0;
-  background: var(--color-white);
+  background: rgba(255, 255, 255, 0.92);
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(10px);
 }
 
 .steps-grid {
@@ -587,9 +590,10 @@
 /* Installation Component */
 .installation {
   padding: 4rem 0;
-  background: var(--color-light);
+  background: rgba(255, 248, 231, 0.92);
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(10px);
 }
 
 .installation-methods {
@@ -705,9 +709,10 @@
 /* Pricing Component */
 .pricing {
   padding: 4rem 0;
-  background: var(--color-white);
+  background: rgba(255, 255, 255, 0.92);
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(10px);
 }
 
 .pricing-card {
@@ -855,12 +860,13 @@
 
 /* Footer Component */
 .footer {
-  background: var(--color-dark);
+  background: rgba(34, 34, 34, 0.95);
   color: var(--color-white);
   padding: 3rem 0 1.5rem;
   border-top: 3px solid var(--color-black);
   position: relative;
   z-index: 1;
+  backdrop-filter: blur(10px);
 }
 
 .footer-content {
