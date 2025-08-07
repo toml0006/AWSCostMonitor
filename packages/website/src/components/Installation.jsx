@@ -1,7 +1,44 @@
 import { motion } from 'framer-motion'
 import { Download, ExternalLink, Shield, DollarSign, Clock, Lock } from 'lucide-react'
-import { EXTERNAL_LINKS, AWS_PERMISSIONS, AWS_API_COSTS, ANIMATION_VARIANTS } from '../utils/constants'
-import { formatCurrency } from '../utils/helpers'
+
+// Inline constants to fix build
+const EXTERNAL_LINKS = {
+  awsCLIInstall: 'https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html',
+  awsCLIConfig: 'https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html',
+  costExplorerPermissions: 'https://docs.aws.amazon.com/cost-management/latest/userguide/ce-iam-policy.html'
+}
+
+const AWS_PERMISSIONS = [
+  'ce:GetCostAndUsage',
+  'ce:GetCostForecast',
+  'ce:DescribeCostCategoryDefinition'
+]
+
+const AWS_API_COSTS = {
+  costExplorerPerRequest: 0.01,
+  maxRequestsPerMinute: 1,
+  maxMonthlyCost: 432,
+  maxMonthlyRequests: 43200,
+  typicalMonthlyCost: { min: 5, max: 15 }
+}
+
+const ANIMATION_VARIANTS = {
+  fadeInUp: {
+    initial: { opacity: 0, y: 20 },
+    whileInView: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 },
+    viewport: { once: true }
+  }
+}
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: amount < 1 ? 2 : 0,
+    maximumFractionDigits: 2
+  }).format(amount)
+}
 
 const Installation = () => {
   return (
