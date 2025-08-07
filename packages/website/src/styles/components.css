@@ -103,6 +103,7 @@
   background: var(--color-light);
   position: relative;
   overflow: hidden;
+  z-index: 1;
 }
 
 .hero-content {
@@ -268,6 +269,8 @@
 .features {
   padding: 4rem 0;
   background: var(--color-white);
+  position: relative;
+  z-index: 1;
 }
 
 .section-header {
@@ -453,6 +456,8 @@
 .screenshots {
   padding: 4rem 0;
   background: var(--color-light);
+  position: relative;
+  z-index: 1;
 }
 
 .screenshots-grid {
@@ -512,6 +517,8 @@
 .how-it-works {
   padding: 4rem 0;
   background: var(--color-white);
+  position: relative;
+  z-index: 1;
 }
 
 .steps-grid {
@@ -581,6 +588,8 @@
 .installation {
   padding: 4rem 0;
   background: var(--color-light);
+  position: relative;
+  z-index: 1;
 }
 
 .installation-methods {
@@ -697,6 +706,8 @@
 .pricing {
   padding: 4rem 0;
   background: var(--color-white);
+  position: relative;
+  z-index: 1;
 }
 
 .pricing-card {
@@ -848,6 +859,8 @@
   color: var(--color-white);
   padding: 3rem 0 1.5rem;
   border-top: 3px solid var(--color-black);
+  position: relative;
+  z-index: 1;
 }
 
 .footer-content {
@@ -928,14 +941,14 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1;
+  z-index: -1;
   overflow: hidden;
 }
 
 .geometric-shape {
   position: absolute;
   pointer-events: none;
-  z-index: 1;
+  z-index: -1;
 }
 
 .shape-circle {

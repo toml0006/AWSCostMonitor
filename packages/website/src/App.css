@@ -2,6 +2,7 @@
   position: relative;
   overflow-x: hidden;
   background-color: var(--color-light);
+  min-height: 100vh;
 }
 
 /* Section spacing */

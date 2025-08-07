@@ -21,7 +21,7 @@
   background-position: 0 0, 40px 60px, 20px 20px, 10px 30px;
   opacity: 0.15;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 .pattern-confetti {
@@ -60,7 +60,7 @@
     repeating-linear-gradient(-45deg, transparent, transparent 35px, var(--color-secondary) 35px, var(--color-secondary) 37px);
   opacity: 0.05;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 /* Memphis Shapes */
@@ -68,6 +68,7 @@
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  z-index: -1;
 }
 
 .memphis-triangle {
@@ -75,6 +76,7 @@
   width: 0;
   height: 0;
   pointer-events: none;
+  z-index: -1;
 }
 
 .memphis-triangle-up {
@@ -94,6 +96,7 @@
   pointer-events: none;
   width: 100px;
   height: 100px;
+  z-index: -1;
 }
 
 .memphis-squiggle::before {
@@ -111,6 +114,7 @@
 .memphis-cross {
   position: absolute;
   pointer-events: none;
+  z-index: -1;
 }
 
 .memphis-cross::before,
@@ -143,6 +147,7 @@
     radial-gradient(circle, var(--color-primary) 3px, transparent 3px);
   background-size: 20px 20px;
   opacity: 0.3;
+  z-index: -1;
 }
 
 /* Animated Squiggles */
@@ -230,7 +235,7 @@
   right: 0;
   bottom: 0;
   overflow: hidden;
-  z-index: 0;
+  z-index: -1;
 }
 
 .memphis-hero-bg::before {
@@ -393,4 +398,5 @@
   background-size: 50px 50px;
   opacity: 0.03;
   pointer-events: none;
+  z-index: -1;
 }
