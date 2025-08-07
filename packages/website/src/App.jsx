@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import './App.css'
 import './styles/components.css'
+import './styles/memphis.css'
 
 // Components
 import Hero from './components/Hero'
@@ -31,12 +32,14 @@ import Installation from './components/Installation'
 import Footer from './components/Footer'
 import Navigation from './components/Navigation'
 import GeometricShapes from './components/GeometricShapes'
+import MemphisPatterns from './components/MemphisPatterns'
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
     <div className="app">
+      <MemphisPatterns />
       <GeometricShapes />
       <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
       <Hero />

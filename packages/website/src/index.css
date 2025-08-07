@@ -1,15 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Memphis-inspired color palette */
-  --color-primary: #FF6B6B;
-  --color-secondary: #4ECDC4;
-  --color-tertiary: #FFE66D;
-  --color-accent: #95E1D3;
-  --color-dark: #2D3436;
-  --color-light: #FFEFD5;
+  /* Memphis-inspired color palette - BOLD & VIBRANT */
+  --color-primary: #FF006E;     /* Hot Pink */
+  --color-secondary: #00F5FF;   /* Cyan */
+  --color-tertiary: #FFD600;    /* Yellow */
+  --color-accent: #8B39FF;      /* Purple */
+  --color-dark: #1A1A1A;
+  --color-light: #FFF8E7;
   --color-white: #FFFFFF;
   --color-black: #000000;
+  
+  /* Additional Memphis colors */
+  --color-orange: #FF8C00;
+  --color-green: #00FF88;
   
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

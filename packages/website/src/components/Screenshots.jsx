@@ -28,7 +28,7 @@ const Screenshots = () => {
   const [activeIndex, setActiveIndex] = useState(0)
   
   return (
-    <section id="screenshots" className="screenshots">
+    <section id="screenshots" className="screenshots pattern-squiggle">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

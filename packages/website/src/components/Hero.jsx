@@ -3,7 +3,9 @@ import { DollarSign, Download, Github, ArrowRight } from 'lucide-react'
 
 const Hero = () => {
   return (
-    <section className="hero">
+    <section className="hero memphis-decoration">
+      <div className="memphis-hero-bg" />
+      <div className="memphis-grid-overlay" />
       <div className="container">
         <div className="hero-content">
           <motion.div
@@ -30,12 +32,12 @@ const Hero = () => {
             
             <div className="hero-cta">
               <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
-                 className="btn btn-primary">
+                 className="btn btn-primary btn-memphis">
                 <Download size={20} />
                 Download for macOS
               </a>
               <a href="https://github.com/toml0006/AWSCostMonitor" 
-                 className="btn btn-outline">
+                 className="btn btn-outline btn-memphis">
                 <Github size={20} />
                 View on GitHub
               </a>

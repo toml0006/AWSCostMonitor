@@ -59,7 +59,7 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="features">
+    <section id="features" className="features pattern-dots">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -80,7 +80,7 @@ const Features = () => {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className={`feature-card card card-brutal card-${feature.color}`}
+              className={`feature-card card card-brutal card-memphis card-${feature.color}`}
             >
               <div className="feature-icon">
                 <feature.icon size={32} />
