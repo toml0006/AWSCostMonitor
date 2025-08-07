@@ -2234,6 +2234,15 @@ class StatusBarController: NSObject {
         let decimalPlaces = UserDefaults.standard.object(forKey: "DecimalPlaces") as? Int ?? 2
         let useThousandsSeparator = UserDefaults.standard.object(forKey: "UseThousandsSeparator") as? Bool ?? true
         
+        // Set the cloud icon
+        if displayFormat == "iconOnly" {
+            // Use colorful cloud icon for icon-only mode
+            button.image = MenuBarCloudIcon.createImage(size: 18)
+        } else {
+            // Use template cloud icon when showing text
+            button.image = MenuBarCloudIcon.createTemplateImage(size: 16)
+        }
+        
         var titleString = ""
         var titleColor: NSColor? = nil
         
@@ -2275,7 +2284,7 @@ class StatusBarController: NSObject {
             }
             
         case "iconOnly":
-            titleString = "$"
+            titleString = "" // No text when showing icon only
         
         default:
             titleString = "$"
