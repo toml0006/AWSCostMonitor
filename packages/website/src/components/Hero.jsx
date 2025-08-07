@@ -73,7 +73,7 @@ const Hero = () => {
               </div>
               <div className="hero-screenshot-image">
                 <img 
-                  src="/screenshots/main-interface.png" 
+                  src="/AWSCostMonitor/screenshots/main-interface.png" 
                   alt="AWSCostMonitor main interface showing menu bar cost display"
                   className="hero-screenshot"
                   width="864"

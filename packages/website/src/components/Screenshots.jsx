@@ -5,7 +5,7 @@ const screenshots = [
   {
     title: "Main Interface",
     description: "Clean menu bar display showing your current AWS costs with trend indicators",
-    image: "/screenshots/main-interface.png",
+    image: "/AWSCostMonitor/screenshots/main-interface.png",
     width: 864,
     height: 1158,
     features: ["Real-time cost display", "Profile switching", "Trend indicators"]
@@ -13,7 +13,7 @@ const screenshots = [
   {
     title: "Settings - Refresh Rate",
     description: "Configure intelligent refresh rates based on your budget and spending patterns",
-    image: "/screenshots/settings-refresh-rate.png",
+    image: "/AWSCostMonitor/screenshots/settings-refresh-rate.png",
     width: 1724,
     height: 1180,
     features: ["Smart refresh rates", "API usage tracking", "Budget-based polling"]
@@ -21,7 +21,7 @@ const screenshots = [
   {
     title: "Settings - Display Format",
     description: "Customize how costs appear in your menu bar with various formatting options",
-    image: "/screenshots/settings-display-format.png",
+    image: "/AWSCostMonitor/screenshots/settings-display-format.png",
     width: 1724,
     height: 1180,
     features: ["Currency formatting", "Display modes", "Visual customization"]
@@ -29,7 +29,7 @@ const screenshots = [
   {
     title: "Help & Getting Started",
     description: "Built-in help system with setup guides and troubleshooting information",
-    image: "/screenshots/help-getting-started.png",
+    image: "/AWSCostMonitor/screenshots/help-getting-started.png",
     width: 1624,
     height: 1280,
     features: ["Setup guide", "Keyboard shortcuts", "Troubleshooting tips"]
@@ -37,7 +37,7 @@ const screenshots = [
   {
     title: "Settings - Anomaly Detection",
     description: "Set up intelligent alerts for unusual spending patterns and budget overages",
-    image: "/screenshots/settings-anomaly-detection.png",
+    image: "/AWSCostMonitor/screenshots/settings-anomaly-detection.png",
     width: 1724,
     height: 1180,
     features: ["Smart alerts", "Budget monitoring", "Spending anomalies"]
