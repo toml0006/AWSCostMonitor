@@ -5,41 +5,41 @@ const screenshots = [
   {
     title: "Main Interface",
     description: "Clean menu bar display showing your current AWS costs with trend indicators",
-    image: "/AWSCostMonitor/screenshots/main-interface-updated.svg",
-    width: 864,
-    height: 1158,
+    image: "/AWSCostMonitor/screenshots/main-interface.png",
+    width: 2000,
+    height: 1125,
     features: ["Real-time cost display", "Profile switching", "Trend indicators"]
   },
   {
     title: "Settings - Refresh Rate",
     description: "Configure intelligent refresh rates based on your budget and spending patterns",
-    image: "/AWSCostMonitor/screenshots/settings-refresh-rate-updated.svg",
-    width: 1724,
-    height: 1180,
+    image: "/AWSCostMonitor/screenshots/settings-refresh-rate.png",
+    width: 2000,
+    height: 1125,
     features: ["Smart refresh rates", "API usage tracking", "Budget-based polling"]
   },
   {
     title: "Settings - Display Format",
     description: "Customize how costs appear in your menu bar with various formatting options",
-    image: "/AWSCostMonitor/screenshots/settings-display-format-updated.svg",
-    width: 1724,
-    height: 1180,
+    image: "/AWSCostMonitor/screenshots/settings-display-format.png",
+    width: 2000,
+    height: 1125,
     features: ["Currency formatting", "Display modes", "Visual customization"]
   },
   {
     title: "Help & Getting Started",
     description: "Built-in help system with setup guides and troubleshooting information",
     image: "/AWSCostMonitor/screenshots/help-getting-started.png",
-    width: 1624,
-    height: 1280,
+    width: 2000,
+    height: 1125,
     features: ["Setup guide", "Keyboard shortcuts", "Troubleshooting tips"]
   },
   {
     title: "Settings - Anomaly Detection",
     description: "Set up intelligent alerts for unusual spending patterns and budget overages",
     image: "/AWSCostMonitor/screenshots/settings-anomaly-detection.png",
-    width: 1724,
-    height: 1180,
+    width: 2000,
+    height: 1125,
     features: ["Smart alerts", "Budget monitoring", "Spending anomalies"]
   }
 ]
