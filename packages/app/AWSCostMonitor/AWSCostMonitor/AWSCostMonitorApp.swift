@@ -140,7 +140,7 @@ enum AWSCostFetchError: Error {
 }
 
 // Helper function to create appropriate credentials provider for sandbox/non-sandbox
-func createAWSCredentialsProvider(for profileName: String) throws -> AWSCredentialIdentityResolver {
+func createAWSCredentialsProvider(for profileName: String) throws -> any AWSCredentialIdentityResolver {
     if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
         // Sandboxed environment - use manual credential parsing
         let accessManager = AWSConfigAccessManager.shared
