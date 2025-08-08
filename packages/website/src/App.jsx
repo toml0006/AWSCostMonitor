@@ -23,6 +23,10 @@ import './App.css'
 import './styles/components.css'
 import './styles/memphis.css'
 import './styles/unsigned-guide.css'
+import './styles/themes.css'
+
+// Context
+import { ThemeProvider } from './contexts/ThemeContext'
 
 // Components
 import Hero from './components/Hero'
@@ -37,6 +41,7 @@ import GeometricShapes from './components/GeometricShapes'
 import MemphisPatterns from './components/MemphisPatterns'
 import UnsignedAppGuide from './components/UnsignedAppGuide'
 import MoneyRain from './components/MoneyRain'
+import ThemeToggle from './components/ThemeToggle'
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -44,8 +49,9 @@ function HomePage() {
   return (
     <div className="app">
       <MoneyRain />
+      <ThemeToggle />
       <MemphisPatterns />
-      <div className="app-background" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--color-light)', zIndex: -2 }} />
+      <div className="app-background" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--color-bg)', zIndex: -2 }} />
       <GeometricShapes />
       <div className="app-content" style={{ position: 'relative', zIndex: 1 }}>
         <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
@@ -63,12 +69,14 @@ function HomePage() {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/unsigned-app-guide" element={<UnsignedAppGuide />} />
-      </Routes>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/unsigned-app-guide" element={<UnsignedAppGuide />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   )
 }
 

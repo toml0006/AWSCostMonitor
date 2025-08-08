@@ -4,10 +4,10 @@
   top: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 248, 231, 0.98);
+  background: var(--color-nav-bg);
   backdrop-filter: blur(10px);
   z-index: 1000;
-  border-bottom: 4px solid var(--color-black);
+  border-bottom: 4px solid var(--color-border);
   box-shadow: 0 4px 0 var(--color-primary);
 }
 
@@ -34,7 +34,7 @@
   font-family: var(--font-primary);
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--color-dark);
+  color: var(--color-nav-text);
 }
 
 .nav-menu {

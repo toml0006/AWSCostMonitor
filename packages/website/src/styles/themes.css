@@ -1,0 +1,183 @@
+/* Light Theme (Default) */
+:root,
+.light {
+  /* Base colors */
+  --color-bg: #FFF8E7;
+  --color-text: #1A1A1A;
+  --color-text-secondary: #4A4A4A;
+  --color-text-muted: #6B6B6B;
+  
+  /* Surface colors */
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F5F5F5;
+  --color-surface-tertiary: #EBEBEB;
+  --color-border: rgba(0, 0, 0, 0.1);
+  
+  /* Brand colors stay vibrant */
+  --color-brand-primary: #FF006E;
+  --color-brand-secondary: #00F5FF;
+  --color-brand-tertiary: #FFD600;
+  --color-brand-accent: #8B39FF;
+  
+  /* Component specific */
+  --color-card-bg: rgba(255, 255, 255, 0.9);
+  --color-card-border: rgba(0, 0, 0, 0.08);
+  --color-code-bg: #F4F4F4;
+  --color-code-text: #D73A49;
+  
+  /* Navigation */
+  --color-nav-bg: rgba(255, 248, 231, 0.95);
+  --color-nav-text: #1A1A1A;
+  --color-nav-hover: #FF006E;
+  
+  /* Footer */
+  --color-footer-bg: #1A1A1A;
+  --color-footer-text: #FFFFFF;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.1);
+  
+  /* Theme toggle */
+  --theme-toggle-bg: rgba(255, 255, 255, 0.9);
+  --theme-toggle-border: rgba(0, 0, 0, 0.2);
+  --theme-toggle-color: #1A1A1A;
+}
+
+/* Ultra Dark Theme */
+.ultra-dark {
+  /* Base colors */
+  --color-bg: #0A0A0A;
+  --color-text: #F0F0F0;
+  --color-text-secondary: #B0B0B0;
+  --color-text-muted: #808080;
+  
+  /* Surface colors */
+  --color-surface: #141414;
+  --color-surface-secondary: #1A1A1A;
+  --color-surface-tertiary: #242424;
+  --color-border: rgba(255, 255, 255, 0.1);
+  
+  /* Brand colors - slightly adjusted for dark mode */
+  --color-brand-primary: #FF1F7D;
+  --color-brand-secondary: #00E5FF;
+  --color-brand-tertiary: #FFE033;
+  --color-brand-accent: #9945FF;
+  
+  /* Component specific */
+  --color-card-bg: rgba(20, 20, 20, 0.9);
+  --color-card-border: rgba(255, 255, 255, 0.08);
+  --color-code-bg: #1A1A1A;
+  --color-code-text: #FF6B9D;
+  
+  /* Navigation */
+  --color-nav-bg: rgba(10, 10, 10, 0.95);
+  --color-nav-text: #F0F0F0;
+  --color-nav-hover: #FF1F7D;
+  
+  /* Footer */
+  --color-footer-bg: #050505;
+  --color-footer-text: #F0F0F0;
+  
+  /* Shadows - more prominent in dark mode */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
+  
+  /* Theme toggle */
+  --theme-toggle-bg: rgba(20, 20, 20, 0.9);
+  --theme-toggle-border: rgba(255, 255, 255, 0.2);
+  --theme-toggle-color: #F0F0F0;
+}
+
+/* Theme transition animations */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Update existing color variables to use theme-aware versions */
+.light,
+:root {
+  --color-primary: var(--color-brand-primary);
+  --color-secondary: var(--color-brand-secondary);
+  --color-tertiary: var(--color-brand-tertiary);
+  --color-accent: var(--color-brand-accent);
+  --color-dark: var(--color-text);
+  --color-light: var(--color-bg);
+  --color-white: var(--color-surface);
+  --color-black: var(--color-text);
+}
+
+.ultra-dark {
+  --color-primary: var(--color-brand-primary);
+  --color-secondary: var(--color-brand-secondary);
+  --color-tertiary: var(--color-brand-tertiary);
+  --color-accent: var(--color-brand-accent);
+  --color-dark: var(--color-bg);
+  --color-light: var(--color-text);
+  --color-white: var(--color-surface);
+  --color-black: var(--color-bg);
+}
+
+/* Special handling for Memphis patterns and shapes */
+.ultra-dark .geometric-shape {
+  opacity: 0.6;
+}
+
+.ultra-dark .memphis-pattern {
+  opacity: 0.4;
+}
+
+/* Code blocks */
+.ultra-dark pre,
+.ultra-dark code {
+  background: var(--color-code-bg);
+  color: var(--color-code-text);
+}
+
+/* Buttons in dark mode */
+.ultra-dark .btn-primary {
+  background: var(--color-brand-primary);
+  color: #FFFFFF;
+  border-color: var(--color-brand-primary);
+}
+
+.ultra-dark .btn-primary:hover {
+  background: #FF3D8A;
+  border-color: #FF3D8A;
+}
+
+.ultra-dark .btn-secondary {
+  background: transparent;
+  color: var(--color-brand-secondary);
+  border-color: var(--color-brand-secondary);
+}
+
+.ultra-dark .btn-secondary:hover {
+  background: var(--color-brand-secondary);
+  color: var(--color-bg);
+}
+
+/* Cards in dark mode */
+.ultra-dark .card,
+.ultra-dark .feature-card,
+.ultra-dark .pricing-card {
+  background: var(--color-card-bg);
+  border-color: var(--color-card-border);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .theme-toggle {
+    bottom: 1rem !important;
+    right: 1rem !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  .theme-toggle span {
+    display: none;
+  }
+}

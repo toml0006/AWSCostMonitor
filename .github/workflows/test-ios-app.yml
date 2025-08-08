@@ -14,6 +14,7 @@ jobs:
   test:
     name: Build and Test
     runs-on: macos-latest
+    timeout-minutes: 30
     
     steps:
     - name: Checkout
@@ -26,8 +27,19 @@ jobs:
       
     - name: Show Xcode Version
       run: xcodebuild -version
+    
+    - name: Cache Swift Package Manager
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/Library/Developer/Xcode/DerivedData
+          packages/app/AWSCostMonitor/.build
+        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+        restore-keys: |
+          ${{ runner.os }}-spm-
       
     - name: Build App
+      timeout-minutes: 20
       run: |
         cd packages/app/AWSCostMonitor
         xcodebuild -project AWSCostMonitor.xcodeproj \
@@ -41,6 +53,7 @@ jobs:
                    clean build
     
     - name: Run Tests
+      timeout-minutes: 10
       run: |
         cd packages/app/AWSCostMonitor
         xcodebuild -project AWSCostMonitor.xcodeproj \

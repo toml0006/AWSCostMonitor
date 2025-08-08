@@ -1,8 +1,9 @@
 .app {
   position: relative;
   overflow-x: hidden;
-  background-color: var(--color-light);
+  background-color: var(--color-bg);
   min-height: 100vh;
+  color: var(--color-text);
 }
 
 /* Section spacing */
