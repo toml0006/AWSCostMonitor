@@ -20,8 +20,8 @@ export const ThemeProvider = ({ children }) => {
   // Determine the actual theme to apply
   const getActualTheme = () => {
     if (theme === 'system') {
-      // Check system preference
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'ultra-dark' : 'light'
+      // Check system preference - use twilight for system dark mode
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'twilight' : 'light'
     }
     return theme
   }
@@ -35,11 +35,13 @@ export const ThemeProvider = ({ children }) => {
     setActualTheme(actual)
     
     // Remove all theme classes first
-    document.documentElement.classList.remove('light', 'ultra-dark')
+    document.documentElement.classList.remove('light', 'twilight', 'ultra-dark')
     
     // Add the appropriate theme class
     if (actual === 'ultra-dark') {
       document.documentElement.classList.add('ultra-dark')
+    } else if (actual === 'twilight') {
+      document.documentElement.classList.add('twilight')
     } else {
       document.documentElement.classList.add('light')
     }
@@ -51,9 +53,9 @@ export const ThemeProvider = ({ children }) => {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
       
       const handleChange = (e) => {
-        const actual = e.matches ? 'ultra-dark' : 'light'
+        const actual = e.matches ? 'twilight' : 'light'
         setActualTheme(actual)
-        document.documentElement.classList.remove('light', 'ultra-dark')
+        document.documentElement.classList.remove('light', 'twilight', 'ultra-dark')
         document.documentElement.classList.add(actual)
       }
       
@@ -70,6 +72,21 @@ export const ThemeProvider = ({ children }) => {
       return 'light'
     })
   }
+
+  // Add keyboard shortcuts for L and D keys
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Don't trigger if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+      
+      if (e.key.toLowerCase() === 'l' || e.key.toLowerCase() === 'd') {
+        cycleTheme()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [])
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, actualTheme, cycleTheme }}>

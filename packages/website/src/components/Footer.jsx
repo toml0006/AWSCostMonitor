@@ -63,7 +63,7 @@ const Footer = () => {
           <p>© 2025 MiddleOut. AWSCostMonitor is open source under MIT License.</p>
           <p>Not affiliated with Amazon Web Services.</p>
           <p className="easter-egg-hint" style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>
-            💡 Psst... try pressing the "$" key (or long-press on mobile) for a surprise!
+            💡 Psst... try pressing "$" for a surprise, or "L"/"D" to toggle dark mode!
           </p>
         </div>
       </div>

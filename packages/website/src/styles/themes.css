@@ -46,51 +46,98 @@
   --theme-toggle-color: #1A1A1A;
 }
 
-/* Ultra Dark Theme */
-.ultra-dark {
-  /* Base colors */
-  --color-bg: #0A0A0A;
-  --color-text: #F0F0F0;
-  --color-text-secondary: #B0B0B0;
-  --color-text-muted: #808080;
+/* Twilight Theme (System Dark Mode) */
+.twilight {
+  /* Base colors - softer dark */
+  --color-bg: #1e293b;
+  --color-text: #e2e8f0;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
   
   /* Surface colors */
-  --color-surface: #141414;
-  --color-surface-secondary: #1A1A1A;
-  --color-surface-tertiary: #242424;
-  --color-border: rgba(255, 255, 255, 0.1);
+  --color-surface: #2d3748;
+  --color-surface-secondary: #334155;
+  --color-surface-tertiary: #475569;
+  --color-border: rgba(148, 163, 184, 0.2);
   
-  /* Brand colors - slightly adjusted for dark mode */
-  --color-brand-primary: #FF1F7D;
-  --color-brand-secondary: #00E5FF;
-  --color-brand-tertiary: #FFE033;
-  --color-brand-accent: #9945FF;
+  /* Brand colors - softer for twilight */
+  --color-brand-primary: #f472b6;
+  --color-brand-secondary: #67e8f9;
+  --color-brand-tertiary: #fde047;
+  --color-brand-accent: #a78bfa;
   
   /* Component specific */
-  --color-card-bg: rgba(20, 20, 20, 0.9);
-  --color-card-border: rgba(255, 255, 255, 0.08);
-  --color-code-bg: #1A1A1A;
-  --color-code-text: #FF6B9D;
+  --color-card-bg: rgba(45, 55, 72, 0.7);
+  --color-card-border: rgba(148, 163, 184, 0.15);
+  --color-code-bg: #2d3748;
+  --color-code-text: #f9a8d4;
   
   /* Navigation */
-  --color-nav-bg: rgba(10, 10, 10, 0.95);
-  --color-nav-text: #F0F0F0;
-  --color-nav-hover: #FF1F7D;
+  --color-nav-bg: rgba(30, 41, 59, 0.95);
+  --color-nav-text: #e2e8f0;
+  --color-nav-hover: #f472b6;
   
   /* Footer */
-  --color-footer-bg: #050505;
-  --color-footer-text: #F0F0F0;
+  --color-footer-bg: #0f172a;
+  --color-footer-text: #e2e8f0;
   
-  /* Shadows - more prominent in dark mode */
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
-  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
-  --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
+  /* Shadows - subtle */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.25);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.3);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.35);
   
   /* Theme toggle */
-  --theme-toggle-bg: rgba(20, 20, 20, 0.9);
-  --theme-toggle-border: rgba(255, 255, 255, 0.2);
-  --theme-toggle-color: #F0F0F0;
+  --theme-toggle-bg: rgba(45, 55, 72, 0.9);
+  --theme-toggle-border: rgba(148, 163, 184, 0.3);
+  --theme-toggle-color: #e2e8f0;
+}
+
+/* Ultra Dark Theme - True Black */
+.ultra-dark {
+  /* Base colors */
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-text-secondary: #e0e0e0;
+  --color-text-muted: #a0a0a0;
+  
+  /* Surface colors - darker */
+  --color-surface: #0a0a0a;
+  --color-surface-secondary: #0f0f0f;
+  --color-surface-tertiary: #1a1a1a;
+  --color-border: rgba(255, 255, 255, 0.15);
+  
+  /* Brand colors - vibrant for contrast */
+  --color-brand-primary: #ff0066;
+  --color-brand-secondary: #00ffff;
+  --color-brand-tertiary: #ffff00;
+  --color-brand-accent: #9933ff;
+  
+  /* Component specific */
+  --color-card-bg: rgba(10, 10, 10, 0.8);
+  --color-card-border: rgba(255, 255, 255, 0.1);
+  --color-code-bg: #0a0a0a;
+  --color-code-text: #ff66b3;
+  
+  /* Navigation */
+  --color-nav-bg: rgba(0, 0, 0, 0.98);
+  --color-nav-text: #ffffff;
+  --color-nav-hover: #ff0066;
+  
+  /* Footer */
+  --color-footer-bg: #000000;
+  --color-footer-text: #ffffff;
+  
+  /* Shadows - more prominent in ultra dark */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.6);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.7);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.8);
+  
+  /* Theme toggle */
+  --theme-toggle-bg: rgba(10, 10, 10, 0.9);
+  --theme-toggle-border: rgba(255, 255, 255, 0.3);
+  --theme-toggle-color: #ffffff;
 }
 
 /* Theme transition animations */
@@ -105,10 +152,21 @@
   --color-secondary: var(--color-brand-secondary);
   --color-tertiary: var(--color-brand-tertiary);
   --color-accent: var(--color-brand-accent);
+  --color-dark: #1A1A1A;
+  --color-light: #FFF8E7;
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+}
+
+.twilight {
+  --color-primary: var(--color-brand-primary);
+  --color-secondary: var(--color-brand-secondary);
+  --color-tertiary: var(--color-brand-tertiary);
+  --color-accent: var(--color-brand-accent);
   --color-dark: var(--color-text);
   --color-light: var(--color-bg);
   --color-white: var(--color-surface);
-  --color-black: var(--color-text);
+  --color-black: #0f172a;
 }
 
 .ultra-dark {
@@ -116,57 +174,99 @@
   --color-secondary: var(--color-brand-secondary);
   --color-tertiary: var(--color-brand-tertiary);
   --color-accent: var(--color-brand-accent);
-  --color-dark: var(--color-bg);
-  --color-light: var(--color-text);
+  --color-dark: var(--color-text);
+  --color-light: var(--color-bg);
   --color-white: var(--color-surface);
-  --color-black: var(--color-bg);
+  --color-black: #000000;
 }
 
 /* Special handling for Memphis patterns and shapes */
+.twilight .geometric-shape,
 .ultra-dark .geometric-shape {
-  opacity: 0.6;
-}
-
-.ultra-dark .memphis-pattern {
   opacity: 0.4;
 }
 
-/* Code blocks */
-.ultra-dark pre,
-.ultra-dark code {
-  background: var(--color-code-bg);
-  color: var(--color-code-text);
+.twilight .memphis-pattern,
+.ultra-dark .memphis-pattern {
+  opacity: 0.3;
 }
 
-/* Buttons in dark mode */
+/* Code blocks */
+.twilight pre,
+.twilight code,
+.ultra-dark pre,
+.ultra-dark code {
+  background: var(--color-code-bg) !important;
+  color: var(--color-code-text) !important;
+}
+
+/* Buttons in dark modes */
+.twilight .btn-primary,
 .ultra-dark .btn-primary {
   background: var(--color-brand-primary);
   color: #FFFFFF;
   border-color: var(--color-brand-primary);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
 }
 
+.twilight .btn-primary:hover,
 .ultra-dark .btn-primary:hover {
-  background: #FF3D8A;
-  border-color: #FF3D8A;
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 rgba(0,0,0,0.7);
 }
 
+.twilight .btn-secondary,
 .ultra-dark .btn-secondary {
   background: transparent;
   color: var(--color-brand-secondary);
-  border-color: var(--color-brand-secondary);
+  border: 2px solid var(--color-brand-secondary);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
 }
 
+.twilight .btn-secondary:hover,
 .ultra-dark .btn-secondary:hover {
   background: var(--color-brand-secondary);
   color: var(--color-bg);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 rgba(0,0,0,0.7);
 }
 
-/* Cards in dark mode */
+/* Cards and sections in dark modes */
+.twilight .card,
+.twilight .feature-card,
+.twilight .pricing-card,
+.twilight section,
 .ultra-dark .card,
 .ultra-dark .feature-card,
-.ultra-dark .pricing-card {
-  background: var(--color-card-bg);
-  border-color: var(--color-card-border);
+.ultra-dark .pricing-card,
+.ultra-dark section {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+/* Hero section special handling */
+.twilight .hero,
+.ultra-dark .hero {
+  background: var(--color-bg);
+}
+
+/* Footer in dark modes */
+.twilight .footer,
+.ultra-dark .footer {
+  background: var(--color-footer-bg);
+  color: var(--color-footer-text);
+}
+
+/* Navigation text colors */
+.twilight .nav-menu a,
+.ultra-dark .nav-menu a {
+  color: var(--color-nav-text) !important;
+}
+
+.twilight .nav-menu a:hover,
+.ultra-dark .nav-menu a:hover {
+  color: var(--color-nav-hover) !important;
 }
 
 /* Mobile responsive */
