@@ -26,6 +26,14 @@ jobs:
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
+    - name: Import Code Signing Certificates
+      if: github.repository_owner == 'toml0006'
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
+        p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
+      continue-on-error: true
+    
     - name: Build and Archive App
       run: |
         cd packages/app/AWSCostMonitor
@@ -33,16 +41,35 @@ jobs:
         # Clean build folder
         xcodebuild clean -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor
         
-        # Build and archive
-        xcodebuild -project AWSCostMonitor.xcodeproj \
-                   -scheme AWSCostMonitor \
-                   -destination 'platform=macOS' \
-                   -configuration Release \
-                   -archivePath AWSCostMonitor.xcarchive \
-                   -allowProvisioningUpdates \
-                   CODE_SIGN_IDENTITY="" \
-                   CODE_SIGNING_REQUIRED=NO \
-                   archive
+        # Check if we have signing certificates
+        if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
+          echo "Found Developer ID, building with code signing..."
+          IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+          
+          # Build and archive with signing
+          xcodebuild -project AWSCostMonitor.xcodeproj \
+                     -scheme AWSCostMonitor \
+                     -destination 'platform=macOS' \
+                     -configuration Release \
+                     -archivePath AWSCostMonitor.xcarchive \
+                     -allowProvisioningUpdates \
+                     CODE_SIGN_STYLE=Manual \
+                     CODE_SIGN_IDENTITY="$IDENTITY" \
+                     DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}" \
+                     archive
+        else
+          echo "No Developer ID found, building without code signing..."
+          # Build and archive without signing
+          xcodebuild -project AWSCostMonitor.xcodeproj \
+                     -scheme AWSCostMonitor \
+                     -destination 'platform=macOS' \
+                     -configuration Release \
+                     -archivePath AWSCostMonitor.xcarchive \
+                     -allowProvisioningUpdates \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     archive
+        fi
         
         # Create export options
         cat > ExportOptions.plist << EOF
@@ -63,6 +90,38 @@ jobs:
                    -archivePath AWSCostMonitor.xcarchive \
                    -exportOptionsPlist ExportOptions.plist \
                    -exportPath ./export
+    
+    - name: Notarize App
+      if: github.repository_owner == 'toml0006' && success()
+      run: |
+        cd packages/app/AWSCostMonitor
+        
+        # Check if app is signed
+        if codesign --verify --deep --strict ./export/AWSCostMonitor.app 2>/dev/null; then
+          echo "App is signed, proceeding with notarization..."
+          
+          # Create zip for notarization
+          ditto -c -k --keepParent ./export/AWSCostMonitor.app AWSCostMonitor-notarization.zip
+          
+          # Submit for notarization (if credentials are available)
+          if [ -n "${{ secrets.APPLE_ID }}" ] && [ -n "${{ secrets.APP_PASSWORD }}" ] && [ -n "${{ secrets.TEAM_ID }}" ]; then
+            xcrun notarytool submit AWSCostMonitor-notarization.zip \
+              --apple-id "${{ secrets.APPLE_ID }}" \
+              --team-id "${{ secrets.TEAM_ID }}" \
+              --password "${{ secrets.APP_PASSWORD }}" \
+              --wait || echo "Notarization failed, continuing without it"
+              
+            # Staple the ticket if notarization succeeded
+            xcrun stapler staple ./export/AWSCostMonitor.app || echo "Stapling failed, continuing without it"
+          else
+            echo "Notarization credentials not found, skipping notarization"
+          fi
+          
+          rm -f AWSCostMonitor-notarization.zip
+        else
+          echo "App is not signed, skipping notarization"
+        fi
+      continue-on-error: true
     
     - name: Create DMG
       run: |
