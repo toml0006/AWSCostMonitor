@@ -65,7 +65,7 @@ struct SettingsView: View {
                         .padding(.horizontal, 8)
                     
                     Button(action: {
-                        if let url = URL(string: "https://toml0006.github.io/aight/") {
+                        if let url = URL(string: "https://toml0006.github.io/AWSCostMonitor/") {
                             NSWorkspace.shared.open(url)
                         }
                     }) {
@@ -73,7 +73,7 @@ struct SettingsView: View {
                             Image(systemName: "globe")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
-                            Text("toml0006.github.io/aight")
+                            Text("toml0006.github.io/AWSCostMonitor")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }
@@ -432,14 +432,9 @@ struct AWSSettingsTab: View {
     }
     
     private func loadBudgetSettingsForProfile(_ profile: AWSProfile) {
-        // TODO: Implement budget loading functionality
-        // let budget = awsManager.getBudget(for: profile.name)
-        // monthlyBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.monthlyBudget).doubleValue)
-        // alertThreshold = budget.alertThreshold
-        
-        // Set default values for now
-        monthlyBudget = "100"
-        alertThreshold = 0.8
+        let budget = awsManager.getBudget(for: profile.name)
+        monthlyBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.monthlyBudget).doubleValue)
+        alertThreshold = budget.alertThreshold
     }
     
     private func saveBudgetSettingsIfValid() {
@@ -448,10 +443,8 @@ struct AWSSettingsTab: View {
             return
         }
         
-        // TODO: Implement budget saving functionality
-        // let budget = Decimal(budgetValue)
-        // awsManager.updateMonthlyBudget(profileName: profile.name, monthlyBudget: budget)
-        // awsManager.updateAlertThreshold(profileName: profile.name, alertThreshold: alertThreshold)
+        let budget = Decimal(budgetValue)
+        awsManager.updateBudget(for: profile.name, monthlyBudget: budget, alertThreshold: alertThreshold)
     }
 }
 
@@ -624,14 +617,9 @@ struct RefreshRateTab: View {
     }
     
     private func loadSettingsForProfile(_ profile: AWSProfile) {
-        // TODO: Fix this when budget functions are available
-        // let budget = awsManager.getBudget(for: profile.name)
-        // apiBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.apiBudget).doubleValue)
-        // refreshInterval = Double(budget.refreshIntervalMinutes)
-        
-        // Default values for now
-        apiBudget = "5"
-        refreshInterval = 360.0
+        let budget = awsManager.getBudget(for: profile.name)
+        apiBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.apiBudget).doubleValue)
+        refreshInterval = Double(budget.refreshIntervalMinutes)
     }
     
     private func updateRefreshBasedOnBudget() {
@@ -671,8 +659,7 @@ struct RefreshRateTab: View {
               let apiBudgetValue = Decimal(string: apiBudget),
               apiBudgetValue > 0 else { return }
         
-        // TODO: Save API budget and refresh settings when functions are available
-        // awsManager.updateAPIBudgetAndRefresh(for: profile.name, apiBudget: apiBudgetValue, refreshIntervalMinutes: Int(refreshInterval))
+        awsManager.updateAPIBudgetAndRefresh(for: profile.name, apiBudget: apiBudgetValue, refreshIntervalMinutes: Int(refreshInterval))
     }
     
     private func saveSettings() {

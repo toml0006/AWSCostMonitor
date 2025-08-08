@@ -46,7 +46,7 @@ struct HelpView: View {
                         .padding(.horizontal, 8)
                     
                     Button(action: {
-                        if let url = URL(string: "https://toml0006.github.io/aight/") {
+                        if let url = URL(string: "https://toml0006.github.io/AWSCostMonitor/") {
                             NSWorkspace.shared.open(url)
                         }
                     }) {
@@ -54,7 +54,7 @@ struct HelpView: View {
                             Image(systemName: "globe")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
-                            Text("toml0006.github.io/aight")
+                            Text("toml0006.github.io/AWSCostMonitor")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }

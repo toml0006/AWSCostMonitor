@@ -81,7 +81,7 @@
     <text x="145" y="560" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="18" font-weight="400">Debug</text>
     
     <!-- Footer -->
-    <text x="100" y="720" fill="#666" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="14">🌐 toml0006.github.io/aight</text>
+    <text x="100" y="720" fill="#666" font-family="-apple-system, BlinkMacSystemFont, SF Pro Display" font-size="14">🌐 toml0006.github.io/AWSCostMonitor</text>
     
     <!-- Separator line -->
     <line x1="430" y1="110" x2="430" y2="740" stroke="#404040" stroke-width="1"/>
