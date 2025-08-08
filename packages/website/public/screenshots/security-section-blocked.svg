@@ -1,0 +1,53 @@
+<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="600" height="400" fill="white"/>
+  
+  <!-- Section header -->
+  <text x="30" y="40" font-family="-apple-system, system-ui" font-size="18" font-weight="600" fill="#1d1d1f">Security</text>
+  
+  <!-- Warning box -->
+  <rect x="30" y="60" width="540" height="120" rx="8" fill="#FFF3CD" stroke="#FFC107" stroke-width="2"/>
+  
+  <!-- Warning icon -->
+  <circle cx="60" cy="120" r="15" fill="#FFC107"/>
+  <text x="60" y="126" text-anchor="middle" fill="white" font-family="-apple-system, system-ui" font-size="18" font-weight="bold">!</text>
+  
+  <!-- Warning text -->
+  <text x="90" y="95" font-family="-apple-system, system-ui" font-size="14" font-weight="500" fill="#1d1d1f">
+    "AWSCostMonitor" was blocked from use because it is
+  </text>
+  <text x="90" y="115" font-family="-apple-system, system-ui" font-size="14" font-weight="500" fill="#1d1d1f">
+    not from an identified developer.
+  </text>
+  
+  <text x="90" y="140" font-family="-apple-system, system-ui" font-size="13" fill="#86868b">
+    If you recently installed this app, you can open it by clicking
+  </text>
+  <text x="90" y="158" font-family="-apple-system, system-ui" font-size="13" fill="#86868b">
+    the button below.
+  </text>
+  
+  <!-- Open Anyway button -->
+  <rect x="460" y="130" width="95" height="32" rx="6" fill="#007AFF"/>
+  <text x="507" y="150" text-anchor="middle" fill="white" font-family="-apple-system, system-ui" font-size="14" font-weight="500">Open Anyway</text>
+  
+  <!-- Arrow pointing to button -->
+  <path d="M 507,175 L 507,190" stroke="#FF6B6B" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0,0 10,5 0,10" fill="#FF6B6B"/>
+    </marker>
+  </defs>
+  
+  <!-- Other settings below -->
+  <line x1="30" y1="210" x2="570" y2="210" stroke="#e5e5e5"/>
+  
+  <text x="30" y="240" font-family="-apple-system, system-ui" font-size="14" fill="#1d1d1f">Allow apps downloaded from:</text>
+  
+  <circle cx="45" cy="265" r="6" fill="white" stroke="#d2d2d7" stroke-width="2"/>
+  <text x="60" y="270" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">App Store</text>
+  
+  <circle cx="45" cy="295" r="6" fill="#007AFF"/>
+  <circle cx="45" cy="295" r="3" fill="white"/>
+  <text x="60" y="300" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">App Store and identified developers</text>
+</svg>

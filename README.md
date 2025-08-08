@@ -94,6 +94,25 @@ Visit `http://localhost:5173` to see the marketing site.
 2. Unzip and drag `AWSCostMonitor.app` to your Applications folder
 3. Launch from Applications or Spotlight
 
+#### ⚠️ Important: Opening an Unsigned App
+
+Since AWSCostMonitor is not yet code-signed (we're working on it!), macOS will show a security warning when you first open it. This is normal for independent open-source apps.
+
+**To open the app:**
+
+1. **First attempt** - Double-click the app. You'll see a dialog saying it cannot be opened.
+2. **Open System Settings** - Go to Apple Menu → System Settings
+3. **Navigate to Privacy & Security** - Find it in the sidebar
+4. **Click "Open Anyway"** - In the Security section, you'll see AWSCostMonitor was blocked. Click "Open Anyway"
+5. **Enter your password** - Authenticate with your Mac password or Touch ID
+6. **Open the app** - Try opening it again, and click "Open" in the final dialog
+
+**Alternative method:** Right-click the app and select "Open" from the context menu.
+
+📖 **[Detailed guide with screenshots](https://toml0006.github.io/AWSCostMonitor/unsigned-app-guide)**
+
+This only needs to be done once. After that, the app will open normally.
+
 ### Build from Source
 
 ```bash

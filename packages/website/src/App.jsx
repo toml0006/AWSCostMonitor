@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   DollarSign, 
@@ -21,6 +22,7 @@ import {
 import './App.css'
 import './styles/components.css'
 import './styles/memphis.css'
+import './styles/unsigned-guide.css'
 
 // Components
 import Hero from './components/Hero'
@@ -33,8 +35,9 @@ import Footer from './components/Footer'
 import Navigation from './components/Navigation'
 import GeometricShapes from './components/GeometricShapes'
 import MemphisPatterns from './components/MemphisPatterns'
+import UnsignedAppGuide from './components/UnsignedAppGuide'
 
-function App() {
+function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
@@ -53,6 +56,17 @@ function App() {
         <Footer />
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/unsigned-app-guide" element={<UnsignedAppGuide />} />
+      </Routes>
+    </Router>
   )
 }
 

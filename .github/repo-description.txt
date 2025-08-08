@@ -1,0 +1,1 @@
+🔍 Real-time AWS cost monitoring in your macOS menu bar. Track spending, set budgets, prevent bill shock. 100% private, open-source. Visit: https://toml0006.github.io/AWSCostMonitor/

@@ -1,0 +1,39 @@
+<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="600" height="400" fill="#f5f5f7"/>
+  
+  <!-- Menu bar -->
+  <rect width="600" height="24" fill="white" opacity="0.95"/>
+  
+  <!-- Apple logo highlighted -->
+  <rect x="0" y="0" width="50" height="24" fill="#007AFF" opacity="0.2"/>
+  <path d="M 25,6 Q 20,8 20,12 T 25,18 Q 30,16 30,12 T 25,6" fill="#1d1d1f"/>
+  
+  <!-- Dropdown menu -->
+  <rect x="10" y="24" width="200" height="320" rx="8" fill="white" stroke="#d2d2d7" stroke-width="0.5"/>
+  
+  <!-- Menu items -->
+  <text x="20" y="50" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">About This Mac</text>
+  <line x1="20" y1="60" x2="190" y2="60" stroke="#e5e5e5"/>
+  
+  <!-- System Settings highlighted -->
+  <rect x="10" y="65" width="200" height="28" fill="#007AFF" opacity="0.15"/>
+  <text x="20" y="82" font-family="-apple-system, system-ui" font-size="13" font-weight="500" fill="#007AFF">System Settings...</text>
+  
+  <line x1="20" y1="98" x2="190" y2="98" stroke="#e5e5e5"/>
+  <text x="20" y="118" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">App Store...</text>
+  <line x1="20" y1="128" x2="190" y2="128" stroke="#e5e5e5"/>
+  <text x="20" y="148" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Recent Items</text>
+  <line x1="20" y1="158" x2="190" y2="158" stroke="#e5e5e5"/>
+  <text x="20" y="178" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Force Quit...</text>
+  <line x1="20" y1="188" x2="190" y2="188" stroke="#e5e5e5"/>
+  <text x="20" y="208" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Sleep</text>
+  <text x="20" y="228" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Restart...</text>
+  <text x="20" y="248" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Shut Down...</text>
+  <line x1="20" y1="258" x2="190" y2="258" stroke="#e5e5e5"/>
+  <text x="20" y="278" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Lock Screen</text>
+  <text x="20" y="298" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Log Out User...</text>
+  
+  <!-- Arrow pointer -->
+  <path d="M 220,80 L 235,90 L 225,95 Z" fill="#1d1d1f"/>
+</svg>

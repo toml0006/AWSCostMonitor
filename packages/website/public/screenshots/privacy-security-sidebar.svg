@@ -1,0 +1,35 @@
+<svg width="600" height="450" xmlns="http://www.w3.org/2000/svg">
+  <!-- Window background -->
+  <rect width="600" height="450" fill="white"/>
+  
+  <!-- Sidebar -->
+  <rect width="200" height="450" fill="#f5f5f7"/>
+  
+  <!-- Sidebar items -->
+  <text x="15" y="30" font-family="-apple-system, system-ui" font-size="12" fill="#86868b" font-weight="500">SYSTEM</text>
+  
+  <text x="15" y="55" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">General</text>
+  <text x="15" y="80" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Appearance</text>
+  <text x="15" y="105" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Accessibility</text>
+  <text x="15" y="130" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Control Center</text>
+  <text x="15" y="155" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Siri & Spotlight</text>
+  
+  <!-- Privacy & Security highlighted -->
+  <rect x="0" y="165" width="200" height="28" fill="#007AFF" opacity="0.15"/>
+  <rect x="0" y="165" width="3" height="28" fill="#007AFF"/>
+  <text x="15" y="182" font-family="-apple-system, system-ui" font-size="13" fill="#007AFF" font-weight="500">Privacy & Security</text>
+  
+  <text x="15" y="210" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Desktop & Dock</text>
+  <text x="15" y="235" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Displays</text>
+  <text x="15" y="260" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Wallpaper</text>
+  <text x="15" y="285" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Screen Saver</text>
+  <text x="15" y="310" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Battery</text>
+  <text x="15" y="335" font-family="-apple-system, system-ui" font-size="13" fill="#1d1d1f">Lock Screen</text>
+  
+  <!-- Main content area -->
+  <text x="220" y="40" font-family="-apple-system, system-ui" font-size="24" font-weight="600" fill="#1d1d1f">Privacy & Security</text>
+  
+  <!-- Arrow pointing to Privacy & Security -->
+  <path d="M 210,175 L 195,180 L 210,185" stroke="#FF6B6B" stroke-width="3" fill="none"/>
+  <circle cx="190" cy="180" r="15" fill="none" stroke="#FF6B6B" stroke-width="3"/>
+</svg>

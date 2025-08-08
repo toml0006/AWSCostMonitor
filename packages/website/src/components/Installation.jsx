@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download, ExternalLink, Shield, DollarSign, Clock, Lock } from 'lucide-react'
+import { Download, ExternalLink, Shield, DollarSign, Clock, Lock, AlertCircle } from 'lucide-react'
 
 // Inline constants to fix build
 const EXTERNAL_LINKS = {
@@ -68,13 +68,22 @@ const Installation = () => {
               <div className="step-content">
                 <h4>Download AWS Cost Monitor</h4>
                 <p>Get the latest release for macOS (requires macOS 13.0+)</p>
-                <button 
-                  className="download-btn"
-                  onClick={() => alert('Download will be available when the app is released!')}
-                >
+                <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="download-btn">
                   <Download size={20} />
                   Download for macOS
-                </button>
+                </a>
+                <div className="warning-note">
+                  <AlertCircle size={16} />
+                  <span>
+                    Note: The app is not yet code-signed. 
+                    <a href="/unsigned-app-guide" style={{color: 'var(--color-primary)', marginLeft: '4px'}}>
+                      Learn how to open it →
+                    </a>
+                  </span>
+                </div>
               </div>
             </div>
 
