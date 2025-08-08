@@ -1355,6 +1355,18 @@
   flex-wrap: wrap;
 }
 
+.coffee-note {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
 /* Footer Component */
 .footer {
   background: rgba(34, 34, 34, 0.85);

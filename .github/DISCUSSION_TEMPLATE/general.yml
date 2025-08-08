@@ -1,0 +1,15 @@
+title: "General Discussion"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to AWSCostMonitor discussions! 
+        
+        This is a place for general conversations about the project, sharing experiences, 
+        and connecting with other users.
+
+  - type: textarea
+    attributes:
+      label: "What's on your mind?"
+      description: "Share your thoughts, experiences, or start a conversation"
+      placeholder: "I'd like to discuss..."

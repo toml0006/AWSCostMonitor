@@ -1,0 +1,92 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for AWSCostMonitor
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please fill out the details below.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Is your feature request related to a problem? Please describe the use case.
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the solution you'd like
+      placeholder: I would like to see...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative solutions
+      description: Describe any alternative solutions or features you've considered
+      placeholder: Alternatively, we could...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would be helpful
+        - High - Important for my workflow
+        - Critical - Blocking my usage
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: feature-type
+    attributes:
+      label: Feature Category
+      description: What type of feature is this? (select all that apply)
+      options:
+        - label: UI/UX improvement
+        - label: New AWS service support
+        - label: Performance enhancement
+        - label: Configuration/Settings
+        - label: Data export/import
+        - label: Alerting/Notifications
+        - label: Multi-account management
+        - label: Cost analysis/reporting
+        - label: API/Integration
+        - label: Other
+
+  - type: textarea
+    id: mockup
+    attributes:
+      label: Mockup or detailed description
+      description: |
+        If applicable, add mockups, wireframes, or detailed descriptions
+        You can drag and drop images here
+      placeholder: Attach images or describe the feature in detail
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: User impact
+      description: |
+        Who would benefit from this feature and how?
+      placeholder: This would help developers by...
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

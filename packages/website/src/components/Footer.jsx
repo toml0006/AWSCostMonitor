@@ -1,4 +1,4 @@
-import { Github, Twitter, Heart, Mail } from 'lucide-react'
+import { Github, Linkedin, Heart, Mail, Coffee } from 'lucide-react'
 
 const Footer = () => {
   return (
@@ -36,13 +36,21 @@ const Footer = () => {
               <Github size={20} />
               GitHub
             </a>
-            <a href="https://twitter.com/toml0006">
-              <Twitter size={20} />
-              Twitter
+            <a href="https://www.linkedin.com/in/jackson-tomlinson/">
+              <Linkedin size={20} />
+              LinkedIn
             </a>
-            <a href="mailto:support@awscostmonitor.app">
+            <a href="#" onClick={(e) => {
+              e.preventDefault();
+              const email = ['awsapp', '@', 'middleout', '.', 'dev'].join('');
+              window.location.href = 'mailto:' + email;
+            }}>
               <Mail size={20} />
               Email
+            </a>
+            <a href="https://buymeacoffee.com/jacksontomlinson">
+              <Coffee size={20} />
+              Buy Me a Coffee
             </a>
           </div>
         </div>

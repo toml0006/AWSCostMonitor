@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Check, Sparkles, Heart } from 'lucide-react'
+import { Check, Sparkles, Heart, Coffee } from 'lucide-react'
 
 const Pricing = () => {
   return (
@@ -97,11 +97,20 @@ const Pricing = () => {
                className="btn btn-outline">
               ⭐ Star on GitHub
             </a>
-            <a href="https://twitter.com/intent/tweet?text=Check%20out%20AWSCostMonitor" 
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://toml0006.github.io/AWSCostMonitor/" 
                className="btn btn-outline">
-              Share on Twitter
+              Share on LinkedIn
+            </a>
+            <a href="https://buymeacoffee.com/jacksontomlinson" 
+               className="btn btn-primary">
+              <Coffee size={18} />
+              Buy Me a Coffee
             </a>
           </div>
+          <p className="coffee-note">
+            ☕ Help me pay my own AWS bill while building tools to help you pay yours! 
+            Your support keeps the servers running and the features coming.
+          </p>
         </motion.div>
       </div>
       

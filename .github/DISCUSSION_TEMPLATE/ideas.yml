@@ -1,0 +1,27 @@
+title: "💡 Ideas & Suggestions"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea for AWSCostMonitor? Share it here!
+        
+        This is the perfect place to brainstorm new features, discuss potential improvements,
+        or share creative use cases before creating a formal feature request.
+
+  - type: textarea
+    attributes:
+      label: "Your Idea"
+      description: "Describe your idea or suggestion"
+      placeholder: "What if AWSCostMonitor could..."
+
+  - type: textarea
+    attributes:
+      label: "Why would this be useful?"
+      description: "Help us understand the value and use case"
+      placeholder: "This would be helpful because..."
+
+  - type: textarea
+    attributes:
+      label: "Additional thoughts"
+      description: "Any other details, mockups, or examples"
+      placeholder: "Here are some additional thoughts..."

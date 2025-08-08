@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/toml0006/AWSCostMonitor/wiki
+    about: Check our wiki for guides, FAQ, and documentation
+  - name: 💬 Discussions
+    url: https://github.com/toml0006/AWSCostMonitor/discussions
+    about: Ask questions and discuss features with the community
+  - name: 🌐 Website
+    url: https://toml0006.github.io/AWSCostMonitor/
+    about: Visit our official website for more information

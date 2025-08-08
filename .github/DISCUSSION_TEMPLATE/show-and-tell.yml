@@ -1,0 +1,33 @@
+title: "🎯 Show and Tell"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Show off how you're using AWSCostMonitor!
+        
+        Share your setup, configurations, success stories, or interesting use cases.
+        Help inspire other users and showcase the power of cost monitoring.
+
+  - type: textarea
+    attributes:
+      label: "What are you showing?"
+      description: "Describe your setup, achievement, or interesting use case"
+      placeholder: "I wanted to share..."
+
+  - type: textarea
+    attributes:
+      label: "How has AWSCostMonitor helped?"
+      description: "Tell us about the impact - money saved, issues caught, etc."
+      placeholder: "Thanks to AWSCostMonitor, I was able to..."
+
+  - type: textarea
+    attributes:
+      label: "Screenshots or details"
+      description: "Share screenshots, configurations, or other details (remove sensitive info!)"
+      placeholder: "Here's my setup..."
+
+  - type: textarea
+    attributes:
+      label: "Tips for others"
+      description: "Any advice or tips for other users?"
+      placeholder: "My advice for other users is..."
