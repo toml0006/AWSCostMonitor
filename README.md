@@ -109,7 +109,7 @@ Since AWSCostMonitor is not yet code-signed (we're working on it!), macOS will s
 
 **Alternative method:** Right-click the app and select "Open" from the context menu.
 
-📖 **[Detailed guide with screenshots](https://toml0006.github.io/AWSCostMonitor/unsigned-app-guide)**
+📖 **[Detailed guide with screenshots](https://toml0006.github.io/AWSCostMonitor/#/unsigned-app-guide)**
 
 This only needs to be done once. After that, the app will open normally.
 

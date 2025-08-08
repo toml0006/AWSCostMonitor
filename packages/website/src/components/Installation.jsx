@@ -79,7 +79,7 @@ const Installation = () => {
                   <AlertCircle size={16} />
                   <span>
                     Note: The app is not yet code-signed. 
-                    <a href="/unsigned-app-guide" style={{color: 'var(--color-primary)', marginLeft: '4px'}}>
+                    <a href="#/unsigned-app-guide" style={{color: 'var(--color-primary)', marginLeft: '4px'}}>
                       Learn how to open it →
                     </a>
                   </span>

@@ -6,7 +6,7 @@ const UnsignedAppGuide = () => {
     <div className="unsigned-guide-page">
       <div className="container">
         {/* Back to home link */}
-        <a href="/" className="back-link">
+        <a href="#/" className="back-link">
           <Home size={20} />
           Back to Home
         </a>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/AWSCostMonitor/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWSCostMonitor - Real-time AWS Cost Tracking</title>
+    <script>
+      // Redirect to index.html with hash routing
+      const path = window.location.pathname.replace('/AWSCostMonitor', '');
+      if (path && path !== '/') {
+        window.location.replace('/AWSCostMonitor/#' + path);
+      } else {
+        window.location.replace('/AWSCostMonitor/');
+      }
+    </script>
+  </head>
+  <body>
+    <p>Redirecting...</p>
+  </body>
+</html>
