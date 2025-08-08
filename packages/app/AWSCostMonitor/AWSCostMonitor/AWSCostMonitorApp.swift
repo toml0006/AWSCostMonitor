@@ -373,6 +373,7 @@ class CostDisplayFormatter {
             // Full format with customizable options
             let formatter = NumberFormatter()
             formatter.numberStyle = showCurrencySymbol ? .currency : .decimal
+            formatter.locale = Locale.current
             formatter.currencyCode = currency
             formatter.maximumFractionDigits = decimalPlaces
             formatter.minimumFractionDigits = decimalPlaces
@@ -391,6 +392,7 @@ class CostDisplayFormatter {
             // Abbreviated format: always round to nearest dollar
             let formatter = NumberFormatter()
             formatter.numberStyle = showCurrencySymbol ? .currency : .decimal
+            formatter.locale = Locale.current
             formatter.currencyCode = currency
             formatter.maximumFractionDigits = 0
             formatter.minimumFractionDigits = 0
@@ -461,6 +463,8 @@ class AWSManager: ObservableObject {
     static let shared = AWSManager()
     
     @Published var profiles: [AWSProfile] = []
+    @Published var realProfiles: [AWSProfile] = []
+    @Published var demoProfiles: [AWSProfile] = []
     @Published var selectedProfile: AWSProfile?
     @Published var costData: [CostData] = [] {
         didSet {
@@ -535,6 +539,91 @@ class AWSManager: ObservableObject {
     private let displayFormatKey = "MenuBarDisplayFormat"
     private let historicalDataKey = "HistoricalCostData"
     private let apiRequestRecordsKey = "APIRequestRecords"
+    
+    // MARK: - Number Formatting
+    
+    // Localized currency formatter
+    private var currencyFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        formatter.usesGroupingSeparator = true  // ALWAYS use thousands separators
+        formatter.groupingSeparator = ","  // FORCE comma
+        formatter.groupingSize = 3  // Group by thousands
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        return formatter
+    }
+    
+    // Localized currency formatter without decimals
+    private var wholeCurrencyFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        formatter.usesGroupingSeparator = true  // ALWAYS use thousands separators
+        formatter.groupingSeparator = ","  // FORCE comma
+        formatter.groupingSize = 3  // Group by thousands
+        formatter.maximumFractionDigits = 0
+        formatter.minimumFractionDigits = 0
+        return formatter
+    }
+    
+    // Localized decimal formatter
+    private var decimalFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale.current
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        formatter.usesGroupingSeparator = true
+        return formatter
+    }
+    
+    // Localized percentage formatter
+    private var percentageFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.locale = Locale.current
+        formatter.maximumFractionDigits = 1
+        formatter.minimumFractionDigits = 1
+        return formatter
+    }
+    
+    // Helper method to format currency with proper localization
+    func formatCurrency(_ amount: Decimal, showDecimals: Bool = true) -> String {
+        let nsNumber = NSDecimalNumber(decimal: amount)
+        let doubleValue = nsNumber.doubleValue
+        
+        // Manual formatting with FORCED commas
+        let wholePart = Int(doubleValue)
+        let fractionalPart = Int((doubleValue - Double(wholePart)) * 100)
+        
+        // Format the whole part with commas
+        let numberFormatter = NumberFormatter()
+        numberFormatter.numberStyle = .decimal
+        numberFormatter.groupingSeparator = ","
+        numberFormatter.usesGroupingSeparator = true
+        numberFormatter.groupingSize = 3
+        
+        let formattedWhole = numberFormatter.string(from: NSNumber(value: wholePart)) ?? "\(wholePart)"
+        
+        if showDecimals {
+            return String(format: "$%@.%02d", formattedWhole, fractionalPart)
+        } else {
+            return "$\(formattedWhole)"
+        }
+    }
+    
+    // Helper method to format decimal numbers with proper localization
+    private func formatDecimal(_ amount: Decimal) -> String {
+        let nsNumber = NSDecimalNumber(decimal: amount)
+        return decimalFormatter.string(from: nsNumber) ?? "0.00"
+    }
+    
+    // Helper method to format percentage with proper localization
+    private func formatPercentage(_ value: Double) -> String {
+        return percentageFormatter.string(from: NSNumber(value: value / 100.0)) ?? "0.0%"
+    }
 
     init() {
         log(.info, category: "Config", "AWSManager initialized")
@@ -585,18 +674,17 @@ class AWSManager: ObservableObject {
         log(.info, category: "Config", "Found \(parsedProfiles.count) profiles in AWS config")
         
         // Populate the profiles array from the parsed data.
-        var profileList = parsedProfiles.keys.map { profileName in
+        self.realProfiles = parsedProfiles.keys.map { profileName in
             let profileConfig = parsedProfiles[profileName]
             let region = profileConfig?["region"]
             return AWSProfile(name: profileName, region: region)
-        }
+        }.sorted { $0.name < $1.name }
         
         // Add the ACME demo profile
-        let acmeProfile = AWSProfile(name: "acme", region: "us-east-1")
-        profileList.append(acmeProfile)
+        self.demoProfiles = [AWSProfile(name: "acme", region: "us-east-1")]
         
-        // Sort profiles alphabetically
-        self.profiles = profileList.sorted { $0.name < $1.name }
+        // Combine: real profiles first, then demo profiles
+        self.profiles = self.realProfiles + self.demoProfiles
         
         log(.info, category: "Config", "Loaded \(self.profiles.count) AWS profiles (including demo)")
         
@@ -1350,9 +1438,8 @@ class AWSManager: ObservableObject {
     
     // Check if we need to perform a startup refresh
     func checkForStartupRefresh() {
-        // Only check if we have a selected profile and cost data
-        guard let profile = selectedProfile,
-              !costData.isEmpty else {
+        // Only check if we have a selected profile
+        guard let profile = selectedProfile else {
             return
         }
         
@@ -1839,6 +1926,15 @@ class AWSManager: ObservableObject {
         log(.info, category: "Demo", "Loading demo data for ACME profile")
         
         await MainActor.run {
+            // Clear any existing cache for ACME to ensure fresh data
+            self.costCache.removeValue(forKey: "acme")
+            self.cacheStatus.removeValue(forKey: "acme")
+            self.dailyCostsByProfile.removeValue(forKey: "acme")
+            self.dailyServiceCostsByProfile.removeValue(forKey: "acme")
+            self.lastMonthData.removeValue(forKey: "acme")
+            self.lastMonthDataFetchDate.removeValue(forKey: "acme")
+            self.lastMonthServiceCosts.removeValue(forKey: "acme")
+            
             self.isLoading = true
             self.isLoadingServices = true
             self.errorMessage = nil
@@ -1853,22 +1949,48 @@ class AWSManager: ObservableObject {
         let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
         let dayOfMonth = calendar.component(.day, from: now)
         
-        // Generate impressive but realistic cost data
-        let mtdTotal = Decimal(87234.56) // Month-to-date total
-        let lastMonthTotal = Decimal(124892.34) // Last month's total
-        let projectedTotal = Decimal(268543.21) // Projected month-end
+        // Generate impressive but realistic cost data - current month performing better
+        let mtdTotal = Decimal(67834.12) // Month-to-date total (14 days worth)
+        let lastMonthTotal = Decimal(89456.78) // Last month was higher (current is 24% lower - GREEN!)
+        let projectedTotal = Decimal(145123.45) // Projected month-end
         
-        // Create daily costs with realistic variation
+        // Create daily costs with realistic variation (14 days of history)
         var dailyCosts: [DailyCost] = []
         var dailyServiceCosts: [DailyServiceCost] = []
-        let baseDaily = mtdTotal / Decimal(dayOfMonth)
+        // Calculate base daily amount for exactly 14 days
+        let baseDaily = mtdTotal / Decimal(14)
         
-        for day in 1...dayOfMonth {
-            guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { continue }
+        // Generate exactly 14 days of historical data 
+        let daysToGenerate = 14
+        
+        // Generate 14 days of comprehensive historical data with realistic mixed patterns
+        for dayOffset in (1-daysToGenerate)...0 {
+            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: now) else { continue }
             
-            // Add some realistic variation (±30%)
-            let variation = Decimal(0.7 + Double.random(in: 0...0.6))
-            let dailyAmount = baseDaily * variation
+            // Create realistic daily patterns with mix of higher/lower than trend
+            let dayOfWeek = calendar.component(.weekday, from: date)
+            let isWeekend = dayOfWeek == 1 || dayOfWeek == 7 // Sunday = 1, Saturday = 7
+            
+            // Weekend costs are typically 30% lower (less business activity)
+            let weekendMultiplier = isWeekend ? Decimal(0.7) : Decimal(1.0)
+            
+            // Create realistic variation with some days significantly higher/lower
+            let dayNumber = dayOffset + daysToGenerate + 1  // 1-14 for the 14 days
+            var trendMultiplier: Decimal
+            
+            // Create a realistic mixed pattern for full 14 days:
+            switch dayNumber {
+            case 1, 5, 9, 13:  // Some days much higher (deployment days, batch jobs)
+                trendMultiplier = Decimal(1.4 + Double.random(in: 0...0.3))  // 40-70% higher
+            case 3, 7, 11:     // Some days much lower (maintenance windows, weekends)
+                trendMultiplier = Decimal(0.3 + Double.random(in: 0...0.2))  // 30-50% lower
+            case 2, 4, 6, 8, 10, 12, 14: // Most days moderately different
+                trendMultiplier = Decimal(0.8 + Double.random(in: 0...0.4))  // ±20% variation
+            default:           // Fallback (shouldn't hit with 1-14 range)
+                trendMultiplier = Decimal(0.95 + Double.random(in: 0...0.1)) // ±5% variation
+            }
+            
+            let dailyAmount = baseDaily * weekendMultiplier * trendMultiplier
             
             dailyCosts.append(DailyCost(
                 date: date,
@@ -1876,13 +1998,19 @@ class AWSManager: ObservableObject {
                 currency: "USD"
             ))
             
-            // Distribute across services
-            let ec2Amount = dailyAmount * Decimal(0.35)
-            let rdsAmount = dailyAmount * Decimal(0.25)
-            let s3Amount = dailyAmount * Decimal(0.15)
-            let lambdaAmount = dailyAmount * Decimal(0.10)
-            let cloudFrontAmount = dailyAmount * Decimal(0.08)
-            let otherAmount = dailyAmount * Decimal(0.07)
+            // Distribute across services with slight daily variations
+            let serviceVariation = 0.9 + Double.random(in: 0...0.2) // ±10% service variation
+            
+            let ec2Amount = dailyAmount * Decimal(0.35 * serviceVariation)
+            let rdsAmount = dailyAmount * Decimal(0.25 * serviceVariation)
+            let s3Amount = dailyAmount * Decimal(0.15 * serviceVariation)
+            let lambdaAmount = dailyAmount * Decimal(0.10 * serviceVariation)
+            let cloudFrontAmount = dailyAmount * Decimal(0.08 * serviceVariation)
+            let dynamoAmount = dailyAmount * Decimal(0.03 * serviceVariation)
+            let apiGatewayAmount = dailyAmount * Decimal(0.02 * serviceVariation)
+            let kmsAmount = dailyAmount * Decimal(0.01 * serviceVariation)
+            let snsAmount = dailyAmount * Decimal(0.005 * serviceVariation)
+            let costExplorerAmount = dailyAmount * Decimal(0.005 * serviceVariation)
             
             dailyServiceCosts.append(contentsOf: [
                 DailyServiceCost(date: date, serviceName: "Amazon Elastic Compute Cloud - Compute", amount: ec2Amount, currency: "USD"),
@@ -1890,7 +2018,11 @@ class AWSManager: ObservableObject {
                 DailyServiceCost(date: date, serviceName: "Amazon Simple Storage Service", amount: s3Amount, currency: "USD"),
                 DailyServiceCost(date: date, serviceName: "AWS Lambda", amount: lambdaAmount, currency: "USD"),
                 DailyServiceCost(date: date, serviceName: "Amazon CloudFront", amount: cloudFrontAmount, currency: "USD"),
-                DailyServiceCost(date: date, serviceName: "Other Services", amount: otherAmount, currency: "USD")
+                DailyServiceCost(date: date, serviceName: "Amazon DynamoDB", amount: dynamoAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Amazon API Gateway", amount: apiGatewayAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "AWS Key Management Service", amount: kmsAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Amazon Simple Notification Service", amount: snsAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "AWS Cost Explorer", amount: costExplorerAmount, currency: "USD")
             ])
         }
         
@@ -1909,6 +2041,9 @@ class AWSManager: ObservableObject {
         ].sorted(by: { $0.amount > $1.amount })
         
         // Create cache entry
+        // Set startDate to 14 days ago to include all generated historical data
+        let startDate14DaysAgo = calendar.date(byAdding: .day, value: -13, to: now)!
+        
         let cacheEntry = CostCacheEntry(
             profileName: "acme",
             fetchDate: Date(),
@@ -1916,7 +2051,7 @@ class AWSManager: ObservableObject {
             currency: "USD",
             dailyCosts: dailyCosts,
             serviceCosts: serviceCosts,
-            startDate: startOfMonth,
+            startDate: startDate14DaysAgo,
             endDate: Date()
         )
         
@@ -1951,7 +2086,7 @@ class AWSManager: ObservableObject {
             self.lastMonthServiceCosts["acme"] = serviceCosts.map { service in
                 ServiceCost(
                     serviceName: service.serviceName,
-                    amount: service.amount * Decimal(1.43), // Last month was 43% higher
+                    amount: service.amount * Decimal(1.32), // Last month was 32% higher (current is 24% lower)
                     currency: service.currency
                 )
             }
@@ -2382,7 +2517,10 @@ class StatusBarController: NSObject {
         let showColors = UserDefaults.standard.object(forKey: "ShowMenuBarColors") as? Bool ?? true
         let showCurrencySymbol = UserDefaults.standard.object(forKey: "ShowCurrencySymbol") as? Bool ?? true
         let decimalPlaces = UserDefaults.standard.object(forKey: "DecimalPlaces") as? Int ?? 2
-        let useThousandsSeparator = UserDefaults.standard.object(forKey: "UseThousandsSeparator") as? Bool ?? true
+        
+        // Force thousands separator to always be true for now
+        let useThousandsSeparator = true
+        // Don't set UserDefaults here - it causes infinite recursion!
         
         // Set the cloud icon
         if displayFormat == "iconOnly" {
@@ -2457,7 +2595,31 @@ class StatusBarController: NSObject {
     }
     
     private func getColorForCost(_ cost: CostData) -> NSColor? {
-        // Get budget for color coding
+        // Prioritize last month comparison over budget for better user feedback
+        if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
+           lastMonthCost.amount > 0 {
+            let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
+            let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
+            let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
+            
+            // Green for spending less than last month (good)
+            if percentChange < -5 {
+                return NSColor.systemGreen
+            }
+            // Orange/Red for spending significantly more than last month (concerning)
+            else if percentChange > 20 {
+                return NSColor.systemRed
+            }
+            else if percentChange > 10 {
+                return NSColor.systemOrange
+            }
+            // White/default for small changes (within normal range)
+            else {
+                return nil
+            }
+        }
+        
+        // Fallback to budget-based coloring if no last month data
         let budget = awsManager.getBudget(for: cost.profileName)
         if budget.monthlyBudget > 0 {
             let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
@@ -2473,19 +2635,7 @@ class StatusBarController: NSObject {
             }
         }
         
-        // If no budget, check against last month
-        if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
-           lastMonthCost.amount > 0 {
-            let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
-            let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
-            if percentChange > 10 {
-                return NSColor.systemOrange
-            } else if percentChange < -10 {
-                return NSColor.systemGreen
-            }
-        }
-        
+        // No color if no comparison data available
         return nil
     }
     
@@ -2566,8 +2716,14 @@ struct PopoverContentView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                     Picker("", selection: $awsManager.selectedProfile) {
-                        ForEach(awsManager.profiles, id: \.self) { profile in
+                        ForEach(awsManager.realProfiles, id: \.self) { profile in
                             Text(profile.name).tag(Optional(profile))
+                        }
+                        if !awsManager.realProfiles.isEmpty && !awsManager.demoProfiles.isEmpty {
+                            Divider()
+                        }
+                        ForEach(awsManager.demoProfiles, id: \.self) { profile in
+                            Text("\(profile.name) (Demo)").tag(Optional(profile))
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
@@ -2662,7 +2818,7 @@ struct PopoverContentView: View {
                                 }
                             }
                             HStack(alignment: .top) {
-                                Text(String(format: "$%.2f", NSDecimalNumber(decimal: cost.amount).doubleValue))
+                                Text(awsManager.formatCurrency(cost.amount))
                                     .font(.system(size: 24, weight: .medium))
                                     .foregroundColor(budgetColor(for: cost))
                                     .textSelection(.enabled)
@@ -2674,14 +2830,17 @@ struct PopoverContentView: View {
                                         let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
                                         let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
                                         let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
+                                        let isPositive = percentChange > 0
+                                        let textColor = isPositive ? Color.red : Color.green
+                                        let iconName = isPositive ? "arrow.up" : "arrow.down"
                                         
                                         HStack(spacing: 2) {
-                                            Image(systemName: percentChange > 0 ? "arrow.up" : "arrow.down")
-                                                .foregroundColor(percentChange > 0 ? .red : .green)
+                                            Image(systemName: iconName)
+                                                .foregroundColor(textColor)
                                                 .font(.system(size: 10))
-                                            Text(String(format: "%.1f%% vs last month", abs(percentChange)))
+                                            Text(String(format: "%+.1f%% vs last month", percentChange))
                                                 .font(.system(size: 10))
-                                                .foregroundColor(percentChange > 0 ? .red : .green)
+                                                .foregroundColor(textColor)
                                         }
                                     }
                                 }
@@ -2702,7 +2861,7 @@ struct PopoverContentView: View {
                                     .font(.system(size: 10))
                                     .foregroundColor(.secondary)
                                 HStack {
-                                    Text(String(format: "$%.2f", projection))
+                                    Text(awsManager.formatCurrency(Decimal(projection)))
                                         .font(.system(size: 14, weight: .medium))
                                         .textSelection(.enabled)
                                     Text("(at current rate)")
@@ -2717,7 +2876,7 @@ struct PopoverContentView: View {
                                     Text("Last Month Total:")
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
-                                    Text(String(format: "$%.2f", NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue))
+                                    Text(awsManager.formatCurrency(lastMonthCost.amount))
                                         .font(.system(size: 10, weight: .medium))
                                         .textSelection(.enabled)
                                 }
@@ -2755,7 +2914,7 @@ struct PopoverContentView: View {
                                                 .font(.system(size: 11))
                                                 .textSelection(.enabled)
                                             Spacer()
-                                            Text(String(format: "$%.2f", NSDecimalNumber(decimal: service.amount).doubleValue))
+                                            Text(awsManager.formatCurrency(service.amount))
                                                 .font(.system(size: 11, weight: .medium))
                                                 .textSelection(.enabled)
                                         }
@@ -2863,6 +3022,20 @@ struct PopoverContentView: View {
     }
     
     private func budgetColor(for cost: CostData) -> Color {
+        // First check if costs are trending better than last month
+        if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
+           lastMonthCost.amount > 0 {
+            let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
+            let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
+            let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
+            
+            // If significantly lower than last month, show green regardless of budget
+            if percentChange < -20 {
+                return .green
+            }
+        }
+        
+        // Otherwise use budget-based coloring
         let budget = awsManager.getBudget(for: cost.profileName)
         if budget.monthlyBudget > 0 {
             let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
@@ -2887,44 +3060,76 @@ struct RealHistogramView: View {
     @EnvironmentObject var awsManager: AWSManager
     @State private var hoveredIndex: Int? = nil
     
-    var body: some View {
+    private func buildFullData() -> [DailyServiceCost] {
         let last14Days = getLast14DaysData()
-        let amounts = last14Days.map { NSDecimalNumber(decimal: $0.amount).doubleValue }
+        let calendar = Calendar.current
+        let today = Date()
+        var allDays: [DailyServiceCost] = []
+        for i in (0..<14).reversed() {
+            if let date = calendar.date(byAdding: .day, value: -i, to: today) {
+                if let existingDay = last14Days.first(where: { calendar.isDate($0.date, inSameDayAs: date) }) {
+                    allDays.append(existingDay)
+                } else {
+                    allDays.append(DailyServiceCost(date: date, serviceName: serviceName, amount: 0, currency: "USD"))
+                }
+            }
+        }
+        return allDays
+    }
+    
+    var body: some View {
+        let allDays = buildFullData()
+        let amounts = allDays.map { NSDecimalNumber(decimal: $0.amount).doubleValue }
         let maxAmount = amounts.max() ?? 1.0
+        
+        // Debug: Log the actual count
+        let _ = print("🔵 RealHistogramView: FORCED to \(allDays.count) bars for service: \(serviceName)")
         
         // Get last month's average daily spend for comparison
         let lastMonthAvg = getLastMonthDailyAverage()
         
-        HStack(alignment: .bottom, spacing: 2) {
-            ForEach(Array(amounts.enumerated()), id: \.offset) { index, amount in
-                VStack {
-                    Spacer()
-                    Rectangle()
-                        .fill(barColor(amount: amount, lastMonthAvg: lastMonthAvg))
-                        .frame(width: 12, height: max(2, CGFloat(amount / maxAmount) * 30))
-                        .cornerRadius(1)
-                        .onHover { isHovering in
-                            hoveredIndex = isHovering ? index : nil
+        ZStack(alignment: .topLeading) {
+            GeometryReader { geometry in
+                HStack(alignment: .bottom, spacing: 1) {  // Minimal spacing between bars
+                    ForEach(Array(amounts.enumerated()), id: \.offset) { index, amount in
+                        VStack {
+                            Spacer()
+                            Rectangle()
+                                .fill(barColor(amount: amount, lastMonthAvg: lastMonthAvg))
+                                .frame(width: max(10, (geometry.size.width - CGFloat(13 * 1)) / 14), height: max(2, CGFloat(amount / maxAmount) * 30))  // Use almost all available width
+                                .cornerRadius(1)
+                                .onHover { isHovering in
+                                    hoveredIndex = isHovering ? index : nil
+                                }
                         }
+                        .frame(height: 32)
+                    }
                 }
-                .frame(height: 32)
             }
+            .frame(height: 32)
             
-            // Tooltip positioned to the right of histogram
-            if let hoveredIndex = hoveredIndex, hoveredIndex < last14Days.count {
-                let day = last14Days[hoveredIndex]
-                Text("\(day.date, formatter: dateFormatter): $\(String(format: "%.2f", NSDecimalNumber(decimal: day.amount).doubleValue))")
-                    .font(.system(size: 9))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(4)
-                    .shadow(radius: 2)
-                    .frame(height: 32, alignment: .center) // Match histogram height and center vertically
-                    .padding(.leading, 4) // Small gap from histogram
+            // Tooltip overlay positioned above the hovered bar
+            GeometryReader { geometry in
+                if let hoveredIndex = hoveredIndex, hoveredIndex < allDays.count {
+                    let day = allDays[hoveredIndex]
+                    let barWidth = max(10, (geometry.size.width - CGFloat(13 * 1)) / 14)
+                    let xPosition = CGFloat(hoveredIndex) * (barWidth + 1) + barWidth / 2 - 30
+                    
+                    Text("\(day.date, formatter: dateFormatter): \(awsManager.formatCurrency(day.amount))")
+                        .font(.system(size: 9))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .cornerRadius(4)
+                        .shadow(radius: 2)
+                        .offset(x: xPosition, y: -8)  // Position above the hovered bar
+                        .zIndex(1)
+                }
             }
+            .frame(height: 32)
         }
+        .frame(minWidth: 220, idealWidth: 250, maxWidth: 280)  // Give histogram more space
         .padding(.vertical, 2)
     }
     
@@ -2979,19 +3184,37 @@ struct RealHistogramView: View {
         
         var result: [DailyServiceCost] = []
         
+        // Check if we have any data for this service first
+        let serviceData = dailyServiceCosts.filter { $0.serviceName == serviceName }
+        
+        // If we have no service data at all, return all zeros
+        if serviceData.isEmpty {
+            for dayOffset in 0..<14 {
+                if let targetDate = calendar.date(byAdding: .day, value: dayOffset, to: fourteenDaysAgo) {
+                    result.append(DailyServiceCost(
+                        date: targetDate,
+                        serviceName: serviceName,
+                        amount: 0,
+                        currency: "USD"
+                    ))
+                }
+            }
+            return result
+        }
+        
+        // We have data, so look for each day
         for dayOffset in 0..<14 {
             guard let targetDate = calendar.date(byAdding: .day, value: dayOffset, to: fourteenDaysAgo) else { continue }
             
             let dayStart = calendar.startOfDay(for: targetDate)
-            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
             
-            let serviceCostsForDay = dailyServiceCosts.filter { cost in
+            // Use calendar comparison instead of date range for better matching
+            let serviceCostForDay = dailyServiceCosts.first { cost in
                 cost.serviceName == serviceName &&
-                cost.date >= dayStart &&
-                cost.date < dayEnd
+                calendar.isDate(cost.date, inSameDayAs: dayStart)
             }
             
-            if let dayCost = serviceCostsForDay.first {
+            if let dayCost = serviceCostForDay {
                 result.append(dayCost)
             } else {
                 result.append(DailyServiceCost(
@@ -3041,6 +3264,58 @@ struct ServiceHistogramView: View {
                     .foregroundColor(.secondary)
             }
         }
+    }
+    
+    private func getLast14DaysData() -> [DailyServiceCost] {
+        let calendar = Calendar.current
+        let today = Date()
+        let fourteenDaysAgo = calendar.date(byAdding: .day, value: -13, to: today)!
+        
+        var result: [DailyServiceCost] = []
+        
+        // Check if we have any data for this service first
+        let serviceData = dailyServiceCosts.filter { $0.serviceName == serviceName }
+        
+        // If we have no service data at all, return all zeros
+        if serviceData.isEmpty {
+            for dayOffset in 0..<14 {
+                if let targetDate = calendar.date(byAdding: .day, value: dayOffset, to: fourteenDaysAgo) {
+                    result.append(DailyServiceCost(
+                        date: targetDate,
+                        serviceName: serviceName,
+                        amount: 0,
+                        currency: "USD"
+                    ))
+                }
+            }
+            return result
+        }
+        
+        // We have data, so look for each day
+        for dayOffset in 0..<14 {
+            guard let targetDate = calendar.date(byAdding: .day, value: dayOffset, to: fourteenDaysAgo) else { continue }
+            
+            let dayStart = calendar.startOfDay(for: targetDate)
+            
+            // Use calendar comparison instead of date range for better matching
+            let serviceCostForDay = dailyServiceCosts.first { cost in
+                cost.serviceName == serviceName &&
+                calendar.isDate(cost.date, inSameDayAs: dayStart)
+            }
+            
+            if let dayCost = serviceCostForDay {
+                result.append(dayCost)
+            } else {
+                result.append(DailyServiceCost(
+                    date: targetDate,
+                    serviceName: serviceName,
+                    amount: 0,
+                    currency: "USD"
+                ))
+            }
+        }
+        
+        return result
     }
     
     private func generateAdvancedHistogram(_ dailyData: [DailyServiceCost]) -> (bars: String, trend: String, trendColor: Color) {
@@ -3106,57 +3381,6 @@ struct ServiceHistogramView: View {
         }
     }
     
-    private func getLast14DaysData() -> [DailyServiceCost] {
-        let calendar = Calendar.current
-        let today = Date()
-        let last14Days = (0..<14).compactMap { daysBack in
-            calendar.date(byAdding: .day, value: -daysBack, to: today)
-        }.reversed()
-        
-        // Create array with data for each of the last 14 days
-        return last14Days.map { date in
-            let dayStart = calendar.startOfDay(for: date)
-            
-            // Find cost for this service on this day
-            let dayData = dailyServiceCosts.first { cost in
-                calendar.isDate(cost.date, inSameDayAs: dayStart) && cost.serviceName == serviceName
-            }
-            
-            // Return existing data or zero cost for missing days
-            return dayData ?? DailyServiceCost(
-                date: dayStart,
-                serviceName: serviceName,
-                amount: 0,
-                currency: "USD"
-            )
-        }
-    }
-    
-    private func getLast7DaysData() -> [DailyServiceCost] {
-        let calendar = Calendar.current
-        let today = Date()
-        let last7Days = (0..<7).compactMap { daysBack in
-            calendar.date(byAdding: .day, value: -daysBack, to: today)
-        }.reversed()
-        
-        // Create array with data for each of the last 7 days
-        return last7Days.map { date in
-            let dayStart = calendar.startOfDay(for: date)
-            
-            // Find cost for this service on this day
-            let dayData = dailyServiceCosts.first { cost in
-                calendar.isDate(cost.date, inSameDayAs: dayStart) && cost.serviceName == serviceName
-            }
-            
-            // Return existing data or zero cost for missing days
-            return dayData ?? DailyServiceCost(
-                date: dayStart,
-                serviceName: serviceName,
-                amount: 0,
-                currency: "USD"
-            )
-        }
-    }
     
     private func heightForAmount(_ amount: Decimal) -> CGFloat {
         let maxAmount = dailyServiceCosts
@@ -3185,8 +3409,15 @@ struct ContentView: View {
                 if awsManager.profiles.isEmpty {
                     Text("No profiles").tag(nil as AWSProfile?)
                 }
-                ForEach(awsManager.profiles, id: \.self) { profile in
+                ForEach(awsManager.realProfiles, id: \.self) { profile in
                     Text(profile.name)
+                        .tag(Optional(profile))
+                }
+                if !awsManager.realProfiles.isEmpty && !awsManager.demoProfiles.isEmpty {
+                    Divider()
+                }
+                ForEach(awsManager.demoProfiles, id: \.self) { profile in
+                    Text("\(profile.name) (Demo)")
                         .tag(Optional(profile))
                 }
             }
