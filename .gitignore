@@ -49,3 +49,19 @@ packages/website/.vite/
 # Release files
 *.dmg
 *.zip
+
+# Security - NEVER commit these
+*.p12
+*.p8
+*.key
+*.pem
+*.cer
+*.cert
+*.crt
+*.pfx
+developer-id.p12
+export-developer-id.sh
+CODE_SIGNING_STATUS.md
+**/certificates/
+**/certs/
+**/keys/

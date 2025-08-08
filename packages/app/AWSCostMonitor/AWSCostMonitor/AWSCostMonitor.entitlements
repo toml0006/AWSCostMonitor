@@ -2,17 +2,25 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- App Sandbox disabled to allow AWS CLI config access -->
+    <!-- App Sandbox enabled with specific entitlements -->
     <key>com.apple.security.app-sandbox</key>
-    <false/>
+    <true/>
     
     <!-- Network access for AWS API -->
     <key>com.apple.security.network.client</key>
     <true/>
     
-    <!-- File access for reading AWS config -->
+    <!-- File access for reading AWS config from home directory -->
     <key>com.apple.security.files.user-selected.read-only</key>
     <true/>
+    
+    <!-- Temporary exception to read AWS config files specifically -->
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+    <array>
+        <string>/.aws/</string>
+        <string>/.aws/config</string>
+        <string>/.aws/credentials</string>
+    </array>
     
     <!-- Hardened Runtime for notarization -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
