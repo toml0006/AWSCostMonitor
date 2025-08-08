@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- App Sandbox enabled with specific entitlements -->
+    <!-- App Sandbox enabled with security-scoped bookmarks -->
     <key>com.apple.security.app-sandbox</key>
     <true/>
     
@@ -10,17 +10,13 @@
     <key>com.apple.security.network.client</key>
     <true/>
     
-    <!-- File access for reading AWS config from home directory -->
+    <!-- File access for user-selected directories (security-scoped bookmarks) -->
     <key>com.apple.security.files.user-selected.read-only</key>
     <true/>
     
-    <!-- Temporary exception to read AWS config files specifically -->
-    <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
-    <array>
-        <string>/.aws/</string>
-        <string>/.aws/config</string>
-        <string>/.aws/credentials</string>
-    </array>
+    <!-- Allow app-scoped security bookmarks for persistent access -->
+    <key>com.apple.security.files.bookmarks.app-scope</key>
+    <true/>
     
     <!-- Hardened Runtime for notarization -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
@@ -31,9 +27,5 @@
     
     <key>com.apple.security.cs.disable-library-validation</key>
     <false/>
-    
-    <!-- Allow reading preferences -->
-    <key>com.apple.security.files.bookmarks.app-scope</key>
-    <true/>
 </dict>
 </plist>

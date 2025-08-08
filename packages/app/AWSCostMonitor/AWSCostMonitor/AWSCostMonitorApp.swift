@@ -4,11 +4,14 @@ import AWSCostExplorer
 import AWSClientRuntime
 import AWSSTS
 import AWSSDKIdentity
+import SmithyIdentity
 import Foundation
 import os.log
 import UserNotifications
 import AppIntents
 import Combine
+import Darwin
+import AWSSDKHTTPAuth
 
 // MARK: - Logging System
 
@@ -66,6 +69,101 @@ struct APIRequestRecord: Identifiable, Codable {
     let success: Bool
     let duration: TimeInterval
     let errorMessage: String?
+}
+
+// AWS Credentials structure for manual parsing
+struct ParsedAWSCredentials {
+    let accessKeyId: String
+    let secretAccessKey: String
+    let sessionToken: String?
+}
+
+// Function to parse AWS credentials from credentials file content
+func parseAWSCredentials(content: String, profileName: String) -> ParsedAWSCredentials? {
+    let lines = content.components(separatedBy: .newlines)
+    var inTargetProfile = false
+    var accessKeyId: String?
+    var secretAccessKey: String?
+    var sessionToken: String?
+    
+    for line in lines {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        
+        // Check if we're entering the target profile section
+        if trimmed == "[\(profileName)]" {
+            inTargetProfile = true
+            continue
+        }
+        
+        // Check if we're entering a different profile section
+        if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") && trimmed != "[\(profileName)]" {
+            inTargetProfile = false
+            continue
+        }
+        
+        // Only process lines when we're in the target profile
+        if inTargetProfile && trimmed.contains("=") {
+            let components = trimmed.components(separatedBy: "=")
+            if components.count >= 2 {
+                let key = components[0].trimmingCharacters(in: .whitespaces)
+                let value = components.dropFirst().joined(separator: "=").trimmingCharacters(in: .whitespaces)
+                
+                switch key {
+                case "aws_access_key_id":
+                    accessKeyId = value
+                case "aws_secret_access_key":
+                    secretAccessKey = value
+                case "aws_session_token":
+                    sessionToken = value
+                default:
+                    break
+                }
+            }
+        }
+    }
+    
+    // Must have at least access key and secret
+    guard let accessKey = accessKeyId, let secretKey = secretAccessKey else {
+        return nil
+    }
+    
+    return ParsedAWSCredentials(
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey,
+        sessionToken: sessionToken
+    )
+}
+
+// Custom errors for AWS cost fetching
+enum AWSCostFetchError: Error {
+    case credentialsNotFound(String)
+}
+
+// Helper function to create appropriate credentials provider for sandbox/non-sandbox
+func createAWSCredentialsProvider(for profileName: String) throws -> AWSCredentialIdentityResolver {
+    if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
+        // Sandboxed environment - use manual credential parsing
+        let accessManager = AWSConfigAccessManager.shared
+        
+        guard let credentialsContent = accessManager.readCredentialsFile() else {
+            throw AWSCostFetchError.credentialsNotFound("Unable to read credentials file via security-scoped access")
+        }
+        
+        guard let profileCredentials = parseAWSCredentials(content: credentialsContent, profileName: profileName) else {
+            throw AWSCostFetchError.credentialsNotFound("No credentials found for profile '\(profileName)' in credentials file")
+        }
+        
+        let awsCredentials = AWSCredentialIdentity(
+            accessKey: profileCredentials.accessKeyId,
+            secret: profileCredentials.secretAccessKey,
+            sessionToken: profileCredentials.sessionToken
+        )
+        
+        return StaticAWSCredentialIdentityResolver(awsCredentials)
+    } else {
+        // Not sandboxed - use standard ProfileAWSCredentialIdentityResolver
+        return try ProfileAWSCredentialIdentityResolver(profileName: profileName)
+    }
 }
 
 // MARK: - Extensions
@@ -424,34 +522,39 @@ class CostDisplayFormatter {
 // This is necessary to list all available profiles.
 class INIParser {
     static func parse(filePath: String) -> [String: [String: String]] {
-        var profiles = [String: [String: String]]()
-        var currentProfileName: String?
         do {
             let content = try String(contentsOfFile: filePath, encoding: .utf8)
-            let lines = content.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            return parseString(content)
+        } catch {
+            print("Error reading INI file: \(error.localizedDescription)")
+            return [:]
+        }
+    }
+    
+    static func parseString(_ content: String) -> [String: [String: String]] {
+        var profiles = [String: [String: String]]()
+        var currentProfileName: String?
+        let lines = content.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-            for line in lines {
-                if line.isEmpty || line.hasPrefix("#") {
-                    continue
-                }
+        for line in lines {
+            if line.isEmpty || line.hasPrefix("#") {
+                continue
+            }
 
-                if line.hasPrefix("[profile ") && line.hasSuffix("]") {
-                    let name = String(line.dropFirst(9).dropLast(1))
-                    currentProfileName = name
-                    profiles[name] = [String: String]()
-                } else if line.hasPrefix("[") && line.hasSuffix("]") {
-                    let name = String(line.dropFirst().dropLast())
-                    currentProfileName = name
-                    profiles[name] = [String: String]()
-                } else if let currentName = currentProfileName {
-                    let parts = line.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
-                    if parts.count == 2 {
-                        profiles[currentName]?[String(parts[0])] = String(parts[1])
-                    }
+            if line.hasPrefix("[profile ") && line.hasSuffix("]") {
+                let name = String(line.dropFirst(9).dropLast(1))
+                currentProfileName = name
+                profiles[name] = [String: String]()
+            } else if line.hasPrefix("[") && line.hasSuffix("]") {
+                let name = String(line.dropFirst().dropLast())
+                currentProfileName = name
+                profiles[name] = [String: String]()
+            } else if let currentName = currentProfileName {
+                let parts = line.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+                if parts.count == 2 {
+                    profiles[currentName]?[String(parts[0])] = String(parts[1])
                 }
             }
-        } catch {
-            print("Error reading or parsing INI file: \(error.localizedDescription)")
         }
         return profiles
     }
@@ -503,6 +606,7 @@ class AWSManager: ObservableObject {
     @Published var lastMonthData: [String: CostData] = [:] // Key is profileName
     @Published var lastMonthDataFetchDate: [String: Date] = [:] // When we fetched last month's data
     @Published var lastMonthServiceCosts: [String: [ServiceCost]] = [:] // Service breakdown by profile
+    @Published var lastMonthDataLoading: [String: Bool] = [:] // Loading state per profile
     private let lastMonthDataKey = "LastMonthCostData"
     private let lastMonthFetchDateKey = "LastMonthDataFetchDate"
     private let lastMonthServiceCostsKey = "LastMonthServiceCosts"
@@ -624,9 +728,64 @@ class AWSManager: ObservableObject {
     private func formatPercentage(_ value: Double) -> String {
         return percentageFormatter.string(from: NSNumber(value: value / 100.0)) ?? "0.0%"
     }
+    
 
     init() {
         log(.info, category: "Config", "AWSManager initialized")
+        print("DEBUG: AWSManager init() called at \(Date())")
+        
+        // Set up AWS SDK environment variables early if we're sandboxed
+        if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
+            log(.info, category: "Config", "App is sandboxed - configuring AWS SDK environment variables")
+            
+            // Get the real home directory by looking up the user record
+            let realHome: String
+            if let user = getpwuid(getuid()),
+               let homeDir = user.pointee.pw_dir {
+                realHome = String(cString: homeDir)
+            } else {
+                // Fallback: try to extract real home from sandbox path
+                let sandboxHome = NSString("~").expandingTildeInPath
+                if sandboxHome.contains("/Library/Containers/") {
+                    let components = sandboxHome.components(separatedBy: "/")
+                    if let userIndex = components.firstIndex(of: "Users"),
+                       userIndex + 1 < components.count {
+                        realHome = "/Users/\(components[userIndex + 1])"
+                    } else {
+                        realHome = "/Users/\(NSUserName())"
+                    }
+                } else {
+                    realHome = sandboxHome
+                }
+            }
+            
+            let configPath = "\(realHome)/.aws/config"
+            let credentialsPath = "\(realHome)/.aws/credentials"
+            
+            setenv("AWS_CONFIG_FILE", configPath, 1)
+            setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsPath, 1)
+            
+            log(.info, category: "Config", "Real home directory: \(realHome)")
+            log(.info, category: "Config", "AWS_CONFIG_FILE set to: \(configPath)")
+            log(.info, category: "Config", "AWS_SHARED_CREDENTIALS_FILE set to: \(credentialsPath)")
+            print("DEBUG: Environment variables configured for sandbox - AWS_CONFIG_FILE=\(configPath)")
+        }
+        
+        // Check AWS config access first
+        let accessManager = AWSConfigAccessManager.shared
+        if accessManager.needsAccessGrant {
+            log(.info, category: "Config", "AWS config access needed, will prompt user")
+            // The UI will handle prompting for access
+        }
+        
+        // Listen for AWS config access granted notification
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(awsConfigAccessGranted),
+            name: .awsConfigAccessGranted,
+            object: nil
+        )
+        
         // Load profiles on initialization
         loadProfiles()
         // Load the stored user preference for the selected profile
@@ -655,22 +814,48 @@ class AWSManager: ObservableObject {
         }
     }
     
+    // Handle AWS config access granted notification
+    @objc func awsConfigAccessGranted() {
+        log(.info, category: "Config", "AWS config access granted, reloading profiles")
+        // Clear any previous error
+        errorMessage = nil
+        // Reload profiles
+        loadProfiles()
+        // Load the selected profile
+        loadSelectedProfile()
+        // Fetch cost data if we have a selected profile
+        if selectedProfile != nil {
+            Task {
+                await fetchCostForSelectedProfile()
+            }
+        }
+    }
+    
     // Function to find the AWS config file and parse profiles.
     func loadProfiles() {
         log(.debug, category: "Config", "Loading AWS profiles")
-        // Construct the path to the AWS config file
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        let awsConfigPath = (homeDir as NSString).appendingPathComponent(".aws/config")
-        log(.debug, category: "Config", "Looking for config at: \(awsConfigPath)")
         
-        guard FileManager.default.fileExists(atPath: awsConfigPath) else {
-            let error = "AWS config file not found at \(awsConfigPath)"
+        // Use AWSConfigAccessManager for sandboxed file access
+        let accessManager = AWSConfigAccessManager.shared
+        
+        // Check if we have access
+        if !accessManager.hasAccess {
+            let error = "AWS config access not granted. Please grant access to your .aws folder."
             errorMessage = error
             log(.error, category: "Config", error)
             return
         }
         
-        let parsedProfiles = INIParser.parse(filePath: awsConfigPath)
+        // Read config file using the access manager
+        guard let configContent = accessManager.readConfigFile() else {
+            let error = "Failed to read AWS config file. Please ensure ~/.aws/config exists."
+            errorMessage = error
+            log(.error, category: "Config", error)
+            return
+        }
+        
+        // Parse the config content
+        let parsedProfiles = INIParser.parseString(configContent)
         log(.info, category: "Config", "Found \(parsedProfiles.count) profiles in AWS config")
         
         // Populate the profiles array from the parsed data.
@@ -1498,12 +1683,16 @@ class AWSManager: ObservableObject {
         }
         
         // Check circuit breaker
-        if circuitBreakerTripped && !force {
-            log(.warning, category: "API", "Circuit breaker tripped. Skipping API call.")
-            await MainActor.run {
-                self.errorMessage = "API circuit breaker active. Try again later."
+        if circuitBreakerTripped {
+            if force {
+                log(.info, category: "API", "Circuit breaker is active but bypassing due to force refresh")
+            } else {
+                log(.warning, category: "API", "Circuit breaker tripped. Skipping API call.")
+                await MainActor.run {
+                    self.errorMessage = "API circuit breaker active. Click 'Retry' to bypass."
+                }
+                return
             }
-            return
         }
         
         // Check rate limit first (unless forced)
@@ -1536,16 +1725,87 @@ class AWSManager: ObservableObject {
         log(.info, category: "API", "Fetching comprehensive cost data for profile: \(profile.name)")
         let startTime = Date()
         
-        do {
-            // Configure AWS credentials provider to use the specific profile
-            let credentialsProvider = try ProfileAWSCredentialIdentityResolver(
-                profileName: profile.name
-            )
+        // Debug: Check AWS config and credentials access
+        let accessManager = AWSConfigAccessManager.shared
+        log(.debug, category: "API", "AWS config access - Has access: \(accessManager.hasAccess), Needs grant: \(accessManager.needsAccessGrant)")
+        
+        // Debug: Read and check config file
+        if let configContent = accessManager.readConfigFile() {
+            log(.debug, category: "API", "Successfully read AWS config file (\(configContent.count) characters)")
             
+            // Check if profile exists
+            let profilePattern = "\\[(profile )?\\Q\(profile.name)\\E\\]"
+            if configContent.range(of: profilePattern, options: .regularExpression) != nil {
+                log(.debug, category: "API", "✅ Profile '\(profile.name)' found in AWS config")
+                
+                // Extract profile configuration
+                if let profileRange = configContent.range(of: profilePattern, options: .regularExpression) {
+                    let startIndex = profileRange.upperBound
+                    let remainingContent = String(configContent[startIndex...])
+                    let lines = remainingContent.split(separator: "\n", maxSplits: 10)
+                    log(.debug, category: "API", "Profile '\(profile.name)' config excerpt:")
+                    for line in lines.prefix(5) {
+                        let trimmed = line.trimmingCharacters(in: .whitespaces)
+                        if trimmed.isEmpty || trimmed.hasPrefix("[") { break }
+                        log(.debug, category: "API", "  \(trimmed)")
+                    }
+                }
+            } else {
+                log(.warning, category: "API", "⚠️ Profile '\(profile.name)' NOT found in AWS config")
+            }
+        } else {
+            log(.error, category: "API", "❌ Failed to read AWS config file")
+        }
+        
+        // Debug: Check credentials file
+        if let credentialsContent = accessManager.readCredentialsFile() {
+            log(.debug, category: "API", "Successfully read AWS credentials file (\(credentialsContent.count) characters)")
+            
+            // Check if profile has credentials
+            if credentialsContent.contains("[\(profile.name)]") {
+                log(.debug, category: "API", "✅ Credentials section found for profile '\(profile.name)'")
+                
+                // Check for credential type (don't log actual values)
+                let profileSection = credentialsContent.components(separatedBy: "[\(profile.name)]").last?.components(separatedBy: "[").first ?? ""
+                if profileSection.contains("aws_access_key_id") {
+                    log(.debug, category: "API", "  Found: aws_access_key_id")
+                }
+                if profileSection.contains("aws_secret_access_key") {
+                    log(.debug, category: "API", "  Found: aws_secret_access_key")
+                }
+                if profileSection.contains("aws_session_token") {
+                    log(.debug, category: "API", "  Found: aws_session_token (temporary credentials)")
+                }
+            } else {
+                log(.warning, category: "API", "⚠️ No credentials section for profile '\(profile.name)' in credentials file")
+            }
+        } else {
+            log(.debug, category: "API", "No AWS credentials file (may be using SSO, IAM roles, or environment variables)")
+        }
+        
+        do {
+            // Debug: Check environment variables that AWS SDK uses
+            log(.debug, category: "API", "Environment check:")
+            log(.debug, category: "API", "  HOME: \(ProcessInfo.processInfo.environment["HOME"] ?? "not set")")
+            log(.debug, category: "API", "  AWS_CONFIG_FILE: \(ProcessInfo.processInfo.environment["AWS_CONFIG_FILE"] ?? "not set")")
+            log(.debug, category: "API", "  AWS_SHARED_CREDENTIALS_FILE: \(ProcessInfo.processInfo.environment["AWS_SHARED_CREDENTIALS_FILE"] ?? "not set")")
+            log(.debug, category: "API", "  AWS_PROFILE: \(ProcessInfo.processInfo.environment["AWS_PROFILE"] ?? "not set")")
+            
+            // Create credentials provider using helper function
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            
+            if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
+                log(.debug, category: "API", "✅ Successfully created StaticAWSCredentialIdentityResolver for sandboxed environment")
+            } else {
+                log(.debug, category: "API", "✅ Successfully created ProfileAWSCredentialIdentityResolver for non-sandboxed environment")
+            }
+            
+            log(.debug, category: "API", "Creating CostExplorerClient configuration for region: \(profile.region ?? "us-east-1")")
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region ?? "us-east-1"
             )
+            log(.debug, category: "API", "✅ Successfully created CostExplorerClient configuration")
             let client = CostExplorerClient(config: config)
             
             let calendar = Calendar.current
@@ -1695,6 +1955,9 @@ class AWSManager: ObservableObject {
                     }
                     
                     // Reset circuit breaker on success
+                    if self.circuitBreakerTripped {
+                        self.log(.info, category: "API", "Circuit breaker reset after successful API call")
+                    }
                     self.consecutiveAPIFailures = 0
                     self.circuitBreakerTripped = false
                     
@@ -1721,6 +1984,23 @@ class AWSManager: ObservableObject {
         } catch {
             let duration = Date().timeIntervalSince(startTime)
             let errorMessage = error.localizedDescription
+            
+            // Enhanced error logging
+            log(.error, category: "API", "Failed to fetch cost data for profile '\(profile.name)'")
+            log(.error, category: "API", "Error type: \(type(of: error))")
+            log(.error, category: "API", "Error description: \(errorMessage)")
+            
+            // Check for specific error types
+            if let awsError = error as? AWSSDKIdentity.AWSCredentialIdentityResolverError {
+                log(.error, category: "API", "AWS Credential Identity Resolver Error detected")
+                log(.error, category: "API", "This usually means:")
+                log(.error, category: "API", "  1. Profile doesn't exist in AWS config")
+                log(.error, category: "API", "  2. No credentials configured for the profile")
+                log(.error, category: "API", "  3. SSO session expired (need to run 'aws sso login')")
+                log(.error, category: "API", "  4. Temporary credentials expired")
+                log(.error, category: "API", "  5. AWS SDK can't find config/credentials files")
+            }
+            
             await MainActor.run {
                 self.handleAPIFailure(duration: duration, profile: profile.name, error: errorMessage)
             }
@@ -1755,9 +2035,7 @@ class AWSManager: ObservableObject {
         }
         
         do {
-            let credentialsProvider = try ProfileAWSCredentialIdentityResolver(
-                profileName: profile.name
-            )
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
             
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
@@ -1862,9 +2140,7 @@ class AWSManager: ObservableObject {
         
         do {
             // Configure AWS credentials provider to use the specific profile
-            let credentialsProvider = try ProfileAWSCredentialIdentityResolver(
-                profileName: profile.name
-            )
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
             
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
@@ -2129,6 +2405,11 @@ class AWSManager: ObservableObject {
             return
         }
         
+        // Set loading state
+        await MainActor.run {
+            self.lastMonthDataLoading[profileName] = true
+        }
+        
         // Wait a bit if we just made another API call
         if !canMakeAPICall() {
             let waitTime = secondsUntilNextAllowedCall()
@@ -2141,7 +2422,7 @@ class AWSManager: ObservableObject {
         
         do {
             // Configure AWS credentials provider
-            let credentialsProvider = try ProfileAWSCredentialIdentityResolver(profileName: profileName)
+            let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region
@@ -2207,6 +2488,11 @@ class AWSManager: ObservableObject {
             let errorMessage = error.localizedDescription
             log(.error, category: "API", "Error fetching last month cost for \(profileName): \(errorMessage)")
             recordAPIRequest(profile: profileName, endpoint: "GetCostAndUsage-LastMonth", success: false, duration: duration, error: errorMessage)
+        }
+        
+        // Clear loading state
+        await MainActor.run {
+            self.lastMonthDataLoading[profileName] = false
         }
     }
     
@@ -3525,7 +3811,7 @@ struct ContentView: View {
                                     .help("Force refresh last month data")
                                 }
                             }
-                        } else {
+                        } else if awsManager.lastMonthDataLoading[cost.profileName] == true {
                             HStack {
                                 Text("Last Month")
                                     .font(.subheadline)
@@ -3536,6 +3822,24 @@ struct ContentView: View {
                                 Text("Loading...")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
+                            }
+                        } else {
+                            HStack {
+                                Text("Last Month")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Button(action: {
+                                    Task {
+                                        await awsManager.fetchLastMonthData(for: cost.profileName, force: true)
+                                    }
+                                }) {
+                                    Text("Load Data")
+                                        .font(.caption)
+                                        .foregroundColor(.accentColor)
+                                }
+                                .buttonStyle(.plain)
+                                .help("Fetch last month data")
                             }
                         }
                     }
@@ -4169,12 +4473,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct AWSCostMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var awsManager = AWSManager.shared
+    @StateObject private var configAccessManager = AWSConfigAccessManager.shared
     @AppStorage("ShowCurrencySymbol") private var showCurrencySymbol: Bool = true
     @AppStorage("DecimalPlaces") private var decimalPlaces: Int = 2
     @AppStorage("UseThousandsSeparator") private var useThousandsSeparator: Bool = true
     @AppStorage("ShowMenuBarColors") private var showMenuBarColors: Bool = true
     
     init() {
+        // Set up AWS SDK environment variables VERY early if we're sandboxed
+        if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
+            // Get the real home directory by looking up the user record
+            let realHome: String
+            if let user = getpwuid(getuid()),
+               let homeDir = user.pointee.pw_dir {
+                realHome = String(cString: homeDir)
+            } else {
+                // Fallback: try to extract real home from sandbox path
+                let sandboxHome = NSString("~").expandingTildeInPath
+                if sandboxHome.contains("/Library/Containers/") {
+                    let components = sandboxHome.components(separatedBy: "/")
+                    if let userIndex = components.firstIndex(of: "Users"),
+                       userIndex + 1 < components.count {
+                        realHome = "/Users/\(components[userIndex + 1])"
+                    } else {
+                        realHome = "/Users/\(NSUserName())"
+                    }
+                } else {
+                    realHome = sandboxHome
+                }
+            }
+            
+            let configPath = "\(realHome)/.aws/config"
+            let credentialsPath = "\(realHome)/.aws/credentials"
+            
+            setenv("AWS_CONFIG_FILE", configPath, 1)
+            setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsPath, 1)
+            
+            print("AWSCostMonitor: Set AWS_CONFIG_FILE to: \(configPath)")
+            print("AWSCostMonitor: Set AWS_SHARED_CREDENTIALS_FILE to: \(credentialsPath)")
+        }
+        
         // Configure AppIntents shortcuts
         if #available(macOS 13.0, *) {
             AWSCostShortcuts.updateAppShortcutParameters()
@@ -4346,6 +4684,15 @@ struct AWSCostMonitorApp: App {
     }
     
     var body: some Scene {
+        // Show AWS config access window if needed
+        WindowGroup("AWS Configuration Access") {
+            if configAccessManager.needsAccessGrant {
+                AWSConfigAccessView()
+                    .frame(width: 450, height: 400)
+            }
+        }
+        .windowResizability(.contentSize)
+        
         // Use Settings scene for the app
         Settings {
             SettingsView()
