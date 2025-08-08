@@ -65,3 +65,7 @@ CODE_SIGNING_STATUS.md
 **/certificates/
 **/certs/
 **/keys/
+
+# Local Claude hooks and configurations
+.claude/
+announce-completion.sh
