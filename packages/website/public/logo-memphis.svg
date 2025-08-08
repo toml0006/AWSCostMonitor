@@ -1,0 +1,53 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Memphis-style patterns -->
+    <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="2" fill="#FFD93D"/>
+    </pattern>
+    
+    <pattern id="zigzag" x="0" y="0" width="40" height="20" patternUnits="userSpaceOnUse">
+      <path d="M0,10 L10,0 L20,10 L30,0 L40,10" stroke="#FF6B6B" stroke-width="3" fill="none"/>
+    </pattern>
+    
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="8" dy="8" stdDeviation="0" flood-color="#1A1A2E" flood-opacity="1"/>
+    </filter>
+  </defs>
+  
+  <!-- Background circle with pattern -->
+  <circle cx="256" cy="256" r="240" fill="#FFF8E7"/>
+  <circle cx="256" cy="256" r="240" fill="url(#dots)" opacity="0.3"/>
+  
+  <!-- Memphis geometric shapes in background -->
+  <rect x="80" y="80" width="60" height="60" fill="#FF6B6B" transform="rotate(15 110 110)" opacity="0.8"/>
+  <circle cx="400" cy="120" r="30" fill="#6BCB77" opacity="0.8"/>
+  <polygon points="380,380 420,360 420,400" fill="#FFD93D" opacity="0.8"/>
+  <rect x="100" y="350" width="80" height="8" fill="#4D96FF" transform="rotate(-20 140 354)"/>
+  
+  <!-- Squiggly lines -->
+  <path d="M 80,200 Q 100,180 120,200 T 160,200" stroke="#FF6B6B" stroke-width="4" fill="none" opacity="0.6"/>
+  <path d="M 340,320 Q 360,300 380,320 T 420,320" stroke="#6BCB77" stroke-width="4" fill="none" opacity="0.6"/>
+  
+  <!-- Main dollar sign container -->
+  <g filter="url(#shadow)">
+    <!-- Background shape -->
+    <rect x="156" y="156" width="200" height="200" rx="40" fill="#4D96FF"/>
+    
+    <!-- Dollar sign -->
+    <text x="256" y="290" font-family="Arial Black, sans-serif" font-size="160" font-weight="900" text-anchor="middle" fill="#FFF8E7">$</text>
+  </g>
+  
+  <!-- Decorative elements -->
+  <circle cx="180" cy="180" r="8" fill="#FFD93D"/>
+  <circle cx="332" cy="180" r="8" fill="#FF6B6B"/>
+  <circle cx="180" cy="332" r="8" fill="#6BCB77"/>
+  <circle cx="332" cy="332" r="8" fill="#FFD93D"/>
+  
+  <!-- Small decorative triangles -->
+  <polygon points="140,240 150,230 150,250" fill="#FF6B6B" opacity="0.8"/>
+  <polygon points="362,262 372,252 372,272" fill="#6BCB77" opacity="0.8"/>
+  
+  <!-- Zigzag pattern at bottom -->
+  <rect x="156" y="340" width="200" height="16" fill="url(#zigzag)" opacity="0.5"/>
+</svg>

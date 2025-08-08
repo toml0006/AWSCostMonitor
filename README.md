@@ -1,7 +1,7 @@
 # AWSCostMonitor
 
 <div align="center">
-  <img src="packages/website/public/logo.png" alt="AWSCostMonitor Logo" width="128" height="128">
+  <img src="logo-simple.svg" alt="AWSCostMonitor Logo" width="128" height="128">
   
   **Keep Your AWS Costs Under Control**
   
@@ -14,9 +14,15 @@
 
 ---
 
+## 📖 About
+
+AWSCostMonitor is a lightweight macOS menu bar application that provides real-time visibility into your AWS spending. Built by developers who got tired of AWS bill surprises, this tool helps you track multiple AWS accounts, get smart alerts, and prevent bill shock — all with zero setup complexity and complete privacy.
+
+🌐 **Visit our website**: [https://toml0006.github.io/AWSCostMonitor/](https://toml0006.github.io/AWSCostMonitor/)
+
 ## 🚀 Overview
 
-AWSCostMonitor is a lightweight macOS menu bar application that provides real-time visibility into your AWS spending. Track multiple AWS accounts, get smart alerts, and prevent bill shock — all with zero setup complexity.
+Monitor your AWS costs in real-time directly from your macOS menu bar. No subscriptions, no cloud services, no tracking — just a simple, effective tool that respects your privacy while keeping your AWS costs under control.
 
 ### ✨ Key Features
 
@@ -105,6 +111,15 @@ AWSCostMonitor uses your existing AWS CLI configuration from `~/.aws/config`. En
 3. The following IAM permissions:
    - `ce:GetCostAndUsage`
    - `ce:GetCostForecast`
+
+## 💖 Support
+
+If AWSCostMonitor saves you money on your AWS bills, consider supporting the project:
+
+- ⭐ **Star this repository** - Help others discover the tool
+- ☕ **[Buy Me a Coffee](https://buymeacoffee.com/jacksontomlinson)** - Help me pay my own AWS bills while building tools to help you pay yours!
+- 🔗 **Share on LinkedIn** - Spread the word to your network
+- 🐛 **Report bugs** - Help improve the tool for everyone
 
 ## 🤝 Contributing
 
