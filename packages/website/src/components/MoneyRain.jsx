@@ -214,9 +214,7 @@ const MoneyRain = () => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               animation: 'luxuryGlow 2s ease-in-out',
-              textShadow: '0 0 60px rgba(255, 215, 0, 0.8)',
-              WebkitTextStroke: '2px #000',
-              textStroke: '2px #000'
+              textShadow: '0 0 60px rgba(255, 215, 0, 0.8)'
             }}
           >
             💰 MONEY PARTY! 💰
@@ -227,8 +225,6 @@ const MoneyRain = () => {
               marginTop: '1rem',
               color: '#FFD700',
               animation: 'luxuryGlow 2s ease-in-out 0.5s',
-              WebkitTextStroke: '1px #000',
-              textStroke: '1px #000'
             }}
           >
             Making it rain AWS savings! 🎉
