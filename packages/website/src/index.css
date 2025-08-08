@@ -1,5 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
+/* Prevent horizontal scrolling on mobile */
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
 :root {
   /* Memphis-inspired color palette - BOLD & VIBRANT */
   --color-primary: #FF006E;     /* Hot Pink */

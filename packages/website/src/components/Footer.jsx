@@ -1,4 +1,4 @@
-import { Github, Linkedin, Heart, Mail, Coffee } from 'lucide-react'
+import { Github, Linkedin, Heart, Mail, Coffee, Globe } from 'lucide-react'
 
 const Footer = () => {
   return (
@@ -32,6 +32,10 @@ const Footer = () => {
           
           <div className="footer-links">
             <h4>Connect</h4>
+            <a href="https://toml0006.github.io">
+              <Globe size={20} />
+              Portfolio
+            </a>
             <a href="https://github.com/toml0006">
               <Github size={20} />
               GitHub
@@ -58,6 +62,9 @@ const Footer = () => {
         <div className="footer-bottom">
           <p>© 2025 MiddleOut. AWSCostMonitor is open source under MIT License.</p>
           <p>Not affiliated with Amazon Web Services.</p>
+          <p className="easter-egg-hint" style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>
+            💡 Psst... try pressing the "$" key (or long-press on mobile) for a surprise!
+          </p>
         </div>
       </div>
       

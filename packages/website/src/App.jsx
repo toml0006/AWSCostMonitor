@@ -36,12 +36,14 @@ import Navigation from './components/Navigation'
 import GeometricShapes from './components/GeometricShapes'
 import MemphisPatterns from './components/MemphisPatterns'
 import UnsignedAppGuide from './components/UnsignedAppGuide'
+import MoneyRain from './components/MoneyRain'
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
     <div className="app">
+      <MoneyRain />
       <MemphisPatterns />
       <div className="app-background" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--color-light)', zIndex: -2 }} />
       <GeometricShapes />
