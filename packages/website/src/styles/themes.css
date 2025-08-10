@@ -325,6 +325,136 @@
   color: var(--color-nav-hover) !important;
 }
 
+/* Fix contrast issues for specific sections */
+
+/* Enterprise Features section */
+.twilight .feature-highlight,
+.ultra-dark .feature-highlight {
+  background: rgba(30, 41, 59, 0.8) !important;
+  color: var(--color-text) !important;
+  border: 2px solid var(--color-border);
+}
+
+.twilight .feature-highlight h3,
+.ultra-dark .feature-highlight h3 {
+  color: var(--color-text) !important;
+}
+
+.twilight .feature-highlight p,
+.ultra-dark .feature-highlight p {
+  color: var(--color-text-secondary) !important;
+  opacity: 1 !important;
+}
+
+.twilight .feature-list li,
+.ultra-dark .feature-list li {
+  color: var(--color-text) !important;
+}
+
+/* Privacy highlight section */
+.twilight .privacy-highlight,
+.ultra-dark .privacy-highlight {
+  background: linear-gradient(135deg, rgba(45, 55, 72, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%) !important;
+  color: var(--color-text) !important;
+  border: 2px solid var(--color-border);
+}
+
+.twilight .privacy-highlight h3,
+.ultra-dark .privacy-highlight h3 {
+  color: var(--color-text) !important;
+}
+
+.twilight .privacy-highlight p,
+.ultra-dark .privacy-highlight p {
+  color: var(--color-text-secondary) !important;
+}
+
+.twilight .privacy-point span,
+.ultra-dark .privacy-point span {
+  color: var(--color-text) !important;
+}
+
+/* How It Works / Get Started section */
+.twilight .how-it-works,
+.ultra-dark .how-it-works {
+  background: rgba(30, 41, 59, 0.4) !important;
+}
+
+.twilight .step h3,
+.ultra-dark .step h3 {
+  color: var(--color-text) !important;
+}
+
+.twilight .step p,
+.ultra-dark .step p {
+  color: var(--color-text-secondary) !important;
+  opacity: 1 !important;
+}
+
+.twilight .requirements h3,
+.ultra-dark .requirements h3 {
+  color: var(--color-text) !important;
+}
+
+.twilight .requirement-item strong,
+.ultra-dark .requirement-item strong {
+  color: var(--color-text) !important;
+}
+
+.twilight .requirement-item span,
+.ultra-dark .requirement-item span {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Step cards */
+.twilight .step-card,
+.ultra-dark .step-card {
+  background: var(--color-card-bg) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.twilight .step-card h3,
+.ultra-dark .step-card h3 {
+  color: var(--color-text) !important;
+}
+
+.twilight .step-card p,
+.ultra-dark .step-card p {
+  color: var(--color-text-secondary) !important;
+  opacity: 1 !important;
+}
+
+/* Installation steps */
+.twilight .installation-steps,
+.ultra-dark .installation-steps {
+  background: var(--color-card-bg) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.twilight .installation-steps h3,
+.ultra-dark .installation-steps h3 {
+  color: var(--color-text) !important;
+}
+
+.twilight .step-content h4,
+.ultra-dark .step-content h4 {
+  color: var(--color-text) !important;
+}
+
+.twilight .step-content p,
+.ultra-dark .step-content p {
+  color: var(--color-text-secondary) !important;
+  opacity: 1 !important;
+}
+
+/* Install steps */
+.twilight .install-steps li,
+.ultra-dark .install-steps li {
+  color: var(--color-text-secondary) !important;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .theme-toggle {
