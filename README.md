@@ -151,9 +151,24 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
+### Development Tools
 - Built with [Swift](https://swift.org/) and [SwiftUI](https://developer.apple.com/xcode/swiftui/)
 - Marketing site built with [React](https://react.dev/) and [Vite](https://vitejs.dev/)
 - Icons from [Lucide](https://lucide.dev/)
+
+### AI-Assisted Development
+This project was developed with significant assistance from [**Claude Code**](https://claude.ai/code) by [**Anthropic**](https://www.anthropic.com/). Claude Code served as an invaluable coding partner throughout the development process, helping with:
+
+- **Architecture Design** - Thoughtful system design and best practices
+- **Swift/SwiftUI Implementation** - Complex macOS app development and API integration
+- **Test Coverage** - Comprehensive unit and UI test suites
+- **Documentation** - Clear, professional documentation and help systems
+- **Performance Optimization** - Including the innovative screen-aware refresh feature in v1.1.0
+- **Problem Solving** - Debugging complex issues and finding elegant solutions
+
+The collaboration with Claude Code demonstrates the power of AI-assisted development in creating high-quality, production-ready applications. Special thanks to the Anthropic team for building such a capable and reliable coding assistant.
+
+*If you're interested in accelerating your development workflow, check out [Claude Code](https://claude.ai/code) - it's like having a senior developer available 24/7.*
 
 ## ⚠️ Disclaimer
 
