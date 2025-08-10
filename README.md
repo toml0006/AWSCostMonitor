@@ -32,6 +32,7 @@ Monitor your AWS costs in real-time directly from your macOS menu bar. No subscr
 - 🔔 **Budget Alerts** - Get notified before exceeding limits
 - ⚡ **Intelligent Refresh** - Adjusts polling based on spending patterns
 - 🔒 **100% Private** - All data stays local, no telemetry
+- ✅ **Signed & Sandboxed** - Developer ID signed and fully sandboxed for security
 
 ## 📁 Repository Structure
 
@@ -94,24 +95,7 @@ Visit `http://localhost:5173` to see the marketing site.
 2. Unzip and drag `AWSCostMonitor.app` to your Applications folder
 3. Launch from Applications or Spotlight
 
-#### ⚠️ Important: Opening an Unsigned App
-
-Since AWSCostMonitor is not yet code-signed (we're working on it!), macOS will show a security warning when you first open it. This is normal for independent open-source apps.
-
-**To open the app:**
-
-1. **First attempt** - Double-click the app. You'll see a dialog saying it cannot be opened.
-2. **Open System Settings** - Go to Apple Menu → System Settings
-3. **Navigate to Privacy & Security** - Find it in the sidebar
-4. **Click "Open Anyway"** - In the Security section, you'll see AWSCostMonitor was blocked. Click "Open Anyway"
-5. **Enter your password** - Authenticate with your Mac password or Touch ID
-6. **Open the app** - Try opening it again, and click "Open" in the final dialog
-
-**Alternative method:** Right-click the app and select "Open" from the context menu.
-
-📖 **[Detailed guide with screenshots](https://toml0006.github.io/AWSCostMonitor/#/unsigned-app-guide)**
-
-This only needs to be done once. After that, the app will open normally.
+✅ **The app is fully signed and sandboxed** - It will open without any security warnings on macOS 13.0 and later.
 
 ### Build from Source
 
@@ -130,6 +114,17 @@ AWSCostMonitor uses your existing AWS CLI configuration from `~/.aws/config`. En
 3. The following IAM permissions:
    - `ce:GetCostAndUsage`
    - `ce:GetCostForecast`
+
+## 🔐 Security
+
+AWSCostMonitor is built with security and privacy as top priorities:
+
+- **✅ Code Signed** - Signed with Apple Developer ID for authenticity
+- **🔒 Sandboxed** - Runs in a secure sandbox with limited system access
+- **🏠 Local Only** - All data stays on your Mac, no external servers
+- **🚫 No Tracking** - Zero telemetry, analytics, or data collection
+- **📖 Open Source** - Full source code available for inspection
+- **🔑 Your Credentials** - Uses existing AWS CLI credentials, never stores or transmits them
 
 ## 💖 Support
 

@@ -805,12 +805,48 @@ class AWSManager: ObservableObject {
         // Load cache data
         loadCostCache()
         
+        // Initialize screen state monitoring
+        _ = ScreenStateMonitor.shared // Initialize the singleton
+        setupScreenStateMonitoring()
+        
         // Check if we need a startup refresh
         checkForStartupRefresh()
         
         // Restore auto-refresh state if it was enabled
         if autoRefreshEnabled {
             startAutomaticRefresh()
+        }
+    }
+    
+    // Setup screen state monitoring for automatic refresh control
+    private func setupScreenStateMonitoring() {
+        // Subscribe to screen state changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleScreenStateChange),
+            name: Notification.Name("ScreenStateChanged"),
+            object: nil
+        )
+        
+        log(.info, category: "Config", "Screen state monitoring initialized")
+    }
+    
+    @objc private func handleScreenStateChange() {
+        let screenMonitor = ScreenStateMonitor.shared
+        if screenMonitor.canRefresh {
+            // Screen is on and unlocked - resume refresh if needed
+            if autoRefreshEnabled && refreshTimer == nil {
+                log(.info, category: "Refresh", "Resuming automatic refresh - screen is on and unlocked")
+                startAutomaticRefresh()
+            }
+        } else {
+            // Screen is off or locked - pause refresh
+            if refreshTimer != nil {
+                log(.info, category: "Refresh", "Pausing automatic refresh - screen is off or locked")
+                stopAutomaticRefresh()
+                // Remember to resume when screen comes back
+                autoRefreshEnabled = true
+            }
         }
     }
     
@@ -1566,8 +1602,13 @@ class AWSManager: ObservableObject {
         
         refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             Task {
-                await self?.fetchCostForSelectedProfile()
-                // After fetch, recalculate interval and restart timer
+                // Check screen state before refreshing
+                if ScreenStateMonitor.shared.shouldAllowRefresh() {
+                    await self?.fetchCostForSelectedProfile()
+                } else {
+                    self?.log(.info, category: "Refresh", "Skipped scheduled refresh: screen off or locked")
+                }
+                // After fetch attempt, recalculate interval and restart timer
                 await MainActor.run {
                     self?.startAutomaticRefresh()
                 }
@@ -1660,6 +1701,17 @@ class AWSManager: ObservableObject {
             log(.warning, category: "API", error)
             await MainActor.run {
                 self.errorMessage = error
+            }
+            return
+        }
+        
+        // Check screen state before making API call (unless forced)
+        if !force && !ScreenStateMonitor.shared.shouldAllowRefresh() {
+            log(.info, category: "API", "Skipping refresh: screen is off or system is locked")
+            // Use cached data if available
+            if let cachedData = costCache[profile.name] {
+                log(.info, category: "Cache", "Using cached data while screen is off/locked")
+                await loadFromCache(cachedData)
             }
             return
         }
@@ -2227,7 +2279,7 @@ class AWSManager: ObservableObject {
         
         // Generate impressive but realistic cost data - current month performing better
         let mtdTotal = Decimal(67834.12) // Month-to-date total (14 days worth)
-        let lastMonthTotal = Decimal(89456.78) // Last month was higher (current is 24% lower - GREEN!)
+        let lastMonthTotal = Decimal(74257.33) // Last month was higher (current is 8.6% lower - modest GREEN!)
         let projectedTotal = Decimal(145123.45) // Projected month-end
         
         // Create daily costs with realistic variation (14 days of history)
@@ -2274,46 +2326,52 @@ class AWSManager: ObservableObject {
                 currency: "USD"
             ))
             
-            // Distribute across services with slight daily variations
+            // Distribute across services with slight daily variations - more realistic distribution
             let serviceVariation = 0.9 + Double.random(in: 0...0.2) // ±10% service variation
             
-            let ec2Amount = dailyAmount * Decimal(0.35 * serviceVariation)
-            let rdsAmount = dailyAmount * Decimal(0.25 * serviceVariation)
-            let s3Amount = dailyAmount * Decimal(0.15 * serviceVariation)
-            let lambdaAmount = dailyAmount * Decimal(0.10 * serviceVariation)
-            let cloudFrontAmount = dailyAmount * Decimal(0.08 * serviceVariation)
-            let dynamoAmount = dailyAmount * Decimal(0.03 * serviceVariation)
-            let apiGatewayAmount = dailyAmount * Decimal(0.02 * serviceVariation)
-            let kmsAmount = dailyAmount * Decimal(0.01 * serviceVariation)
-            let snsAmount = dailyAmount * Decimal(0.005 * serviceVariation)
-            let costExplorerAmount = dailyAmount * Decimal(0.005 * serviceVariation)
+            let ec2Amount = dailyAmount * Decimal(0.42 * serviceVariation)  // EC2 typically dominates
+            let rdsAmount = dailyAmount * Decimal(0.18 * serviceVariation)   // RDS is often second
+            let s3Amount = dailyAmount * Decimal(0.08 * serviceVariation)    // S3 storage costs
+            let cloudFrontAmount = dailyAmount * Decimal(0.07 * serviceVariation)  // CDN costs
+            let elasticLoadBalancingAmount = dailyAmount * Decimal(0.06 * serviceVariation)  // ELB/ALB
+            let lambdaAmount = dailyAmount * Decimal(0.05 * serviceVariation)      // Lambda compute
+            let ecsAmount = dailyAmount * Decimal(0.04 * serviceVariation)         // ECS/Fargate
+            let route53Amount = dailyAmount * Decimal(0.03 * serviceVariation)     // DNS
+            let dynamoAmount = dailyAmount * Decimal(0.025 * serviceVariation)     // DynamoDB
+            let backupAmount = dailyAmount * Decimal(0.02 * serviceVariation)      // AWS Backup
+            let apiGatewayAmount = dailyAmount * Decimal(0.015 * serviceVariation) // API Gateway
+            let kmsAmount = dailyAmount * Decimal(0.01 * serviceVariation)         // KMS encryption
             
             dailyServiceCosts.append(contentsOf: [
                 DailyServiceCost(date: date, serviceName: "Amazon Elastic Compute Cloud - Compute", amount: ec2Amount, currency: "USD"),
                 DailyServiceCost(date: date, serviceName: "Amazon Relational Database Service", amount: rdsAmount, currency: "USD"),
                 DailyServiceCost(date: date, serviceName: "Amazon Simple Storage Service", amount: s3Amount, currency: "USD"),
-                DailyServiceCost(date: date, serviceName: "AWS Lambda", amount: lambdaAmount, currency: "USD"),
                 DailyServiceCost(date: date, serviceName: "Amazon CloudFront", amount: cloudFrontAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Elastic Load Balancing", amount: elasticLoadBalancingAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "AWS Lambda", amount: lambdaAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Amazon Elastic Container Service", amount: ecsAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "Amazon Route 53", amount: route53Amount, currency: "USD"),
                 DailyServiceCost(date: date, serviceName: "Amazon DynamoDB", amount: dynamoAmount, currency: "USD"),
+                DailyServiceCost(date: date, serviceName: "AWS Backup", amount: backupAmount, currency: "USD"),
                 DailyServiceCost(date: date, serviceName: "Amazon API Gateway", amount: apiGatewayAmount, currency: "USD"),
-                DailyServiceCost(date: date, serviceName: "AWS Key Management Service", amount: kmsAmount, currency: "USD"),
-                DailyServiceCost(date: date, serviceName: "Amazon Simple Notification Service", amount: snsAmount, currency: "USD"),
-                DailyServiceCost(date: date, serviceName: "AWS Cost Explorer", amount: costExplorerAmount, currency: "USD")
+                DailyServiceCost(date: date, serviceName: "AWS Key Management Service", amount: kmsAmount, currency: "USD")
             ])
         }
         
-        // Create service breakdown
+        // Create service breakdown - more realistic distribution
         let serviceCosts = [
-            ServiceCost(serviceName: "Amazon Elastic Compute Cloud - Compute", amount: mtdTotal * Decimal(0.35), currency: "USD"),
-            ServiceCost(serviceName: "Amazon Relational Database Service", amount: mtdTotal * Decimal(0.25), currency: "USD"),
-            ServiceCost(serviceName: "Amazon Simple Storage Service", amount: mtdTotal * Decimal(0.15), currency: "USD"),
-            ServiceCost(serviceName: "AWS Lambda", amount: mtdTotal * Decimal(0.10), currency: "USD"),
-            ServiceCost(serviceName: "Amazon CloudFront", amount: mtdTotal * Decimal(0.08), currency: "USD"),
-            ServiceCost(serviceName: "Amazon DynamoDB", amount: mtdTotal * Decimal(0.03), currency: "USD"),
-            ServiceCost(serviceName: "Amazon API Gateway", amount: mtdTotal * Decimal(0.02), currency: "USD"),
-            ServiceCost(serviceName: "AWS Key Management Service", amount: mtdTotal * Decimal(0.01), currency: "USD"),
-            ServiceCost(serviceName: "Amazon Simple Notification Service", amount: mtdTotal * Decimal(0.005), currency: "USD"),
-            ServiceCost(serviceName: "AWS Cost Explorer", amount: mtdTotal * Decimal(0.005), currency: "USD")
+            ServiceCost(serviceName: "Amazon Elastic Compute Cloud - Compute", amount: mtdTotal * Decimal(0.42), currency: "USD"),
+            ServiceCost(serviceName: "Amazon Relational Database Service", amount: mtdTotal * Decimal(0.18), currency: "USD"),
+            ServiceCost(serviceName: "Amazon Simple Storage Service", amount: mtdTotal * Decimal(0.08), currency: "USD"),
+            ServiceCost(serviceName: "Amazon CloudFront", amount: mtdTotal * Decimal(0.07), currency: "USD"),
+            ServiceCost(serviceName: "Elastic Load Balancing", amount: mtdTotal * Decimal(0.06), currency: "USD"),
+            ServiceCost(serviceName: "AWS Lambda", amount: mtdTotal * Decimal(0.05), currency: "USD"),
+            ServiceCost(serviceName: "Amazon Elastic Container Service", amount: mtdTotal * Decimal(0.04), currency: "USD"),
+            ServiceCost(serviceName: "Amazon Route 53", amount: mtdTotal * Decimal(0.03), currency: "USD"),
+            ServiceCost(serviceName: "Amazon DynamoDB", amount: mtdTotal * Decimal(0.025), currency: "USD"),
+            ServiceCost(serviceName: "AWS Backup", amount: mtdTotal * Decimal(0.02), currency: "USD"),
+            ServiceCost(serviceName: "Amazon API Gateway", amount: mtdTotal * Decimal(0.015), currency: "USD"),
+            ServiceCost(serviceName: "AWS Key Management Service", amount: mtdTotal * Decimal(0.01), currency: "USD")
         ].sorted(by: { $0.amount > $1.amount })
         
         // Create cache entry
@@ -2362,7 +2420,7 @@ class AWSManager: ObservableObject {
             self.lastMonthServiceCosts["acme"] = serviceCosts.map { service in
                 ServiceCost(
                     serviceName: service.serviceName,
-                    amount: service.amount * Decimal(1.32), // Last month was 32% higher (current is 24% lower)
+                    amount: service.amount * Decimal(1.094), // Last month was 9.4% higher (current is 8.6% lower)
                     currency: service.currency
                 )
             }
