@@ -11,7 +11,7 @@ permissions:
 jobs:
   build-and-release:
     name: Build and Release
-    runs-on: macos-latest
+    runs-on: macos-14
     
     steps:
     - name: Checkout
@@ -41,6 +41,14 @@ jobs:
         # Clean build folder
         xcodebuild clean -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor
         
+        # Test compile to catch any Swift errors early
+        echo "Testing Swift compilation..."
+        xcodebuild -project AWSCostMonitor.xcodeproj \
+                   -scheme AWSCostMonitor \
+                   -destination 'platform=macOS' \
+                   -configuration Debug \
+                   build || exit 1
+        
         # Check if we have signing certificates
         if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
           echo "Found Developer ID, building with code signing..."
@@ -51,7 +59,7 @@ jobs:
                      -scheme AWSCostMonitor \
                      -destination 'platform=macOS' \
                      -configuration Release \
-                     -archivePath AWSCostMonitor.xcarchive \
+                     -archivePath ./AWSCostMonitor.xcarchive \
                      -allowProvisioningUpdates \
                      CODE_SIGN_STYLE=Manual \
                      CODE_SIGN_IDENTITY="$IDENTITY" \
@@ -64,7 +72,7 @@ jobs:
                      -scheme AWSCostMonitor \
                      -destination 'platform=macOS' \
                      -configuration Release \
-                     -archivePath AWSCostMonitor.xcarchive \
+                     -archivePath ./AWSCostMonitor.xcarchive \
                      -allowProvisioningUpdates \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
@@ -79,6 +87,8 @@ jobs:
         <dict>
             <key>method</key>
             <string>mac-application</string>
+            <key>teamID</key>
+            <string>TBY9TNDT67</string>
             <key>destination</key>
             <string>export</string>
         </dict>
@@ -87,7 +97,7 @@ jobs:
         
         # Export app
         xcodebuild -exportArchive \
-                   -archivePath AWSCostMonitor.xcarchive \
+                   -archivePath ./AWSCostMonitor.xcarchive \
                    -exportOptionsPlist ExportOptions.plist \
                    -exportPath ./export
     
