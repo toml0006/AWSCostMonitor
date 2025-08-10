@@ -20,10 +20,10 @@ const UnsignedAppGuide = () => {
           <div className="guide-icon">
             <Shield size={48} />
           </div>
-          <h1>Opening an Unsigned App on macOS</h1>
+          <h1>Opening an App Downloaded from the Internet</h1>
           <p className="guide-subtitle">
-            AWSCostMonitor is not yet code-signed, which means macOS will show a security warning when you first open it. 
-            This is normal for independent apps, and here's how to safely open it.
+            When you download AWSCostMonitor, macOS will show a security dialog about opening an app from the internet. 
+            This is a normal security feature, and here's how to safely open it.
           </p>
         </motion.div>
 
@@ -36,8 +36,8 @@ const UnsignedAppGuide = () => {
           <AlertCircle size={24} />
           <div>
             <strong>Why does this happen?</strong>
-            <p>Apple requires developers to pay for a Developer ID certificate to sign apps. As an open-source project, 
-            we haven't yet obtained this certificate. The app is completely safe and its source code is publicly available on GitHub.</p>
+            <p>macOS shows this security dialog for any app downloaded from the internet to protect users from potentially harmful software. 
+            The app is completely safe and its source code is publicly available on GitHub for verification.</p>
           </div>
         </motion.div>
 
@@ -161,7 +161,7 @@ const UnsignedAppGuide = () => {
             <h3>Is the app safe?</h3>
             <p>Yes! AWSCostMonitor is open-source software. You can review the entire source code on 
             <a href="https://github.com/toml0006/AWSCostMonitor" target="_blank" rel="noopener noreferrer"> GitHub</a>. 
-            The warning appears because we haven't paid for an Apple Developer certificate yet.</p>
+            The dialog appears as a standard macOS security measure for apps downloaded from the internet.</p>
           </div>
 
           <div className="faq-item">

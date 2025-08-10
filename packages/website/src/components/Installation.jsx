@@ -78,7 +78,7 @@ const Installation = () => {
                 <div className="warning-note">
                   <AlertCircle size={16} />
                   <span>
-                    Note: The app is not yet code-signed. 
+                    Note: You'll see a security dialog about opening an app downloaded from the internet. 
                     <a href="#/unsigned-app-guide" style={{color: 'var(--color-primary)', marginLeft: '4px'}}>
                       Learn how to open it →
                     </a>
