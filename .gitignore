@@ -69,3 +69,6 @@ CODE_SIGNING_STATUS.md
 # Local Claude hooks and configurations
 .claude/
 announce-completion.sh
+
+# Marketing materials (keep separate from code)
+marketing-materials/
