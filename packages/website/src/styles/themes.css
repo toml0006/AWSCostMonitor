@@ -455,6 +455,26 @@
   color: var(--color-text-secondary) !important;
 }
 
+/* Benefit cards - fix contrast issues */
+.twilight .benefit-card,
+.ultra-dark .benefit-card {
+  background: var(--color-card-bg) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 3px solid var(--color-border) !important;
+}
+
+.twilight .benefit-card h4,
+.ultra-dark .benefit-card h4 {
+  color: var(--color-text) !important;
+}
+
+.twilight .benefit-card p,
+.ultra-dark .benefit-card p {
+  color: var(--color-text-secondary) !important;
+  opacity: 1 !important;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .theme-toggle {
