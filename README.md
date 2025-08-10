@@ -170,6 +170,9 @@ The collaboration with Claude Code demonstrates the power of AI-assisted develop
 
 *If you're interested in accelerating your development workflow, check out [Claude Code](https://claude.ai/code) - it's like having a senior developer available 24/7.*
 
+### Human Note
+Hi, this is Jackson, nice to meet you.  Please know that while I am grateful for the assistance from Claude Code, Claude wrote it's own acknowledgement.  It is a super-awesome tool, but take that acknowledgement with a grain of salt (I'm leaving it in 'cause I thought it was funny how self-egrandizing it was when asked to write one).  Thanks for your support!
+
 ## ⚠️ Disclaimer
 
 This project is not affiliated with, endorsed by, or sponsored by Amazon Web Services (AWS) or Amazon.com, Inc.
