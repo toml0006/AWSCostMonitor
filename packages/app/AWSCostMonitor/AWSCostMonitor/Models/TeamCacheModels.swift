@@ -15,19 +15,28 @@ struct TeamCacheConfig: Codable {
     var s3Region: String
     var cachePrefix: String
     var ttlOverride: TimeInterval?
+    var encryptionType: S3EncryptionType
+    var kmsKeyId: String?
+    var enableAuditLogging: Bool
     
     init(
         enabled: Bool = false,
         s3BucketName: String = "",
         s3Region: String = "us-east-1",
         cachePrefix: String = "awscost-team-cache",
-        ttlOverride: TimeInterval? = nil
+        ttlOverride: TimeInterval? = nil,
+        encryptionType: S3EncryptionType = .sseS3,
+        kmsKeyId: String? = nil,
+        enableAuditLogging: Bool = true
     ) {
         self.enabled = enabled
         self.s3BucketName = s3BucketName
         self.s3Region = s3Region
         self.cachePrefix = cachePrefix
         self.ttlOverride = ttlOverride
+        self.encryptionType = encryptionType
+        self.kmsKeyId = kmsKeyId
+        self.enableAuditLogging = enableAuditLogging
     }
     
     var isValid: Bool {
@@ -222,6 +231,79 @@ enum CacheError: Error, LocalizedError {
         case .cacheCorrupted:
             return "Cache data is corrupted or invalid"
         }
+    }
+}
+
+// MARK: - S3 Encryption Types
+
+enum S3EncryptionType: String, Codable, CaseIterable {
+    case none = "none"
+    case sseS3 = "AES256"
+    case sseKms = "aws:kms"
+    
+    var displayName: String {
+        switch self {
+        case .none:
+            return "No Encryption"
+        case .sseS3:
+            return "SSE-S3 (AES256)"
+        case .sseKms:
+            return "SSE-KMS (Customer Managed)"
+        }
+    }
+}
+
+// MARK: - IAM Permission Check Result
+
+struct IAMPermissionCheckResult {
+    let hasReadAccess: Bool
+    let hasWriteAccess: Bool
+    let hasListAccess: Bool
+    let hasKMSAccess: Bool
+    let missingPermissions: [String]
+    let errors: [String]
+    
+    var isFullyPermissioned: Bool {
+        return hasReadAccess && hasWriteAccess && hasListAccess
+    }
+    
+    var permissionSummary: String {
+        if isFullyPermissioned {
+            return "All required permissions verified"
+        }
+        return "Missing permissions: \(missingPermissions.joined(separator: ", "))"
+    }
+}
+
+// MARK: - Audit Log Entry
+
+struct AuditLogEntry: Codable {
+    let timestamp: Date
+    let operation: String
+    let profileName: String
+    let accountId: String
+    let cacheKey: String
+    let success: Bool
+    let errorMessage: String?
+    let metadata: [String: String]
+    
+    init(
+        operation: String,
+        profileName: String,
+        accountId: String,
+        cacheKey: String,
+        success: Bool,
+        errorMessage: String? = nil,
+        metadata: [String: String] = [:]
+    ) {
+        self.timestamp = Date()
+        self.operation = operation
+        self.profileName = profileName
+        self.accountId = accountId
+        self.cacheKey = cacheKey
+        self.success = success
+        self.errorMessage = errorMessage
+        self.metadata = metadata
     }
 }
 

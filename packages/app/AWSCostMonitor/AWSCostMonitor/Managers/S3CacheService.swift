@@ -93,6 +93,19 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
                 self.logger.debug("Successfully retrieved cache entry for key: \(fullKey)")
                 self.statistics.recordHit()
                 self.isConnected = true
+                
+                // Log audit entry
+                if self.config.enableAuditLogging {
+                    await self.logAuditEntry(
+                        operation: "getObject",
+                        profileName: entry.profileName,
+                        accountId: entry.accountId,
+                        cacheKey: fullKey,
+                        success: true,
+                        metadata: ["expired": "\(entry.metadata.isExpired)"]
+                    )
+                }
+                
                 return .success(entry)
                 
             } catch let error {
@@ -112,7 +125,8 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
                 // Serialize and compress the entry
                 let data = try self.serializeCacheEntry(entry)
                 
-                let input = PutObjectInput(
+                // Configure encryption based on settings
+                var putInput = PutObjectInput(
                     body: .data(data),
                     bucket: self.config.s3BucketName,
                     key: fullKey,
@@ -122,9 +136,23 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
                         "account-id": entry.accountId,
                         "created-by": entry.metadata.createdBy,
                         "ttl": String(entry.metadata.ttl)
-                    ],
-                    serverSideEncryption: .aes256 // Enable server-side encryption
+                    ]
                 )
+                
+                // Apply encryption settings
+                switch self.config.encryptionType {
+                case .none:
+                    break // No encryption
+                case .sseS3:
+                    putInput.serverSideEncryption = .aes256
+                case .sseKms:
+                    putInput.serverSideEncryption = .awsKms
+                    if let kmsKeyId = self.config.kmsKeyId {
+                        putInput.sseKMSKeyId = kmsKeyId
+                    }
+                }
+                
+                let input = putInput
                 
                 _ = try await self.s3Client.putObject(input: input)
                 
@@ -132,6 +160,18 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
                 self.statistics.totalEntries += 1
                 self.statistics.totalSizeBytes += data.count
                 self.isConnected = true
+                
+                // Log audit entry
+                if self.config.enableAuditLogging {
+                    await self.logAuditEntry(
+                        operation: "putObject",
+                        profileName: entry.profileName,
+                        accountId: entry.accountId,
+                        cacheKey: fullKey,
+                        success: true,
+                        metadata: ["size": "\(data.count)"]
+                    )
+                }
                 
             } catch let error {
                 throw try self.mapS3Error(error, operation: "putObject", key: fullKey)
@@ -283,6 +323,122 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
         }
     }
     
+    // MARK: - Permission Validation
+    
+    func validatePermissions() async -> IAMPermissionCheckResult {
+        logger.info("Validating IAM permissions for bucket: \(config.s3BucketName)")
+        
+        var hasReadAccess = false
+        var hasWriteAccess = false
+        var hasListAccess = false
+        var hasKMSAccess = true // Default to true if not using KMS
+        var missingPermissions: [String] = []
+        var errors: [String] = []
+        
+        let testKey = "\(config.cachePrefix)/.permission-test-\(UUID().uuidString)"
+        
+        // Test read permissions (will fail on non-existent object, but that's ok)
+        do {
+            let getInput = GetObjectInput(
+                bucket: config.s3BucketName,
+                key: testKey
+            )
+            _ = try await s3Client.getObject(input: getInput)
+            hasReadAccess = true
+        } catch {
+            // Check if it's a 404 (object not found) vs 403 (access denied)
+            if error.localizedDescription.contains("NoSuchKey") || error.localizedDescription.contains("NotFound") {
+                hasReadAccess = true // We have read permission, object just doesn't exist
+            } else if error.localizedDescription.contains("AccessDenied") || error.localizedDescription.contains("Forbidden") {
+                missingPermissions.append("s3:GetObject")
+                errors.append("Read access denied: \(error.localizedDescription)")
+            }
+        }
+        
+        // Test write permissions
+        do {
+            let testData = "permission-test".data(using: .utf8)!
+            var putInput = PutObjectInput(
+                body: .data(testData),
+                bucket: config.s3BucketName,
+                key: testKey
+            )
+            
+            // Apply encryption for test
+            switch config.encryptionType {
+            case .none:
+                break
+            case .sseS3:
+                putInput.serverSideEncryption = .aes256
+            case .sseKms:
+                putInput.serverSideEncryption = .awsKms
+                if let kmsKeyId = config.kmsKeyId {
+                    putInput.sseKMSKeyId = kmsKeyId
+                }
+            }
+            
+            _ = try await s3Client.putObject(input: putInput)
+            hasWriteAccess = true
+            
+            // Clean up test object
+            let deleteInput = DeleteObjectInput(
+                bucket: config.s3BucketName,
+                key: testKey
+            )
+            _ = try? await s3Client.deleteObject(input: deleteInput)
+            
+        } catch {
+            if error.localizedDescription.contains("AccessDenied") || error.localizedDescription.contains("Forbidden") {
+                missingPermissions.append("s3:PutObject")
+                errors.append("Write access denied: \(error.localizedDescription)")
+            } else if error.localizedDescription.contains("kms") {
+                hasKMSAccess = false
+                missingPermissions.append("kms:Encrypt/kms:GenerateDataKey")
+                errors.append("KMS access denied: \(error.localizedDescription)")
+            }
+        }
+        
+        // Test list permissions
+        do {
+            let listInput = ListObjectsV2Input(
+                bucket: config.s3BucketName,
+                maxKeys: 1,
+                prefix: config.cachePrefix
+            )
+            _ = try await s3Client.listObjectsV2(input: listInput)
+            hasListAccess = true
+        } catch {
+            if error.localizedDescription.contains("AccessDenied") || error.localizedDescription.contains("Forbidden") {
+                missingPermissions.append("s3:ListBucket")
+                errors.append("List access denied: \(error.localizedDescription)")
+            }
+        }
+        
+        // Log audit entry if enabled
+        if config.enableAuditLogging {
+            await logAuditEntry(
+                operation: "validatePermissions",
+                profileName: "system",
+                accountId: "system",
+                cacheKey: "permission-check",
+                success: missingPermissions.isEmpty,
+                errorMessage: errors.joined(separator: "; ")
+            )
+        }
+        
+        let result = IAMPermissionCheckResult(
+            hasReadAccess: hasReadAccess,
+            hasWriteAccess: hasWriteAccess,
+            hasListAccess: hasListAccess,
+            hasKMSAccess: hasKMSAccess,
+            missingPermissions: missingPermissions,
+            errors: errors
+        )
+        
+        logger.info("Permission validation complete: \(result.permissionSummary)")
+        return result
+    }
+    
     // MARK: - Statistics and Status
     
     func clearStatistics() {
@@ -292,6 +448,67 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
     
     func getStatus() -> (connected: Bool, statistics: CacheStatistics, lastError: CacheError?) {
         return (isConnected, statistics, lastError)
+    }
+    
+    // MARK: - Audit Logging
+    
+    private func logAuditEntry(
+        operation: String,
+        profileName: String,
+        accountId: String,
+        cacheKey: String,
+        success: Bool,
+        errorMessage: String? = nil,
+        metadata: [String: String] = [:]
+    ) async {
+        guard config.enableAuditLogging else { return }
+        
+        let entry = AuditLogEntry(
+            operation: operation,
+            profileName: profileName,
+            accountId: accountId,
+            cacheKey: cacheKey,
+            success: success,
+            errorMessage: errorMessage,
+            metadata: metadata
+        )
+        
+        // Log locally
+        if success {
+            logger.info("Audit: \(operation) succeeded for \(cacheKey)")
+        } else {
+            logger.error("Audit: \(operation) failed for \(cacheKey): \(errorMessage ?? "Unknown error")")
+        }
+        
+        // Optionally write audit log to S3 (in a separate audit prefix)
+        if config.enableAuditLogging {
+            let auditKey = "audit-logs/\(Date().ISO8601Format())/\(UUID().uuidString).json"
+            do {
+                let auditData = try JSONEncoder().encode(entry)
+                var putInput = PutObjectInput(
+                    body: .data(auditData),
+                    bucket: config.s3BucketName,
+                    key: auditKey
+                )
+                
+                // Apply encryption for audit logs
+                switch config.encryptionType {
+                case .none:
+                    break
+                case .sseS3:
+                    putInput.serverSideEncryption = .aes256
+                case .sseKms:
+                    putInput.serverSideEncryption = .awsKms
+                    if let kmsKeyId = config.kmsKeyId {
+                        putInput.sseKMSKeyId = kmsKeyId
+                    }
+                }
+                
+                _ = try? await s3Client.putObject(input: putInput)
+            } catch {
+                logger.error("Failed to write audit log: \(error.localizedDescription)")
+            }
+        }
     }
     
     // MARK: - Private Helpers

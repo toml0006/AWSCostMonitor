@@ -53,8 +53,8 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [ ] 5.1 Add AWSS3 dependency to project
   - [ ] 5.2 Write tests for S3Client initialization and configuration
   - [ ] 5.3 Implement S3Client setup with user's AWS credentials
-  - [ ] 5.4 Write tests for IAM permission validation
-  - [ ] 5.5 Add IAM permission checking and clear error messages
+  - [x] 5.4 Write tests for IAM permission validation
+  - [x] 5.5 Add IAM permission checking and clear error messages
   - [ ] 5.6 Write tests for cross-region S3 access
   - [ ] 5.7 Implement region-aware S3 client configuration
   - [ ] 5.8 Verify all AWS SDK integration tests pass
@@ -71,9 +71,9 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 6.9 Verify all UX enhancement tests pass
 
 - [ ] 7. Documentation and Marketing Materials
-  - [ ] 7.1 Write comprehensive team setup guide
-  - [ ] 7.2 Create S3 bucket setup instructions with IAM policies
-  - [ ] 7.3 Document troubleshooting steps for common issues
+  - [x] 7.1 Write comprehensive team setup guide
+  - [x] 7.2 Create S3 bucket setup instructions with IAM policies
+  - [x] 7.3 Document troubleshooting steps for common issues
   - [ ] 7.4 Create team onboarding workflow documentation
   - [ ] 7.5 Update app help system with team cache documentation
   - [ ] 7.6 Write marketing copy for website features page
