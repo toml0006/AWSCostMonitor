@@ -76,6 +76,12 @@ class AWSManager: ObservableObject {
     private let dailyCostsKey = "DailyCostData"
     private let dailyServiceCostsKey = "DailyServiceCostData"
     
+    // Team cache system
+    @Published var profileTeamCacheSettings: [String: ProfileTeamCacheSettings] = [:]
+    @Published var teamCacheServices: [String: S3CacheService] = [:]
+    private let teamCacheSettingsKey = "ProfileTeamCacheSettings"
+    private var backgroundSyncTimer: Timer?
+    
     // Circuit breaker for API protection
     @Published var circuitBreakerTripped = false
     @Published var consecutiveAPIFailures = 0
@@ -265,6 +271,8 @@ class AWSManager: ObservableObject {
         loadLastMonthData()
         // Load cache data
         loadCostCache()
+        // Load team cache settings
+        loadTeamCacheSettings()
         
         // Initialize screen state monitoring
         _ = ScreenStateMonitor.shared // Initialize the singleton
@@ -329,6 +337,7 @@ class AWSManager: ObservableObject {
         
         // Stop any running timers
         stopAutomaticRefresh()
+        stopBackgroundSyncTimer()
         #if DEBUG
         stopDebugTimer()
         #endif
@@ -1405,12 +1414,17 @@ class AWSManager: ObservableObject {
             return
         }
         
-        // Check cache first (unless forced)
+        // Cache-first lookup strategy: team cache → local cache → API (unless forced)
         if !force {
+            if await checkTeamCacheFirst(for: profile) {
+                return // Team cache hit, data loaded
+            }
+            
+            // Fallback to local cache if team cache miss/disabled
             if let cachedData = costCache[profile.name] {
                 let budget = getBudget(for: profile.name)
                 if cachedData.isValidForBudget(budget) {
-                    log(.info, category: "Cache", "Using cached data for \(profile.name), age: \(Int(Date().timeIntervalSince(cachedData.fetchDate) / 60)) minutes")
+                    log(.info, category: "Cache", "Using local cached data for \(profile.name), age: \(Int(Date().timeIntervalSince(cachedData.fetchDate) / 60)) minutes")
                     await loadFromCache(cachedData)
                     return
                 }
@@ -2319,7 +2333,7 @@ class AWSManager: ObservableObject {
         }
     }
     
-    // Save cache to disk
+    // Save cache to disk and update team cache
     private func saveCostCache() {
         do {
             let encoder = JSONEncoder()
@@ -2336,6 +2350,11 @@ class AWSManager: ObservableObject {
             UserDefaults.standard.set(dailyServiceData, forKey: dailyServiceCostsKey)
             
             log(.debug, category: "Cache", "Saved cache data for \(costCache.count) profiles")
+            
+            // Update team cache for enabled profiles
+            Task {
+                await updateTeamCacheAfterAPICall()
+            }
         } catch {
             log(.error, category: "Cache", "Failed to save cache: \(error.localizedDescription)")
         }
@@ -2401,6 +2420,375 @@ class AWSManager: ObservableObject {
         
         isLoading = false
         isLoadingServices = false
+    }
+    
+    // MARK: - Team Cache Management
+    
+    // Load team cache settings from UserDefaults
+    private func loadTeamCacheSettings() {
+        if let data = UserDefaults.standard.data(forKey: teamCacheSettingsKey),
+           let settings = try? JSONDecoder().decode([String: ProfileTeamCacheSettings].self, from: data) {
+            self.profileTeamCacheSettings = settings
+            log(.debug, category: "TeamCache", "Loaded team cache settings for \(settings.count) profiles")
+            
+            // Initialize S3 cache services for enabled profiles
+            initializeTeamCacheServices()
+        }
+    }
+    
+    // Save team cache settings to UserDefaults
+    private func saveTeamCacheSettings() {
+        do {
+            let data = try JSONEncoder().encode(profileTeamCacheSettings)
+            UserDefaults.standard.set(data, forKey: teamCacheSettingsKey)
+            log(.debug, category: "TeamCache", "Saved team cache settings for \(profileTeamCacheSettings.count) profiles")
+        } catch {
+            log(.error, category: "TeamCache", "Failed to save team cache settings: \(error.localizedDescription)")
+        }
+    }
+    
+    // Initialize S3 cache services for enabled profiles
+    private func initializeTeamCacheServices() {
+        teamCacheServices.removeAll()
+        
+        Task { @MainActor in
+            for (profileName, settings) in profileTeamCacheSettings {
+                if settings.teamCacheEnabled, let config = settings.teamCacheConfig, config.isValid {
+                    do {
+                        let s3Service = try S3CacheService(config: config)
+                        teamCacheServices[profileName] = s3Service
+                        log(.debug, category: "TeamCache", "Initialized S3 cache service for profile: \(profileName)")
+                    } catch {
+                        log(.error, category: "TeamCache", "Failed to initialize S3 cache service for \(profileName): \(error.localizedDescription)")
+                    }
+                }
+            }
+            
+            // Start background sync timer if we have any team cache services
+            if !teamCacheServices.isEmpty {
+                startBackgroundSyncTimer()
+            }
+        }
+    }
+    
+    // Get team cache settings for a profile
+    func getTeamCacheSettings(for profileName: String) -> ProfileTeamCacheSettings {
+        return profileTeamCacheSettings[profileName] ?? ProfileTeamCacheSettings()
+    }
+    
+    // Update team cache settings for a profile
+    func updateTeamCacheSettings(for profileName: String, settings: ProfileTeamCacheSettings) {
+        profileTeamCacheSettings[profileName] = settings
+        saveTeamCacheSettings()
+        
+        // Reinitialize cache services to reflect changes
+        initializeTeamCacheServices()
+    }
+    
+    // Start background synchronization timer
+    private func startBackgroundSyncTimer() {
+        backgroundSyncTimer?.invalidate()
+        
+        // Run background sync every 5 minutes
+        backgroundSyncTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+            Task {
+                await self?.performBackgroundCacheSync()
+            }
+        }
+        
+        log(.debug, category: "TeamCache", "Started background sync timer")
+    }
+    
+    // Stop background synchronization timer
+    private func stopBackgroundSyncTimer() {
+        backgroundSyncTimer?.invalidate()
+        backgroundSyncTimer = nil
+        log(.debug, category: "TeamCache", "Stopped background sync timer")
+    }
+    
+    // Perform background cache synchronization
+    private func performBackgroundCacheSync() async {
+        log(.debug, category: "TeamCache", "Starting background cache sync")
+        
+        for (profileName, cacheService) in teamCacheServices {
+            guard let accountId = await resolveAccountId(for: profileName),
+                  let cacheEntry = costCache[profileName] else {
+                continue
+            }
+            
+            do {
+                let cacheKey = generateCacheKey(accountId: accountId)
+                let remoteCacheEntry = convertToRemoteCacheEntry(cacheEntry, accountId: accountId)
+                
+                try await cacheService.putObject(key: cacheKey, entry: remoteCacheEntry)
+                log(.debug, category: "TeamCache", "Background sync completed for profile: \(profileName)")
+            } catch {
+                log(.error, category: "TeamCache", "Background sync failed for profile \(profileName): \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // MARK: - Team Cache Helper Methods
+    
+    // Check team cache first for the given profile
+    private func checkTeamCacheFirst(for profile: AWSProfile) async -> Bool {
+        // Check if team cache is enabled for this profile
+        let settings = getTeamCacheSettings(for: profile.name)
+        guard settings.teamCacheEnabled,
+              let cacheService = teamCacheServices[profile.name] else {
+            log(.debug, category: "TeamCache", "Team cache not enabled for profile: \(profile.name)")
+            return false
+        }
+        
+        // Resolve account ID and generate cache key
+        guard let accountId = await resolveAccountId(for: profile.name) else {
+            log(.warning, category: "TeamCache", "Could not resolve account ID for team cache lookup: \(profile.name)")
+            return false
+        }
+        
+        let cacheKey = generateCacheKey(accountId: accountId)
+        
+        do {
+            // Try to get data from team cache
+            let result = try await cacheService.getObject(key: cacheKey)
+            
+            switch result {
+            case .success(let remoteEntry):
+                // Check if the remote cache data is still valid
+                let budget = getBudget(for: profile.name)
+                let localEntry = convertToLocalCacheEntry(remoteEntry)
+                
+                if localEntry.isValidForBudget(budget) {
+                    log(.info, category: "TeamCache", "Using team cache data for \(profile.name), age: \(Int(Date().timeIntervalSince(remoteEntry.fetchDate) / 60)) minutes")
+                    
+                    // Update local cache with team cache data
+                    await MainActor.run {
+                        self.costCache[profile.name] = localEntry
+                        self.cacheStatus[profile.name] = remoteEntry.fetchDate
+                    }
+                    
+                    // Load the data into UI
+                    await loadFromCache(localEntry)
+                    return true
+                } else {
+                    log(.debug, category: "TeamCache", "Team cache data for \(profile.name) is stale")
+                }
+                
+            case .expired(let expiredEntry):
+                log(.debug, category: "TeamCache", "Team cache data for \(profile.name) has expired")
+                
+            case .notFound:
+                log(.debug, category: "TeamCache", "No team cache data found for \(profile.name)")
+                
+            case .error(let error):
+                log(.error, category: "TeamCache", "Team cache lookup failed for \(profile.name): \(error.localizedDescription)")
+            }
+            
+        } catch {
+            log(.error, category: "TeamCache", "Team cache error for \(profile.name): \(error.localizedDescription)")
+        }
+        
+        return false
+    }
+    
+    // Update team cache after successful API call
+    private func updateTeamCacheAfterAPICall() async {
+        log(.debug, category: "TeamCache", "Updating team cache after API call")
+        
+        for (profileName, cacheEntry) in costCache {
+            // Check if team cache is enabled for this profile
+            let settings = getTeamCacheSettings(for: profileName)
+            guard settings.teamCacheEnabled,
+                  let cacheService = teamCacheServices[profileName] else {
+                continue
+            }
+            
+            // Resolve account ID
+            guard let accountId = await resolveAccountId(for: profileName) else {
+                log(.warning, category: "TeamCache", "Could not resolve account ID for team cache update: \(profileName)")
+                continue
+            }
+            
+            do {
+                let cacheKey = generateCacheKey(accountId: accountId)
+                let remoteCacheEntry = convertToRemoteCacheEntry(cacheEntry, accountId: accountId)
+                
+                try await cacheService.putObject(key: cacheKey, entry: remoteCacheEntry)
+                log(.info, category: "TeamCache", "Updated team cache for profile: \(profileName)")
+            } catch {
+                log(.error, category: "TeamCache", "Failed to update team cache for \(profileName): \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // Generate cache key for current month
+    private func generateCacheKey(accountId: String) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        let year = calendar.component(.year, from: now)
+        let month = calendar.component(.month, from: now)
+        
+        return CacheKeyGenerator.generateKey(
+            accountId: accountId,
+            year: year,
+            month: month,
+            dataType: .fullData
+        )
+    }
+    
+    // Resolve AWS account ID for a profile
+    private func resolveAccountId(for profileName: String) async -> String? {
+        do {
+            // Use AWS STS to get account ID
+            let stsConfig = try await STSClient.STSClientConfiguration(
+                region: "us-east-1" // STS is available in all regions
+            )
+            let stsClient = STSClient(config: stsConfig)
+            
+            let input = GetCallerIdentityInput()
+            let output = try await stsClient.getCallerIdentity(input: input)
+            
+            if let accountId = output.account {
+                log(.debug, category: "TeamCache", "Resolved account ID for \(profileName): \(accountId)")
+                return accountId
+            } else {
+                log(.warning, category: "TeamCache", "Could not resolve account ID for profile: \(profileName)")
+                return nil
+            }
+        } catch {
+            log(.error, category: "TeamCache", "Failed to resolve account ID for \(profileName): \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    // Convert local cache entry to remote cache entry
+    private func convertToRemoteCacheEntry(_ localEntry: CostCacheEntry, accountId: String) -> RemoteCacheEntry {
+        let cacheKey = generateCacheKey(accountId: accountId)
+        let metadata = CacheMetadata(
+            ttl: 3600, // 1 hour TTL
+            cacheKey: cacheKey
+        )
+        
+        return RemoteCacheEntry(
+            profileName: localEntry.profileName,
+            accountId: accountId,
+            fetchDate: localEntry.fetchDate,
+            mtdTotal: localEntry.mtdTotal,
+            currency: localEntry.currency,
+            dailyCosts: localEntry.dailyCosts,
+            serviceCosts: localEntry.serviceCosts,
+            startDate: localEntry.startDate,
+            endDate: localEntry.endDate,
+            metadata: metadata
+        )
+    }
+    
+    // Convert remote cache entry to local cache entry
+    private func convertToLocalCacheEntry(_ remoteEntry: RemoteCacheEntry) -> CostCacheEntry {
+        return CostCacheEntry(
+            profileName: remoteEntry.profileName,
+            fetchDate: remoteEntry.fetchDate,
+            mtdTotal: remoteEntry.mtdTotal,
+            currency: remoteEntry.currency,
+            dailyCosts: remoteEntry.dailyCosts,
+            serviceCosts: remoteEntry.serviceCosts,
+            startDate: remoteEntry.startDate,
+            endDate: remoteEntry.endDate
+        )
+    }
+    
+    // MARK: - Team Cache Cleanup and Maintenance
+    
+    // Clean up old cache entries for a profile
+    func cleanupTeamCache(for profileName: String) async {
+        let settings = getTeamCacheSettings(for: profileName)
+        guard settings.teamCacheEnabled,
+              let cacheService = teamCacheServices[profileName] else {
+            return
+        }
+        
+        guard let accountId = await resolveAccountId(for: profileName) else {
+            log(.warning, category: "TeamCache", "Could not resolve account ID for cache cleanup: \(profileName)")
+            return
+        }
+        
+        do {
+            // List all cache entries for this account
+            let prefix = "cache-v1/\(accountId)/"
+            let keys = try await cacheService.listObjects(prefix: prefix)
+            
+            let calendar = Calendar.current
+            let now = Date()
+            let currentMonth = calendar.component(.month, from: now)
+            let currentYear = calendar.component(.year, from: now)
+            
+            // Delete entries older than 3 months
+            for key in keys {
+                if let parsed = CacheKeyGenerator.parseKey(key) {
+                    let entryDate = calendar.date(from: DateComponents(year: parsed.year, month: parsed.month))
+                    let monthsOld = calendar.dateComponents([.month], from: entryDate ?? now, to: now).month ?? 0
+                    
+                    if monthsOld > 3 {
+                        try await cacheService.deleteObject(key: key)
+                        log(.info, category: "TeamCache", "Deleted old cache entry: \(key)")
+                    }
+                }
+            }
+            
+            log(.info, category: "TeamCache", "Cache cleanup completed for profile: \(profileName)")
+        } catch {
+            log(.error, category: "TeamCache", "Cache cleanup failed for \(profileName): \(error.localizedDescription)")
+        }
+    }
+    
+    // Force refresh cache (bypass all cache layers)
+    func forceRefreshWithTeamCacheUpdate() async {
+        guard let profile = selectedProfile else {
+            log(.warning, category: "TeamCache", "No profile selected for force refresh")
+            return
+        }
+        
+        // Clear local cache first
+        costCache.removeValue(forKey: profile.name)
+        cacheStatus.removeValue(forKey: profile.name)
+        
+        // Clear team cache if enabled
+        let settings = getTeamCacheSettings(for: profile.name)
+        if settings.teamCacheEnabled,
+           let cacheService = teamCacheServices[profile.name],
+           let accountId = await resolveAccountId(for: profile.name) {
+            
+            let cacheKey = generateCacheKey(accountId: accountId)
+            
+            do {
+                try await cacheService.deleteObject(key: cacheKey)
+                log(.info, category: "TeamCache", "Cleared team cache for profile: \(profile.name)")
+            } catch {
+                log(.error, category: "TeamCache", "Failed to clear team cache for \(profile.name): \(error.localizedDescription)")
+            }
+        }
+        
+        // Now fetch fresh data from API
+        await fetchCostForSelectedProfile(force: true)
+    }
+    
+    // Test team cache connection for a profile
+    func testTeamCacheConnection(for profileName: String) async -> Bool {
+        let settings = getTeamCacheSettings(for: profileName)
+        guard settings.teamCacheEnabled,
+              let cacheService = teamCacheServices[profileName] else {
+            log(.warning, category: "TeamCache", "Team cache not enabled for profile: \(profileName)")
+            return false
+        }
+        
+        do {
+            try await cacheService.testConnection()
+            log(.info, category: "TeamCache", "Team cache connection test successful for: \(profileName)")
+            return true
+        } catch {
+            log(.error, category: "TeamCache", "Team cache connection test failed for \(profileName): \(error.localizedDescription)")
+            return false
+        }
     }
     
     // MARK: - Enhanced Analytics
