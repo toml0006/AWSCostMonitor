@@ -71,6 +71,25 @@ struct PopoverContentView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Spacer()
+                    
+                    // Team Cache Status Indicator
+                    if let profile = awsManager.selectedProfile {
+                        // TODO: Check if team cache is enabled for this profile
+                        let teamCacheEnabled = false // This should be loaded from profile settings
+                        
+                        if teamCacheEnabled {
+                            HStack(spacing: 3) {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 6, height: 6)
+                                Text("Team")
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundColor(.blue)
+                            }
+                            .help("Team cache enabled")
+                        }
+                    }
+                    
                     Picker("", selection: $awsManager.selectedProfile) {
                         ForEach(awsManager.realProfiles, id: \.self) { profile in
                             Text(profile.name).tag(Optional(profile))
@@ -217,6 +236,20 @@ struct PopoverContentView: View {
                                         Text("(\(Int(cacheAge/60)) min ago)")
                                             .font(.system(size: 9, weight: .bold))
                                             .foregroundColor(cacheAge > 1800 ? .red : .green) // Red if > 30 min
+                                        
+                                        // Team cache sync status
+                                        // TODO: Check if team cache is enabled and show last sync
+                                        let teamCacheEnabled = false // This should be loaded from profile settings
+                                        if teamCacheEnabled {
+                                            HStack(spacing: 3) {
+                                                Circle()
+                                                    .fill(Color.blue)
+                                                    .frame(width: 4, height: 4)
+                                                Text("Team synced")
+                                                    .font(.system(size: 8))
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -354,6 +387,7 @@ struct PopoverContentView: View {
             VStack(spacing: 8) {
                 // Top row: Refresh and Settings
                 HStack {
+                    // Regular refresh button
                     Button(action: {
                         Task {
                             await awsManager.fetchCostForSelectedProfile(force: true)
@@ -370,6 +404,33 @@ struct PopoverContentView: View {
                     .buttonStyle(.plain)
                     .onHover { isHovered in
                         refreshButtonHovered = isHovered
+                    }
+                    
+                    // Team cache force refresh (when enabled)
+                    if let profile = awsManager.selectedProfile {
+                        // TODO: Check if team cache is enabled for this profile
+                        let teamCacheEnabled = false // This should be loaded from profile settings
+                        
+                        if teamCacheEnabled {
+                            Button(action: {
+                                Task {
+                                    // TODO: Implement team cache force refresh
+                                    await awsManager.fetchCostForSelectedProfile(force: true)
+                                    awsManager.log(.info, category: "TeamCache", "Team cache force refresh initiated from menu")
+                                }
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "externaldrive.connected.to.line.below")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.blue)
+                                    Text("Team")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .help("Force refresh team cache")
+                        }
                     }
                     
                     Spacer()
