@@ -28,11 +28,41 @@ Monitor your AWS costs in real-time directly from your macOS menu bar. No subscr
 
 - 👁️ **Always Visible** - Lives in your menu bar for instant cost visibility
 - 👥 **Multi-Profile Support** - Switch between multiple AWS accounts effortlessly
+- 📅 **Calendar View** - Visual monthly calendar showing daily spending patterns (v1.2.0)
+- 📊 **Interactive Charts** - Donut charts with hover interactions for service breakdowns (v1.2.0)
+- 🔍 **Daily Deep Dive** - Click any calendar day to see detailed service costs and usage (v1.2.0)
 - 📊 **Smart Trends** - Color-coded indicators show spending patterns
 - 🔔 **Budget Alerts** - Get notified before exceeding limits
 - ⚡ **Intelligent Refresh** - Adjusts polling based on spending patterns
+- ⌨️ **Keyboard Shortcuts** - Quick access with customizable hotkeys (v1.2.0)
 - 🔒 **100% Private** - All data stays local, no telemetry
 - ✅ **Signed & Sandboxed** - Developer ID signed and fully sandboxed for security
+
+## 🆕 What's New in v1.2.0
+
+### 📅 Calendar View
+- **Monthly Calendar**: Visualize daily spending patterns with color-coded calendar grid
+- **Smart Navigation**: Navigate between months with current month quick return
+- **Spending Heatmap**: Instantly spot high-spend days with visual intensity
+- **Keyboard Shortcut**: Quick access with ⌘K from anywhere in the app
+
+### 📊 Enhanced Day Details
+- **Interactive Donut Charts**: Beautiful, responsive charts that highlight on hover
+- **Service Breakdown**: Click any day to see detailed AWS service costs
+- **Visual Proportions**: Instantly understand which services cost the most
+- **Smart Grouping**: Small services automatically grouped for cleaner display
+
+### ⌨️ Keyboard Shortcuts
+- **⌘K**: Open Calendar View
+- **⌘R**: Force refresh cost data
+- **⌘1-9**: Quick switch between AWS profiles
+- **ESC**: Close calendar/day detail views
+
+### 🎨 User Experience
+- **Smooth Animations**: Polished transitions and hover effects
+- **Professional Design**: Clean, modern interface following macOS design guidelines
+- **Responsive Layout**: Optimal viewing at any window size
+- **Accessibility**: Full keyboard navigation support
 
 ## 📁 Repository Structure
 

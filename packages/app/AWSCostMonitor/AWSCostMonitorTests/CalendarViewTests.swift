@@ -308,7 +308,7 @@ struct CalendarViewTests {
         let dailyCosts = awsManager.dailyCostsByProfile[testProfile] ?? []
         #expect(dailyCosts.isEmpty)
         
-        let serviceCosts = awsManager.dailyServiceCostsByProfile[testProfile] ?? [:]
+        let serviceCosts = awsManager.dailyServiceCostsByProfile[testProfile] ?? []
         #expect(serviceCosts.isEmpty)
     }
     
