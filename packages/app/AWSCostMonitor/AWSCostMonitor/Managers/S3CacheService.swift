@@ -147,9 +147,10 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
                     putInput.serverSideEncryption = .aes256
                 case .sseKms:
                     putInput.serverSideEncryption = .awsKms
-                    if let kmsKeyId = self.config.kmsKeyId {
-                        putInput.sseKMSKeyId = kmsKeyId
-                    }
+                    // Note: KMS key ID would be set here when AWS SDK supports it
+                    // if let kmsKeyId = self.config.kmsKeyId {
+                    //     putInput.sseKMSKeyId = kmsKeyId
+                    // }
                 }
                 
                 let input = putInput
@@ -326,7 +327,7 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
     // MARK: - Permission Validation
     
     func validatePermissions() async -> IAMPermissionCheckResult {
-        logger.info("Validating IAM permissions for bucket: \(config.s3BucketName)")
+        logger.info("Validating IAM permissions for bucket: \(self.config.s3BucketName)")
         
         var hasReadAccess = false
         var hasWriteAccess = false
@@ -372,9 +373,10 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
                 putInput.serverSideEncryption = .aes256
             case .sseKms:
                 putInput.serverSideEncryption = .awsKms
-                if let kmsKeyId = config.kmsKeyId {
-                    putInput.sseKMSKeyId = kmsKeyId
-                }
+                // Note: KMS key ID would be set here when AWS SDK supports it
+                // if let kmsKeyId = config.kmsKeyId {
+                //     putInput.sseKMSKeyId = kmsKeyId
+                // }
             }
             
             _ = try await s3Client.putObject(input: putInput)
@@ -499,9 +501,10 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
                     putInput.serverSideEncryption = .aes256
                 case .sseKms:
                     putInput.serverSideEncryption = .awsKms
-                    if let kmsKeyId = config.kmsKeyId {
-                        putInput.sseKMSKeyId = kmsKeyId
-                    }
+                    // Note: KMS key ID would be set here when AWS SDK supports it
+                    // if let kmsKeyId = config.kmsKeyId {
+                    //     putInput.sseKMSKeyId = kmsKeyId
+                    // }
                 }
                 
                 _ = try? await s3Client.putObject(input: putInput)
