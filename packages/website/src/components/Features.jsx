@@ -11,10 +11,28 @@ import {
   BarChart3,
   Lock,
   Calendar,
-  PieChart
+  PieChart,
+  Crown,
+  Share2
 } from 'lucide-react'
 
 const features = [
+  {
+    icon: Share2,
+    title: 'Team Cache Sharing',
+    description: 'Share cost data across your team via S3 to reduce API costs and improve coordination',
+    color: 'primary',
+    badge: 'PRO',
+    isPro: true
+  },
+  {
+    icon: Crown,
+    title: 'Advanced Forecasting',
+    description: 'Enhanced cost predictions and analytics with mathematical precision',
+    color: 'accent',
+    badge: 'PRO',
+    isPro: true
+  },
   {
     icon: Calendar,
     title: 'Calendar View',
@@ -96,7 +114,7 @@ const Features = () => {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className={`feature-card card card-brutal card-memphis card-${feature.color}`}
+              className={`feature-card card card-brutal card-memphis card-${feature.color} ${feature.isPro ? 'feature-pro' : ''}`}
             >
               <div className="feature-icon">
                 <feature.icon size={32} />

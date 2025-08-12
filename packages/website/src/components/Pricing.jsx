@@ -13,71 +13,120 @@ const Pricing = () => {
           className="section-header"
         >
           <h2>Simple <span className="text-gradient">Pricing</span></h2>
-          <p>Actually, there's no pricing. It's completely free.</p>
+          <p>Free to start, Pro features for teams. No subscriptions.</p>
         </motion.div>
         
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="pricing-card"
-        >
-          <div className="price-badge">
-            <Sparkles size={24} />
-            <span>FOREVER FREE</span>
-          </div>
-          
-          <div className="price-amount">
-            <span className="currency">$</span>
-            <span className="number">0</span>
-            <span className="period">/forever</span>
-          </div>
-          
-          <p className="price-description">
-            Open source and free forever. No premium tiers, no upsells, no catch.
-          </p>
-          
-          <div className="features-list">
-            <div className="feature">
-              <Check size={20} />
-              <span>Unlimited AWS profiles</span>
+        <div className="pricing-grid">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="pricing-card"
+          >
+            <div className="price-badge">
+              <Sparkles size={24} />
+              <span>FREE</span>
             </div>
-            <div className="feature">
-              <Check size={20} />
-              <span>Real-time cost monitoring</span>
+            
+            <div className="price-amount">
+              <span className="currency">$</span>
+              <span className="number">0</span>
+              <span className="period">/forever</span>
             </div>
-            <div className="feature">
-              <Check size={20} />
-              <span>Smart refresh rates</span>
+            
+            <p className="price-description">
+              Perfect for individual developers and personal use
+            </p>
+            
+            <div className="features-list">
+              <div className="feature">
+                <Check size={20} />
+                <span>Single AWS profile</span>
+              </div>
+              <div className="feature">
+                <Check size={20} />
+                <span>Real-time cost monitoring</span>
+              </div>
+              <div className="feature">
+                <Check size={20} />
+                <span>Calendar view</span>
+              </div>
+              <div className="feature">
+                <Check size={20} />
+                <span>Interactive charts</span>
+              </div>
+              <div className="feature">
+                <Check size={20} />
+                <span>Manual refresh</span>
+              </div>
+              <div className="feature">
+                <Check size={20} />
+                <span>Basic alerts</span>
+              </div>
             </div>
-            <div className="feature">
-              <Check size={20} />
-              <span>Budget alerts</span>
+            
+            <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
+               className="btn btn-outline price-cta">
+              Download Free
+            </a>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            viewport={{ once: true }}
+            className="pricing-card pricing-card-pro"
+          >
+            <div className="price-badge price-badge-pro">
+              <Sparkles size={24} />
+              <span>PRO</span>
             </div>
-            <div className="feature">
-              <Check size={20} />
-              <span>Service breakdown</span>
+            
+            <div className="price-amount">
+              <span className="currency">$</span>
+              <span className="number">3.99</span>
+              <span className="period">/one-time</span>
             </div>
-            <div className="feature">
-              <Check size={20} />
-              <span>Historical tracking</span>
+            
+            <p className="price-description">
+              For teams and power users. 3-day free trial included.
+            </p>
+            
+            <div className="features-list">
+              <div className="feature">
+                <Check size={20} />
+                <span>Everything in Free</span>
+              </div>
+              <div className="feature feature-pro">
+                <Check size={20} />
+                <span>Unlimited AWS profiles</span>
+              </div>
+              <div className="feature feature-pro">
+                <Check size={20} />
+                <span>Team cache sharing via S3</span>
+              </div>
+              <div className="feature feature-pro">
+                <Check size={20} />
+                <span>Advanced forecasting</span>
+              </div>
+              <div className="feature feature-pro">
+                <Check size={20} />
+                <span>Smart refresh rates</span>
+              </div>
+              <div className="feature feature-pro">
+                <Check size={20} />
+                <span>Priority support</span>
+              </div>
             </div>
-            <div className="feature">
-              <Check size={20} />
-              <span>Export to CSV/JSON</span>
-            </div>
-            <div className="feature">
-              <Check size={20} />
-              <span>Forever updates</span>
-            </div>
-          </div>
-          
-          <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
-             className="btn btn-primary price-cta">
-            Download Now
-          </a>
-        </motion.div>
+            
+            <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
+               className="btn btn-primary price-cta">
+              Try Free for 3 Days
+            </a>
+          </motion.div>
+        </div>
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}

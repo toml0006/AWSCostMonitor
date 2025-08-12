@@ -15,8 +15,8 @@ const Hero = () => {
             className="hero-text"
           >
             <div className="hero-badge">
-              <span className="badge-primary">NEW</span>
-              <span>Never get surprised by AWS bills again</span>
+              <span className="badge-primary">v1.3.0</span>
+              <span>Pro features + Team collaboration</span>
             </div>
             
             <h1 className="hero-title">
@@ -49,8 +49,8 @@ const Hero = () => {
                 <span className="stat-label">Setup time</span>
               </div>
               <div className="stat">
-                <span className="stat-number">$0</span>
-                <span className="stat-label">Forever free</span>
+                <span className="stat-number">$3.99</span>
+                <span className="stat-label">Pro upgrade</span>
               </div>
               <div className="stat">
                 <span className="stat-number">100%</span>
