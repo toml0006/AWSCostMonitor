@@ -38,6 +38,26 @@ Monitor your AWS costs in real-time directly from your macOS menu bar. No subscr
 - 🔒 **100% Private** - All data stays local, no telemetry
 - ✅ **Signed & Sandboxed** - Developer ID signed and fully sandboxed for security
 
+## 🆕 What's New in v1.3.0 - Team Features & Pro Upgrade
+
+**Finally decided to charge money. Shocking, we know.**
+
+### 💎 Pro Features (Just $3.99, Less Than Your Coffee Habit)
+- **Team Cache Sharing** - Stop your teammates from hammering AWS APIs like barbarians
+- **Advanced Forecasting** - Mathematical predictions of your future financial regret  
+- **3-Day Free Trial** - We're not monsters, try it first
+- **Universal Binary** - Now works on Intel Macs too (you're welcome, holdouts)
+
+### ⚡ Actually Useful Improvements
+- Enhanced calendar view with 47% more colors and 73% fewer confused stares
+- Keyboard shortcuts (⌘1-9) because apparently clicking is exhausting
+- Better error messages when things inevitably break
+- Memory leak fixed (your RAM thanks us)
+
+**[📋 See Full Changelog](CHANGELOG.md)** - *Warning: Contains mild sarcasm and technical details*
+
+---
+
 ## 🆕 What's New in v1.2.0
 
 ### 📅 Calendar View
