@@ -698,6 +698,9 @@ private extension Data {
 
 // MARK: - Stub Implementation for Non-Premium Builds
 
+import Foundation
+import SwiftUI
+
 protocol S3CacheServiceProtocol {
     func getObject(key: String) async throws -> CacheOperationResult
     func putObject(key: String, entry: RemoteCacheEntry) async throws

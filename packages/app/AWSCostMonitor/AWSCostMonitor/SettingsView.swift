@@ -12,18 +12,23 @@ struct SettingsView: View {
         MenuBarDisplayFormat(rawValue: displayFormat) ?? .full
     }
     
-    let settingsCategories = [
-        "Refresh Rate",
-        "Display",
-        "AWS",
+    var settingsCategories: [String] {
+        var categories = [
+            "Refresh Rate",
+            "Display",
+            "AWS"
+        ]
         #if PREMIUM_FEATURES
-        "Team Cache",
+        categories.append("Team Cache")
         #endif
-        "Alerts",
-        "Notifications",
-        "CloudWatch",
-        "Debug"
-    ]
+        categories.append(contentsOf: [
+            "Alerts",
+            "Notifications",
+            "CloudWatch",
+            "Debug"
+        ])
+        return categories
+    }
     
     var body: some View {
         HStack(spacing: 0) {
