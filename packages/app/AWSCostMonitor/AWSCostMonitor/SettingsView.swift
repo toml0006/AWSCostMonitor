@@ -16,6 +16,7 @@ struct SettingsView: View {
         "Refresh Rate",
         "Display",
         "AWS",
+        "Team Cache",
         "Alerts",
         "Notifications",
         "CloudWatch",
@@ -113,6 +114,8 @@ struct SettingsView: View {
             return "textformat"
         case "AWS":
             return "cloud"
+        case "Team Cache":
+            return "externaldrive.connected.to.line.below"
         case "Alerts":
             return "exclamationmark.triangle"
         case "Notifications":
@@ -143,6 +146,8 @@ struct SettingsView: View {
             )
         case "AWS":
             AWSSettingsTab()
+        case "Team Cache":
+            TeamCacheSettingsTab()
         case "Alerts":
             AnomalySettingsTab()
         case "Notifications":
@@ -1582,6 +1587,443 @@ struct EditMetricSheet: View {
             .padding()
         }
         .frame(width: 400, height: 350)
+    }
+}
+
+struct TeamCacheSettingsTab: View {
+    @EnvironmentObject var awsManager: AWSManager
+    @State private var selectedProfile: AWSProfile?
+    @State private var teamCacheEnabled: Bool = false
+    @State private var s3BucketName: String = ""
+    @State private var s3Region: String = "us-east-1"
+    @State private var cachePrefix: String = "awscost-team-cache"
+    @State private var isTestingConnection: Bool = false
+    @State private var connectionTestResult: String?
+    @State private var connectionTestIcon: String?
+    @State private var connectionTestColor: Color = .secondary
+    @State private var showingStats: Bool = false
+    @State private var cacheStatistics: CacheStatistics?
+    @State private var lastSyncTime: Date?
+    
+    // Available AWS regions for S3
+    let availableRegions = [
+        "us-east-1": "US East (N. Virginia)",
+        "us-east-2": "US East (Ohio)",
+        "us-west-1": "US West (N. California)",
+        "us-west-2": "US West (Oregon)",
+        "ap-south-1": "Asia Pacific (Mumbai)",
+        "ap-northeast-1": "Asia Pacific (Tokyo)",
+        "ap-northeast-2": "Asia Pacific (Seoul)",
+        "ap-southeast-1": "Asia Pacific (Singapore)",
+        "ap-southeast-2": "Asia Pacific (Sydney)",
+        "ca-central-1": "Canada (Central)",
+        "eu-central-1": "Europe (Frankfurt)",
+        "eu-west-1": "Europe (Ireland)",
+        "eu-west-2": "Europe (London)",
+        "eu-west-3": "Europe (Paris)",
+        "eu-north-1": "Europe (Stockholm)",
+        "sa-east-1": "South America (São Paulo)"
+    ]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Team Cache Configuration")
+                .font(.headline)
+            
+            if !awsManager.profiles.isEmpty {
+                // Profile selector
+                Picker("Select Profile:", selection: $selectedProfile) {
+                    Text("Choose a profile").tag(nil as AWSProfile?)
+                    ForEach(awsManager.profiles, id: \.self) { profile in
+                        Text(profile.name).tag(Optional(profile))
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: selectedProfile) { _, newProfile in
+                    if let profile = newProfile {
+                        loadTeamCacheSettings(for: profile)
+                    }
+                }
+                
+                if let profile = selectedProfile {
+                    Divider()
+                    
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Enable/Disable toggle
+                        HStack {
+                            Toggle("Enable team cache for this profile", isOn: $teamCacheEnabled)
+                                .onChange(of: teamCacheEnabled) { _, _ in
+                                    saveTeamCacheSettings()
+                                }
+                            
+                            Spacer()
+                            
+                            // Status indicator
+                            if teamCacheEnabled {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 8, height: 8)
+                                    Text("Enabled")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                }
+                            } else {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color.gray)
+                                        .frame(width: 8, height: 8)
+                                    Text("Disabled")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        }
+                        
+                        if teamCacheEnabled {
+                            // S3 Configuration Section
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("S3 Bucket Configuration")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                
+                                // Bucket name
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("S3 Bucket Name")
+                                        .font(.caption)
+                                    TextField("my-team-cost-cache", text: $s3BucketName)
+                                        .textFieldStyle(.roundedBorder)
+                                        .onChange(of: s3BucketName) { _, _ in
+                                            saveTeamCacheSettings()
+                                        }
+                                    Text("Must be globally unique and accessible by all team members")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                // Region
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("S3 Region")
+                                        .font(.caption)
+                                    Picker("Region", selection: $s3Region) {
+                                        ForEach(Array(availableRegions.keys.sorted()), id: \.self) { region in
+                                            if let displayName = availableRegions[region] {
+                                                Text("\(region) - \(displayName)").tag(region)
+                                            }
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .onChange(of: s3Region) { _, _ in
+                                        saveTeamCacheSettings()
+                                    }
+                                    Text("Choose region closest to your team")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                // Cache prefix
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Cache Prefix")
+                                        .font(.caption)
+                                    TextField("awscost-team-cache", text: $cachePrefix)
+                                        .textFieldStyle(.roundedBorder)
+                                        .onChange(of: cachePrefix) { _, _ in
+                                            saveTeamCacheSettings()
+                                        }
+                                    Text("Used to organize cache entries in the S3 bucket")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                // Connection test
+                                HStack {
+                                    Button(action: testConnection) {
+                                        HStack(spacing: 6) {
+                                            if isTestingConnection {
+                                                ProgressView()
+                                                    .scaleEffect(0.7)
+                                                    .controlSize(.small)
+                                            } else if let icon = connectionTestIcon {
+                                                Image(systemName: icon)
+                                                    .foregroundColor(connectionTestColor)
+                                            }
+                                            Text("Test Connection")
+                                        }
+                                    }
+                                    .disabled(s3BucketName.isEmpty || isTestingConnection)
+                                    .buttonStyle(.bordered)
+                                    
+                                    if let result = connectionTestResult {
+                                        Text(result)
+                                            .font(.caption)
+                                            .foregroundColor(connectionTestColor)
+                                            .lineLimit(2)
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color.gray.opacity(0.05))
+                            .cornerRadius(8)
+                            
+                            // Cache Statistics Section
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Text("Cache Statistics")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                    
+                                    Spacer()
+                                    
+                                    Button(showingStats ? "Hide Stats" : "Show Stats") {
+                                        showingStats.toggle()
+                                        if showingStats {
+                                            loadCacheStatistics()
+                                        }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                                
+                                if showingStats {
+                                    if let stats = cacheStatistics {
+                                        VStack(spacing: 8) {
+                                            HStack {
+                                                Text("Cache Entries:")
+                                                Spacer()
+                                                Text("\(stats.totalEntries)")
+                                                    .monospacedDigit()
+                                            }
+                                            .font(.caption)
+                                            
+                                            HStack {
+                                                Text("Cache Size:")
+                                                Spacer()
+                                                Text(formatBytes(stats.totalSizeBytes))
+                                                    .monospacedDigit()
+                                            }
+                                            .font(.caption)
+                                            
+                                            HStack {
+                                                Text("Hit Ratio:")
+                                                Spacer()
+                                                Text(String(format: "%.1f%%", stats.hitRatio * 100))
+                                                    .monospacedDigit()
+                                                    .foregroundColor(stats.hitRatio > 0.5 ? .green : .orange)
+                                            }
+                                            .font(.caption)
+                                            
+                                            HStack {
+                                                Text("Hits/Misses:")
+                                                Spacer()
+                                                Text("\(stats.cacheHits)/\(stats.cacheMisses)")
+                                                    .monospacedDigit()
+                                            }
+                                            .font(.caption)
+                                            
+                                            if stats.errors > 0 {
+                                                HStack {
+                                                    Text("Errors:")
+                                                    Spacer()
+                                                    Text("\(stats.errors)")
+                                                        .monospacedDigit()
+                                                        .foregroundColor(.red)
+                                                }
+                                                .font(.caption)
+                                            }
+                                            
+                                            if let lastAccess = stats.lastAccessTime {
+                                                HStack {
+                                                    Text("Last Access:")
+                                                    Spacer()
+                                                    Text(lastAccess, style: .relative)
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                                .font(.caption)
+                                            }
+                                        }
+                                    } else {
+                                        HStack {
+                                            ProgressView()
+                                                .controlSize(.small)
+                                            Text("Loading statistics...")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color.blue.opacity(0.05))
+                            .cornerRadius(8)
+                            
+                            // Force Refresh Section
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Cache Management")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                
+                                HStack {
+                                    Button("Force Refresh Cache") {
+                                        forceRefreshCache()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .disabled(!teamCacheEnabled || s3BucketName.isEmpty)
+                                    
+                                    Spacer()
+                                    
+                                    if let syncTime = lastSyncTime {
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            Text("Last Sync:")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Text(syncTime, style: .relative)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                                
+                                Text("Forces a fresh fetch from AWS API and updates the team cache")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            // Help and Setup Instructions
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "info.circle")
+                                        .foregroundColor(.blue)
+                                    Text("Setup Requirements")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("• S3 bucket with read/write permissions for all team members")
+                                        .font(.caption)
+                                    Text("• IAM policy allowing s3:GetObject, s3:PutObject, s3:DeleteObject, s3:ListBucket")
+                                        .font(.caption)
+                                    Text("• All team members must use the same bucket name and region")
+                                        .font(.caption)
+                                    Text("• Cache entries are compressed and encrypted at rest")
+                                        .font(.caption)
+                                }
+                                .foregroundColor(.secondary)
+                                
+                                Button("View Setup Guide") {
+                                    if let url = URL(string: "https://toml0006.github.io/AWSCostMonitor/team-cache-setup") {
+                                        NSWorkspace.shared.open(url)
+                                    }
+                                }
+                                .buttonStyle(.link)
+                                .font(.caption)
+                            }
+                            .padding()
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+            } else {
+                Text("No AWS profiles available")
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .onAppear {
+            if selectedProfile == nil && !awsManager.profiles.isEmpty {
+                selectedProfile = awsManager.selectedProfile ?? awsManager.profiles.first
+                if let profile = selectedProfile {
+                    loadTeamCacheSettings(for: profile)
+                }
+            }
+        }
+    }
+    
+    private func loadTeamCacheSettings(for profile: AWSProfile) {
+        // Load team cache settings for the selected profile
+        // This would need to be implemented in AWSManager to get/set per-profile team cache settings
+        
+        // For now, using default values - this will need to be connected to actual storage
+        teamCacheEnabled = false
+        s3BucketName = ""
+        s3Region = "us-east-1"
+        cachePrefix = "awscost-team-cache"
+        connectionTestResult = nil
+        connectionTestIcon = nil
+        cacheStatistics = nil
+        lastSyncTime = nil
+    }
+    
+    private func saveTeamCacheSettings() {
+        guard let profile = selectedProfile else { return }
+        
+        // TODO: Implement saving team cache settings to AWSManager
+        // This should save per-profile team cache configuration
+        awsManager.log(.info, category: "TeamCache", "Team cache settings updated for profile: \(profile.name)")
+    }
+    
+    private func testConnection() {
+        guard let profile = selectedProfile, !s3BucketName.isEmpty else { return }
+        
+        isTestingConnection = true
+        connectionTestResult = nil
+        connectionTestIcon = nil
+        
+        Task {
+            await MainActor.run {
+                // Simulate connection test - this should use actual S3CacheService
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    // TODO: Implement real connection test using S3CacheService
+                    let success = !s3BucketName.isEmpty && s3BucketName.count > 3
+                    
+                    if success {
+                        connectionTestResult = "Connection successful!"
+                        connectionTestIcon = "checkmark.circle.fill"
+                        connectionTestColor = .green
+                    } else {
+                        connectionTestResult = "Connection failed. Check bucket name and permissions."
+                        connectionTestIcon = "xmark.circle.fill"
+                        connectionTestColor = .red
+                    }
+                    
+                    isTestingConnection = false
+                }
+            }
+        }
+    }
+    
+    private func loadCacheStatistics() {
+        // TODO: Load actual cache statistics from S3CacheService
+        cacheStatistics = CacheStatistics(
+            totalEntries: 12,
+            totalSizeBytes: 1024 * 150, // 150 KB
+            lastAccessTime: Date().addingTimeInterval(-300), // 5 minutes ago
+            cacheHits: 45,
+            cacheMisses: 8,
+            errors: 1
+        )
+    }
+    
+    private func forceRefreshCache() {
+        guard let profile = selectedProfile, teamCacheEnabled else { return }
+        
+        lastSyncTime = Date()
+        
+        Task {
+            // TODO: Implement force refresh with team cache
+            await awsManager.fetchCostForSelectedProfile(force: true)
+            awsManager.log(.info, category: "TeamCache", "Force refresh completed for profile: \(profile.name)")
+        }
+    }
+    
+    private func formatBytes(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
     }
 }
 

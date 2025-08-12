@@ -9,51 +9,67 @@ import {
   Users,
   RefreshCw,
   BarChart3,
-  Lock
+  Lock,
+  Calendar,
+  PieChart
 } from 'lucide-react'
 
 const features = [
   {
+    icon: Calendar,
+    title: 'Calendar View',
+    description: 'Beautiful monthly calendar showing daily spending patterns with color-coded intensity',
+    color: 'primary',
+    badge: 'v1.2.0'
+  },
+  {
+    icon: PieChart,
+    title: 'Interactive Charts',
+    description: 'Professional donut charts with hover effects showing service cost breakdowns',
+    color: 'accent',
+    badge: 'v1.2.0'
+  },
+  {
     icon: Eye,
-    title: "Always Visible",
-    description: "Lives in your menu bar for instant cost visibility without switching contexts",
-    color: "primary"
+    title: 'Always Visible',
+    description: 'Lives in your menu bar for instant cost visibility without switching contexts',
+    color: 'tertiary'
   },
   {
     icon: BarChart3,
-    title: "Visual Histograms",
-    description: "14-day spending histograms per service with red/green coloring vs last month",
-    color: "accent"
+    title: 'Visual Histograms',
+    description: '14-day spending histograms per service with red/green coloring vs last month',
+    color: 'secondary'
   },
   {
     icon: TrendingDown,
-    title: "Smart Projections",
-    description: "Month-end spending projection and percentage comparison to last month",
-    color: "tertiary"
+    title: 'Smart Projections',
+    description: 'Month-end spending projection and percentage comparison to last month',
+    color: 'primary'
   },
   {
     icon: Users,
-    title: "Multi-Profile Support",
-    description: "Switch between multiple AWS accounts with smart error handling",
-    color: "secondary"
+    title: 'Multi-Profile Support',
+    description: 'Switch between multiple AWS accounts with smart error handling',
+    color: 'accent'
   },
   {
     icon: Bell,
-    title: "Budget Alerts",
-    description: "Get notified before you exceed your monthly spending limits",
-    color: "accent"
+    title: 'Budget Alerts',
+    description: 'Get notified before you exceed your monthly spending limits',
+    color: 'tertiary'
   },
   {
     icon: Zap,
-    title: "Intelligent Refresh",
-    description: "Adjusts polling frequency based on your spending patterns to minimize API calls",
-    color: "primary"
+    title: 'Intelligent Refresh',
+    description: 'Adjusts polling frequency based on your spending patterns to minimize API calls',
+    color: 'secondary'
   },
   {
     icon: Lock,
-    title: "Privacy First",
-    description: "Zero data collection. No external servers. Your AWS data never leaves your Mac.",
-    color: "secondary"
+    title: 'Privacy First',
+    description: 'Zero data collection. No external servers. Your AWS data never leaves your Mac.',
+    color: 'primary'
   }
 ]
 
@@ -84,6 +100,11 @@ const Features = () => {
             >
               <div className="feature-icon">
                 <feature.icon size={32} />
+                {feature.badge && (
+                  <span className="feature-badge">
+                    {feature.badge}
+                  </span>
+                )}
               </div>
               <h3>{feature.title}</h3>
               <p>{feature.description}</p>
@@ -141,10 +162,12 @@ const Features = () => {
             <div className="highlight-text">
               <h3>Enterprise Features, Personal Simplicity</h3>
               <p>
-                AWSCostMonitor brings enterprise-grade cost monitoring to individual developers 
-                and small teams. No complex setup, no monthly fees, no data leaving your machine.
+                AWSCostMonitor brings enterprise-grade cost monitoring to individual developers and
+                small teams. No complex setup, no monthly fees, no data leaving your machine.
               </p>
               <ul className="feature-list">
+                <li>✓ Calendar view with daily spending patterns</li>
+                <li>✓ Interactive donut charts with hover effects</li>
                 <li>✓ Service-by-service cost breakdown</li>
                 <li>✓ Monthly spending forecasts</li>
                 <li>✓ Historical data tracking</li>

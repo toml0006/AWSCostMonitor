@@ -180,3 +180,53 @@ Investing in testing and documentation upfront reduces long-term maintenance cos
 **Negative:**
 - Slower initial development
 - More upfront effort required
+
+---
+
+## 2025-08-11: Team Remote Caching with Privacy Preservation
+
+**ID:** DEC-005
+**Status:** Accepted
+**Category:** Technical
+**Related Spec:** @.agent-os/specs/2025-08-11-team-remote-cache/
+
+### Decision
+
+Implement team-based remote caching using AWS S3 as the storage backend, allowing teams to share cost data while maintaining the privacy-first architecture by leveraging users' existing AWS credentials and infrastructure.
+
+### Context
+
+Teams using AWSCostMonitor are making redundant API calls to AWS Cost Explorer, resulting in unnecessary costs and API usage. A shared cache could significantly reduce API calls while maintaining data freshness, but introducing external data sharing must align with the privacy-first design principle.
+
+### Alternatives Considered
+
+1. **Custom Cache Server**
+   - Pros: Full control, custom authentication, real-time sync
+   - Cons: Infrastructure complexity, contradicts privacy-first design, introduces external dependencies
+
+2. **No Team Sharing**
+   - Pros: Maintains pure local-only architecture
+   - Cons: Teams continue to waste money on redundant API calls, no cost optimization benefits
+
+3. **AWS S3 Backend (Selected)**
+   - Pros: Leverages existing AWS infrastructure and credentials, no additional authentication, aligns with AWS-centric workflow
+   - Cons: Requires S3 permissions, introduces complexity, potential cross-account access challenges
+
+### Rationale
+
+Using AWS S3 as the cache backend allows team data sharing while preserving privacy principles. Teams already trust AWS with their cost data, and using existing IAM credentials avoids introducing new authentication mechanisms or external services.
+
+### Consequences
+
+**Positive:**
+- Significant API cost reduction for teams (potentially 5-10x fewer calls)
+- Maintains privacy-first architecture (no third-party services)
+- Leverages existing AWS trust relationship and credentials
+- Optional per-profile configuration preserves user control
+- Graceful fallback maintains reliability
+
+**Negative:**
+- Increases configuration complexity for teams
+- Requires additional AWS permissions (S3 access)
+- Introduces potential cross-account access complexity
+- Cache synchronization adds new failure modes

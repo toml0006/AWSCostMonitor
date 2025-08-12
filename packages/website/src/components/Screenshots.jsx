@@ -11,6 +11,22 @@ const screenshots = [
     features: ["Real-time cost display", "Profile switching", "Trend indicators"]
   },
   {
+    title: "Calendar View",
+    description: "Beautiful monthly calendar showing daily spending patterns with color-coded intensity",
+    image: "/AWSCostMonitor/screenshots/calendar-view.png",
+    width: 2000,
+    height: 1125,
+    features: ["Monthly spending calendar", "Color-coded daily costs", "Quick month navigation", "⌘K keyboard shortcut"]
+  },
+  {
+    title: "Day Detail with Donut Chart",
+    description: "Interactive donut chart showing service breakdown when you click any calendar day",
+    image: "/AWSCostMonitor/screenshots/day-detail-donut.png",
+    width: 2000,
+    height: 1125,
+    features: ["Interactive donut charts", "Hover effects", "Service cost breakdown", "Smart service grouping"]
+  },
+  {
     title: "Settings - Refresh Rate",
     description: "Configure intelligent refresh rates based on your budget and spending patterns",
     image: "/AWSCostMonitor/screenshots/settings-refresh-rate.png",

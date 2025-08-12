@@ -1,13 +1,14 @@
 # Product Roadmap
 
-> Last Updated: 2025-08-02
-> Version: 1.0.0
+> Last Updated: 2025-08-11
+> Version: 1.2.0
 > Status: Active Development
 
-## Phase 0: Already Completed
+## Phase 0: Already Completed (v1.0.0 - v1.2.0)
 
 The following features have been implemented:
 
+### Core Menu Bar Features (v1.0.0)
 - [x] **Menu Bar Application** - Basic SwiftUI menu bar app with dollar sign icon `XS`
 - [x] **AWS Profile Loading** - Parse and load profiles from ~/.aws/config `S`
 - [x] **Profile Selection** - Dropdown picker to select active AWS profile `S`
@@ -16,7 +17,17 @@ The following features have been implemented:
 - [x] **Basic Error Handling** - Display errors when API calls fail `S`
 - [x] **Manual Refresh** - Button to manually refresh cost data `XS`
 
-## Phase 1: Enhanced Display & Configuration (2 weeks)
+### Calendar View & Visualizations (v1.2.0)
+- [x] **Calendar View** - Monthly calendar with color-coded daily spending `L`
+- [x] **Interactive Donut Charts** - Service breakdown with hover effects `M`
+- [x] **Day Detail View** - Click any day for detailed cost breakdown `M`
+- [x] **Service Histogram View** - Visual service cost analysis `M`
+- [x] **Real Histogram View** - Temporal spending trends `M`
+- [x] **Keyboard Shortcuts** - ⌘K for calendar, ⌘R refresh, ⌘1-9 profiles `S`
+- [x] **MVC Architecture** - Refactored with Controllers, Models, Utilities `L`
+- [x] **Debug Timer Controls** - Testing tools for refresh functionality `S`
+
+## Phase 1: Enhanced Display & Configuration (Next Priority)
 
 **Goal:** Improve the display flexibility and add persistent configuration
 **Success Criteria:** Users can customize what they see and settings persist across app restarts
@@ -30,7 +41,7 @@ The following features have been implemented:
 
 ### Should-Have Features
 
-- [ ] **Keyboard Shortcuts** - Quick actions for refresh and profile switching `S`
+- [x] **Keyboard Shortcuts** - Quick actions for refresh and profile switching `S` ✅ v1.2.0
 - [ ] **Status Indicators** - Visual cues for loading/error states in menu bar `S`
 
 ### Dependencies
@@ -84,10 +95,10 @@ The following features have been implemented:
 
 ### Must-Have Features
 
-- [ ] **MTD Analytics** - Total, daily average, burn rate from cached data `S`
+- [x] **MTD Analytics** - Total, daily average, burn rate from cached data `S` ✅ v1.2.0
 - [ ] **Spending Forecast** - Project month-end using daily trend data `M`
-- [ ] **Service Breakdown** - Display top 5 services by cost from GroupBy data `M`
-- [ ] **Daily Trend Graph** - Visualize daily spending pattern `M`
+- [x] **Service Breakdown** - Display top 5 services by cost from GroupBy data `M` ✅ v1.2.0
+- [x] **Daily Trend Graph** - Visualize daily spending pattern `M` ✅ v1.2.0
 - [ ] **Budget Progress** - Show % budget vs % month elapsed `S`
 
 ### Should-Have Features
