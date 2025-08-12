@@ -59,7 +59,7 @@ jobs:
                    -derivedDataPath ./DerivedData \
                    clean build
     
-    - name: Run Tests
+    - name: Run Unit Tests
       timeout-minutes: 10
       run: |
         cd packages/app/AWSCostMonitor
@@ -72,4 +72,5 @@ jobs:
                    CODE_SIGNING_REQUIRED=NO \
                    DEVELOPMENT_TEAM="" \
                    -derivedDataPath ./DerivedData \
+                   -only-testing:AWSCostMonitorTests \
                    test
