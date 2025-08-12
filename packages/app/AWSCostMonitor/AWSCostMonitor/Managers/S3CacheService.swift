@@ -3,8 +3,10 @@
 //  AWSCostMonitor
 //
 //  S3-based remote cache service for team cache functionality
+//  PREMIUM FEATURE: Only available in builds with PREMIUM_FEATURES=1
 //
 
+#if PREMIUM_FEATURES
 import Foundation
 import OSLog
 import AWSS3
@@ -691,3 +693,69 @@ private extension Data {
         }
     }
 }
+
+#else
+
+// MARK: - Stub Implementation for Non-Premium Builds
+
+protocol S3CacheServiceProtocol {
+    func getObject(key: String) async throws -> CacheOperationResult
+    func putObject(key: String, entry: RemoteCacheEntry) async throws
+    func headObject(key: String) async throws -> Bool
+    func deleteObject(key: String) async throws
+    func listObjects(prefix: String) async throws -> [String]
+}
+
+@MainActor
+class S3CacheService: ObservableObject, S3CacheServiceProtocol {
+    @Published var statistics = CacheStatistics()
+    @Published var isConnected = false
+    @Published var lastError: CacheError?
+    
+    init(config: TeamCacheConfig) throws {
+        throw CacheError.premiumFeatureRequired
+    }
+    
+    func getObject(key: String) async throws -> CacheOperationResult {
+        throw CacheError.premiumFeatureRequired
+    }
+    
+    func putObject(key: String, entry: RemoteCacheEntry) async throws {
+        throw CacheError.premiumFeatureRequired
+    }
+    
+    func headObject(key: String) async throws -> Bool {
+        throw CacheError.premiumFeatureRequired
+    }
+    
+    func deleteObject(key: String) async throws {
+        throw CacheError.premiumFeatureRequired
+    }
+    
+    func listObjects(prefix: String) async throws -> [String] {
+        throw CacheError.premiumFeatureRequired
+    }
+    
+    func testConnection() async throws {
+        throw CacheError.premiumFeatureRequired
+    }
+    
+    func validatePermissions() async -> IAMPermissionCheckResult {
+        return IAMPermissionCheckResult(
+            hasReadAccess: false,
+            hasWriteAccess: false,
+            hasListAccess: false,
+            hasKMSAccess: false,
+            missingPermissions: ["Premium feature required"],
+            errors: ["Team cache is a premium feature"]
+        )
+    }
+    
+    func clearStatistics() {}
+    
+    func getStatus() -> (connected: Bool, statistics: CacheStatistics, lastError: CacheError?) {
+        return (false, statistics, CacheError.premiumFeatureRequired)
+    }
+}
+
+#endif

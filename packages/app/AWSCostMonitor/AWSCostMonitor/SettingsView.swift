@@ -16,7 +16,9 @@ struct SettingsView: View {
         "Refresh Rate",
         "Display",
         "AWS",
+        #if PREMIUM_FEATURES
         "Team Cache",
+        #endif
         "Alerts",
         "Notifications",
         "CloudWatch",
@@ -114,8 +116,10 @@ struct SettingsView: View {
             return "textformat"
         case "AWS":
             return "cloud"
+        #if PREMIUM_FEATURES
         case "Team Cache":
             return "externaldrive.connected.to.line.below"
+        #endif
         case "Alerts":
             return "exclamationmark.triangle"
         case "Notifications":
@@ -146,8 +150,14 @@ struct SettingsView: View {
             )
         case "AWS":
             AWSSettingsTab()
+        #if PREMIUM_FEATURES
         case "Team Cache":
-            TeamCacheSettingsTab()
+            if FeatureFlags.hasTeamCacheFeatures {
+                TeamCacheSettingsTab()
+            } else {
+                TeamCacheUpgradePrompt()
+            }
+        #endif
         case "Alerts":
             AnomalySettingsTab()
         case "Notifications":
@@ -2026,6 +2036,135 @@ struct TeamCacheSettingsTab: View {
         return formatter.string(fromByteCount: Int64(bytes))
     }
 }
+
+// MARK: - Team Cache Upgrade Prompt
+
+#if PREMIUM_FEATURES
+struct TeamCacheUpgradePrompt: View {
+    @State private var showingUpgradeView = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Team Cache Configuration")
+                .font(.headline)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "crown.fill")
+                        .foregroundColor(.yellow)
+                        .font(.title2)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Team Cache - Pro Feature")
+                            .font(.headline)
+                        Text("Share cost data across your team with S3-based caching")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Text("Team Cache allows multiple team members to share AWS cost data, reducing API calls and costs while keeping everyone in sync.")
+                    .foregroundColor(.secondary)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Pro features include:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Team cost data sharing via S3", systemImage: "cloud.fill")
+                        Label("Reduced AWS API costs for teams", systemImage: "dollarsign.circle.fill")
+                        Label("Unlimited AWS profiles", systemImage: "person.3.fill")
+                        Label("Advanced forecasting", systemImage: "chart.line.uptrend.xyaxis")
+                        Label("Data export capabilities", systemImage: "square.and.arrow.up.fill")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
+                
+                #if APPSTORE_BUILD
+                HStack(spacing: 12) {
+                    Button(action: {
+                        if PurchaseManager.shared.canStartTrial {
+                            PurchaseManager.shared.startTrial()
+                        } else {
+                            showingUpgradeView = true
+                        }
+                    }) {
+                        HStack {
+                            if PurchaseManager.shared.canStartTrial {
+                                Image(systemName: "gift.fill")
+                                Text("Start \(RemoteConfig.shared.trialDurationDays)-Day Free Trial")
+                            } else {
+                                Image(systemName: "crown.fill")
+                                Text("Upgrade to Pro")
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button("Learn More") {
+                        showingUpgradeView = true
+                    }
+                    .foregroundColor(.accentColor)
+                }
+                #else
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.blue)
+                        Text("Open Source Version")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Team cache is a premium feature available in the App Store version.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("The App Store version includes team collaboration features with a 3-day free trial and one-time $3.99 purchase.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 12) {
+                        Button("Learn More") {
+                            showingUpgradeView = true
+                        }
+                        .foregroundColor(.blue)
+                        
+                        Button("App Store") {
+                            if let url = URL(string: "https://apps.apple.com/app/awscostmonitor/id123456789") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                        .foregroundColor(.blue)
+                    }
+                    .font(.caption)
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(6)
+                #endif
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
+            
+            Spacer()
+        }
+        .sheet(isPresented: $showingUpgradeView) {
+            UpgradeView()
+        }
+    }
+}
+#endif
 
 #Preview {
     SettingsView()
