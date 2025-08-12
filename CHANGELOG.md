@@ -1,61 +1,107 @@
-# Changelog
+# AWSCostMonitor Changelog
 
-All notable changes to AWS Cost Monitor will be documented in this file.
-
-## [1.1.0] - 2025-08-10
-
-### 🎉 What's New
-
-**Your app is now smarter about when to check AWS costs!**
-
-We've added intelligent screen-aware refresh that automatically pauses cost updates when you're not looking. This means:
-
-- 💰 **Lower API costs** - No more checking AWS when your screen is off or Mac is locked
-- 🔋 **Better battery life** - The app takes a break when you do
-- 🧠 **Smart caching** - Shows your last known costs instead of errors when offline
-
-### ✨ Features Added
-
-- **Screen-aware refresh** - Automatically pauses updates when your display sleeps or system locks
-- **User activity detection** - Knows when you've stepped away from your desk
-- **Intelligent cache management** - Uses cached data smartly when refresh is paused
-- **Comprehensive test coverage** - Added 50+ new tests for reliability
-
-### 🐛 Bug Fixes
-
-- Fixed potential crashes during test execution
-- Improved handling of private AppStorage properties in tests
-- Better error handling when screen state changes
-
-### 🔧 Technical Improvements
-
-- Added `ScreenStateMonitor` class for system state detection
-- Integrated screen state checks into refresh logic
-- Enhanced test suite with UI and unit tests for all major features
-- Improved refresh rate logic with budget-based intervals
-
-### 📝 Notes
-
-The screen-aware refresh is completely automatic - no configuration needed! Your app will just use less resources and save you money on AWS API calls. It's like having a thoughtful assistant who knows when you're actually at your desk.
+*Because apparently you need to know exactly what we've been up to...*
 
 ---
 
-## [1.0.0] - 2025-08-01
+## Version 1.3.0 - "The One Where We Actually Charge Money" 
+*Released August 12, 2025*
 
-### 🚀 Initial Release
+**Oh, you thought everything would stay free forever? How adorable.** 
 
-- Menu bar cost display with real-time MTD spending
-- Multi-profile support with persistent selection
-- Smart refresh intervals based on budget proximity
-- Sandbox support for Mac App Store compliance
-- ACME demo mode for testing
-- Comprehensive logging and debugging tools
-- Budget tracking and alerts
-- Service cost breakdown
-- Historical data tracking
-- Anomaly detection
-- Help documentation
+### 💎 New Pro Features (Yes, We Said Pro)
+- **Team Cache Sharing** - Finally, a way for your teammates to stop hitting the AWS API like it's a piñata. Share cost data via S3 because apparently coordination is hard.
+- **Advanced Forecasting** - Crystal ball not included, but our algorithms will tell you how broke you'll be by month-end with disturbing accuracy.
+- **3-Day Free Trial** - We're not monsters. Try before you cry about the price.
+- **One-time $3.99 Purchase** - That's less than your overpriced coffee habit. No subscriptions because we're not *that* evil.
+
+### ⚡ Improvements (AKA "Things That Should Have Worked Better")
+- **Enhanced Calendar View** - Now with 47% more colors and 73% fewer "what does this blob mean?" moments
+- **Keyboard Shortcuts** - Press ⌘1-9 to switch profiles because apparently clicking is *so* last year
+- **Optimized API Usage** - We made it even more efficient so you can save those precious AWS pennies for important things like... more AWS services
+- **Better Error Handling** - Now when things break, we'll tell you about it in a slightly nicer way
+
+### 🐛 Bug Fixes (AKA "Oops, Our Bad")
+- Fixed memory leak that was slowly eating your RAM like a digital Pac-Man
+- Resolved profile switching delays because waiting 3 seconds is apparently the end of the world
+- Fixed chart rendering on external displays (yes, we know you have that fancy 4K monitor)
+- Improved AWS credential parsing because apparently reading files is *complicated*
+
+### 🏗️ Technical Stuff You Probably Don't Care About
+- Universal binary support for both Intel and Apple Silicon Macs
+- Complete App Store integration with all the fancy metadata
+- StoreKit configuration because in-app purchases are apparently rocket science
+- Privacy policy because lawyers exist
 
 ---
 
-*For more details, visit [awscostmonitor.app](https://awscostmonitor.app)*
+## Version 1.2.0 - "The One With Pretty Pictures"
+*Released July 15, 2025*
+
+**We heard you like looking at things, so we put charts in your charts.**
+
+### 🎨 New Visual Delights
+- **Interactive Calendar View** - A heat map that shows your spending like a thermal camera shows your shame
+- **Donut Charts** - Because pie charts are for quitters and donuts are delicious
+- **Day Detail Views** - Click any day to see exactly how you spent your cloud allowance
+- **Memphis Design Aesthetic** - It's the 80s, but make it expensive
+
+### ⌨️ Power User Features
+- **Keyboard Shortcuts** - ⌘K for calendar because we're not savages
+- **Profile Quick-switching** - For when you manage more AWS accounts than you have brain cells
+- **Hover Effects** - Because static charts are for static people
+
+### 🔧 Under the Hood
+- MVC architecture refactoring (because apparently organization matters)
+- Debug timer controls (for when you want to pretend you're debugging)
+- Enhanced data models (with more models than a Milan fashion show)
+
+---
+
+## Version 1.1.0 - "The One Where We Got Serious"
+*Released August 10, 2025*
+
+**Turns out people actually wanted to use this thing. Who knew?**
+
+### 📊 Smart Features That Think For You
+- **Screen-aware Monitoring** - Pauses when you're not looking because we respect your privacy (and your battery)
+- **Intelligent Refresh Rates** - Adjusts based on your budget because panic levels should scale appropriately
+- **Multi-profile Support** - For the overachievers managing seventeen different AWS accounts
+
+### 🔒 Privacy Features (Because We're Not Facebook)
+- **100% Local Data** - Your spending habits stay on your Mac where they belong
+- **No Telemetry** - We don't care about your usage patterns, honestly
+- **Secure Credential Usage** - Uses your existing AWS setup because we're not asking for your passwords
+
+### 🎯 Quality of Life Improvements
+- **Budget Tracking** - Set limits and watch yourself blow past them with style
+- **Cost Forecasting** - Mathematical predictions of your future financial regret
+- **API Rate Limiting** - Protects you from accidentally DDoSing yourself
+
+---
+
+## Version 1.0.0 - "The Beginning of Your AWS Spending Awareness"
+*Released August 1, 2025*
+
+**It all started here. You're welcome.**
+
+### 🎉 The Basics (But Make Them Good)
+- **Menu Bar Cost Display** - Always visible, always judging your cloud spending choices
+- **Real-time MTD Tracking** - Month-to-date costs updated faster than your regret
+- **AWS Profile Integration** - Reads your ~/.aws/config like it's a bestselling novel
+- **Manual Refresh** - For when you want to check if that last deploy really cost what you think it did
+
+### 🏁 The Foundation
+- **Native macOS App** - Built with SwiftUI because Electron apps are for people who hate performance
+- **Menu Bar Integration** - Lives quietly until you need to know how much you've spent
+- **Error Handling** - Shows you when AWS is having "one of those days"
+
+---
+
+*Still reading? Impressive. Most people give up after the first emoji. Check out our [GitHub releases](https://github.com/toml0006/AWSCostMonitor/releases) for the technical details that'll put you to sleep.*
+
+---
+
+**Pro Tip**: If you're still using the free version after trying the Pro trial, that's fine. We get it. But remember, every time you manually check the AWS console instead of using our calendar view, a developer somewhere sheds a single tear.
+
+*Last updated: August 12, 2025 | Next update: When we feel like it*

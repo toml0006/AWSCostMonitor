@@ -3,6 +3,7 @@
 //  AWSCostMonitor
 //
 //  Team cache-related data models
+//  PREMIUM FEATURE: Some models only available in builds with PREMIUM_FEATURES=1
 //
 
 import Foundation
@@ -211,6 +212,7 @@ enum CacheError: Error, LocalizedError {
     case compressionError(Error)
     case invalidCacheKey
     case cacheCorrupted
+    case premiumFeatureRequired
     
     var errorDescription: String? {
         switch self {
@@ -230,6 +232,8 @@ enum CacheError: Error, LocalizedError {
             return "Invalid cache key format"
         case .cacheCorrupted:
             return "Cache data is corrupted or invalid"
+        case .premiumFeatureRequired:
+            return "Team cache is a premium feature. Upgrade to Pro to enable team cost sharing."
         }
     }
 }

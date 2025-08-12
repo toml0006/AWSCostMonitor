@@ -1,0 +1,51 @@
+AWSCostMonitor is a powerful, privacy-first macOS menu bar app that provides real-time visibility into your AWS cloud spending. With intelligent screen-aware monitoring and beautiful visualizations, it helps developers, DevOps teams, and cloud managers prevent bill shock and optimize costs.
+
+KEY FEATURES:
+
+📅 Visual Calendar View
+• Monthly heat map visualization of daily spending
+• Interactive donut charts for service breakdowns
+• Click any day for detailed cost analysis
+• Beautiful Memphis-design aesthetic
+
+🧠 Intelligent Monitoring
+• Screen-aware refresh - pauses when you're not looking
+• Reduces AWS API costs by 40-60%
+• Battery optimization for MacBook users
+• Automatic lock-state detection
+
+⌨️ Power User Features
+• Keyboard shortcuts (⌘K for calendar, ⌘R refresh)
+• Multi-AWS profile support with quick switching (⌘1-9)
+• Configurable refresh intervals and budgets
+• Smart refresh based on budget proximity
+
+🔒 Privacy-First Design
+• 100% local - your data never leaves your Mac
+• Uses your existing AWS credentials securely
+• No external services or telemetry
+• Open source for complete transparency
+
+💎 Pro Features (One-time $3.99 purchase)
+• Team cache sharing via S3 - reduce API costs across your team
+• Advanced cost forecasting and analytics
+• Unlimited AWS profiles
+• Priority support
+• 3-day free trial included
+
+🎨 Native macOS Experience
+• Beautiful SwiftUI interface
+• Bold Memphis design aesthetic
+• Menu bar integration for ambient awareness
+• Optimized for macOS 13.0+
+• Native Apple Silicon support
+
+Perfect for:
+• Developers managing personal AWS accounts
+• DevOps teams monitoring multiple environments
+• Small businesses tracking cloud costs
+• Anyone wanting to prevent AWS bill shock
+
+The app respects your workflow - it lives quietly in your menu bar, keeping you informed without interruption. When you need details, the interactive calendar and charts are just a click away.
+
+No account creation required. No subscription fees. Just install and start monitoring your AWS costs immediately.

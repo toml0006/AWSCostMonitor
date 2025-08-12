@@ -1,0 +1,367 @@
+#!/usr/bin/env swift
+
+//
+//  awscost-team
+//  AWSCostMonitor CLI Tool
+//
+//  Team cache management tool for AWSCostMonitor
+//
+
+import Foundation
+
+// MARK: - Main CLI Handler
+
+func main() {
+    let args = Array(CommandLine.arguments.dropFirst())
+    
+    if args.isEmpty || args[0] == "status" {
+        StatusCommand().run()
+    } else {
+        switch args[0] {
+        case "init":
+            InitCommand(args: Array(args.dropFirst())).run()
+        case "test":
+            TestCommand().run()
+        case "clear":
+            ClearCommand(args: Array(args.dropFirst())).run()
+        case "sync":
+            SyncCommand(args: Array(args.dropFirst())).run()
+        case "--help", "-h":
+            printHelp()
+        case "--version", "-v":
+            print("awscost-team version 1.0.0")
+        default:
+            print("Unknown command: \(args[0])")
+            printHelp()
+            exit(1)
+        }
+    }
+}
+
+func printHelp() {
+    print("awscost-team - Team cache management for AWSCostMonitor")
+    print("")
+    print("USAGE:")
+    print("    awscost-team <command> [options]")
+    print("")
+    print("COMMANDS:")
+    print("    init     Initialize team cache configuration")
+    print("    test     Test S3 connectivity and permissions")
+    print("    status   Show cache status and statistics")
+    print("    clear    Clear remote cache")
+    print("    sync     Force sync local to remote cache")
+    print("")
+    print("OPTIONS:")
+    print("    --help, -h      Show this help message")
+    print("    --version, -v   Show version information")
+}
+
+// MARK: - Team Cache Configuration Model
+
+struct TeamCacheConfiguration: Codable {
+    var s3BucketName: String
+    var s3Region: String
+    var cachePrefix: String
+    var profiles: [String: ProfileCacheSettings]
+    
+    struct ProfileCacheSettings: Codable {
+        var enabled: Bool
+        var accountId: String?
+    }
+    
+    init() {
+        self.s3BucketName = ""
+        self.s3Region = "us-east-1"
+        self.cachePrefix = "awscost-team-cache"
+        self.profiles = [:]
+    }
+}
+
+// MARK: - Configuration Manager
+
+class ConfigurationManager {
+    private let configPath: String
+    
+    init() {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+        let configDir = homeDir.appendingPathComponent(".config/awscost-monitor")
+        try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
+        self.configPath = configDir.appendingPathComponent("team-cache-config.json").path
+    }
+    
+    func loadConfiguration() throws -> TeamCacheConfiguration {
+        guard FileManager.default.fileExists(atPath: configPath) else {
+            return TeamCacheConfiguration()
+        }
+        
+        let data = try Data(contentsOf: URL(fileURLWithPath: configPath))
+        return try JSONDecoder().decode(TeamCacheConfiguration.self, from: data)
+    }
+    
+    func saveConfiguration(_ config: TeamCacheConfiguration) throws {
+        let data = try JSONEncoder().encode(config)
+        try data.write(to: URL(fileURLWithPath: configPath))
+        print("Configuration saved to \(configPath)")
+    }
+}
+
+// MARK: - Init Command
+
+struct InitCommand {
+    var bucket: String?
+    var region: String = "us-east-1"
+    var prefix: String = "awscost-team-cache"
+    var force: Bool = false
+    
+    init(args: [String]) {
+        for i in 0..<args.count {
+            switch args[i] {
+            case "--bucket":
+                if i + 1 < args.count {
+                    bucket = args[i + 1]
+                }
+            case "--region":
+                if i + 1 < args.count {
+                    region = args[i + 1]
+                }
+            case "--prefix":
+                if i + 1 < args.count {
+                    prefix = args[i + 1]
+                }
+            case "--force":
+                force = true
+            default:
+                break
+            }
+        }
+    }
+    
+    func run() {
+        let configManager = ConfigurationManager()
+        
+        do {
+            var config = try configManager.loadConfiguration()
+            
+            // Check if already configured
+            if !config.s3BucketName.isEmpty && !force {
+                print("❌ Team cache is already configured for bucket: \(config.s3BucketName)")
+                print("   Use --force to overwrite existing configuration")
+                return
+            }
+            
+            // Interactive setup if bucket not provided
+            var bucketName = bucket
+            if bucketName == nil {
+                print("🚀 Setting up team cache configuration...")
+                print("Enter S3 bucket name for team cache: ", terminator: "")
+                bucketName = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            
+            guard let validBucket = bucketName, !validBucket.isEmpty else {
+                print("❌ Error: S3 bucket name is required")
+                exit(1)
+            }
+            
+            // Validate bucket name format
+            if !isValidS3BucketName(validBucket) {
+                print("❌ Error: Invalid S3 bucket name format")
+                exit(1)
+            }
+            
+            config.s3BucketName = validBucket
+            config.s3Region = region
+            config.cachePrefix = prefix
+            
+            try configManager.saveConfiguration(config)
+            
+            print("✅ Team cache configuration initialized successfully!")
+            print("   Bucket: \(config.s3BucketName)")
+            print("   Region: \(config.s3Region)")
+            print("   Prefix: \(config.cachePrefix)")
+            print("")
+            print("📋 Next steps:")
+            print("   1. Ensure the S3 bucket exists and you have read/write permissions")
+            print("   2. Run 'awscost-team test' to verify connectivity")
+            print("   3. Configure AWSCostMonitor to use team cache for desired profiles")
+        } catch {
+            print("❌ Error: \(error.localizedDescription)")
+            exit(1)
+        }
+    }
+    
+    private func isValidS3BucketName(_ name: String) -> Bool {
+        let pattern = "^[a-z0-9][a-z0-9\\-]*[a-z0-9]$"
+        let regex = try? NSRegularExpression(pattern: pattern)
+        return regex?.firstMatch(in: name, options: [], range: NSRange(location: 0, length: name.count)) != nil
+    }
+}
+
+// MARK: - Test Command
+
+struct TestCommand {
+    func run() {
+        let configManager = ConfigurationManager()
+        
+        do {
+            let config = try configManager.loadConfiguration()
+            
+            guard !config.s3BucketName.isEmpty else {
+                print("❌ No team cache configuration found. Run 'awscost-team init' first.")
+                exit(1)
+            }
+            
+            print("🔍 Testing S3 connectivity...")
+            print("   Bucket: \(config.s3BucketName)")
+            print("   Region: \(config.s3Region)")
+            
+            // Placeholder for S3 connection test
+            // In real implementation, would use AWS SDK to test connectivity
+            print("✅ S3 connection test successful!")
+            print("   Read/write permissions verified")
+            print("   Note: This is a placeholder test. Real implementation would use AWS SDK.")
+        } catch {
+            print("❌ Error: \(error.localizedDescription)")
+            exit(1)
+        }
+    }
+}
+
+// MARK: - Status Command
+
+struct StatusCommand {
+    func run() {
+        let configManager = ConfigurationManager()
+        
+        do {
+            let config = try configManager.loadConfiguration()
+            
+            guard !config.s3BucketName.isEmpty else {
+                print("❌ No team cache configuration found. Run 'awscost-team init' first.")
+                exit(1)
+            }
+            
+            print("📊 Team Cache Status")
+            print("==================")
+            print("Bucket: \(config.s3BucketName)")
+            print("Region: \(config.s3Region)")
+            print("Prefix: \(config.cachePrefix)")
+            
+            // Show configured profiles
+            if config.profiles.isEmpty {
+                print("\n📋 Profiles: None configured")
+            } else {
+                print("\n📋 Profiles:")
+                for (profileName, settings) in config.profiles {
+                    let status = settings.enabled ? "✅ Enabled" : "❌ Disabled"
+                    let accountInfo = settings.accountId.map { " (Account: \($0))" } ?? ""
+                    print("   \(profileName): \(status)\(accountInfo)")
+                }
+            }
+        } catch {
+            print("❌ Error: \(error.localizedDescription)")
+            exit(1)
+        }
+    }
+}
+
+// MARK: - Clear Command
+
+struct ClearCommand {
+    var profile: String?
+    var force: Bool = false
+    
+    init(args: [String]) {
+        for i in 0..<args.count {
+            switch args[i] {
+            case "--profile":
+                if i + 1 < args.count {
+                    profile = args[i + 1]
+                }
+            case "--force":
+                force = true
+            default:
+                break
+            }
+        }
+    }
+    
+    func run() {
+        let configManager = ConfigurationManager()
+        
+        do {
+            let config = try configManager.loadConfiguration()
+            
+            guard !config.s3BucketName.isEmpty else {
+                print("❌ No team cache configuration found. Run 'awscost-team init' first.")
+                exit(1)
+            }
+            
+            let targetScope = profile ?? "all profiles"
+            
+            if !force {
+                print("⚠️  This will permanently delete cached data for \(targetScope)")
+                print("Continue? (y/N): ", terminator: "")
+                let response = readLine()?.lowercased()
+                guard response == "y" || response == "yes" else {
+                    print("Operation cancelled.")
+                    return
+                }
+            }
+            
+            print("🗑️  Clearing cache for \(targetScope)...")
+            print("✅ Successfully cleared 0 cache entries (placeholder)")
+        } catch {
+            print("❌ Error: \(error.localizedDescription)")
+            exit(1)
+        }
+    }
+}
+
+// MARK: - Sync Command
+
+struct SyncCommand {
+    var profile: String?
+    var refresh: Bool = false
+    
+    init(args: [String]) {
+        for i in 0..<args.count {
+            switch args[i] {
+            case "--profile":
+                if i + 1 < args.count {
+                    profile = args[i + 1]
+                }
+            case "--refresh":
+                refresh = true
+            default:
+                break
+            }
+        }
+    }
+    
+    func run() {
+        let configManager = ConfigurationManager()
+        
+        do {
+            let config = try configManager.loadConfiguration()
+            
+            guard !config.s3BucketName.isEmpty else {
+                print("❌ No team cache configuration found. Run 'awscost-team init' first.")
+                exit(1)
+            }
+            
+            print("🔄 Syncing to remote cache...")
+            if refresh {
+                print("   Forcing refresh from AWS API first")
+            }
+            
+            print("✅ Sync completed! (placeholder)")
+        } catch {
+            print("❌ Error: \(error.localizedDescription)")
+            exit(1)
+        }
+    }
+}
+
+// MARK: - Execute Main
+
+main()

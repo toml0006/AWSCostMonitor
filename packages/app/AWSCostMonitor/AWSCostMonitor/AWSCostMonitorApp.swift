@@ -19,6 +19,10 @@ struct AWSCostMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var awsManager = AWSManager.shared
     @StateObject private var configAccessManager = AWSConfigAccessManager.shared
+    @StateObject private var remoteConfig = RemoteConfig.shared
+    #if APPSTORE_BUILD
+    @StateObject private var purchaseManager = PurchaseManager.shared
+    #endif
     @AppStorage("ShowCurrencySymbol") private var showCurrencySymbol: Bool = true
     @AppStorage("DecimalPlaces") private var decimalPlaces: Int = 2
     @AppStorage("UseThousandsSeparator") private var useThousandsSeparator: Bool = true
@@ -66,6 +70,14 @@ struct AWSCostMonitorApp: App {
         // Check if onboarding is needed
         let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "HasCompletedOnboarding")
         let manager = awsManager
+        
+        #if APPSTORE_BUILD
+        // Initialize purchase manager and remote config for App Store builds
+        Task {
+            await RemoteConfig.shared.fetchConfig()
+            await PurchaseManager.shared.initializeStore()
+        }
+        #endif
         
         if !hasCompletedOnboarding {
             // Show onboarding after a short delay to ensure app is fully initialized
@@ -242,6 +254,10 @@ struct AWSCostMonitorApp: App {
         Settings {
             SettingsView()
                 .environmentObject(awsManager)
+                #if APPSTORE_BUILD
+                .environmentObject(purchaseManager)
+                #endif
+                .environmentObject(remoteConfig)
         }
         .commands {
             // Remove the default menu items we don't need

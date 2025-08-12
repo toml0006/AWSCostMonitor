@@ -1,0 +1,23 @@
+Version 1.3.0 - Team Features & Pro Upgrade
+
+NEW FEATURES:
+• Team Cache Sharing (Pro) - Share cost data across your team via S3
+• Advanced Forecasting (Pro) - Enhanced cost predictions and analytics  
+• 3-Day Free Trial - Try all Pro features before purchasing
+• One-time $3.99 upgrade - No subscriptions!
+
+IMPROVEMENTS:
+• Enhanced calendar view with better service breakdown
+• Improved keyboard shortcuts (⌘1-9 for profile switching)
+• Optimized API usage for even lower costs
+• Better error handling and recovery
+
+BUG FIXES:
+• Fixed memory leak in long-running sessions
+• Resolved profile switching delays
+• Fixed chart rendering on external displays
+• Improved AWS credential file parsing
+
+The Pro upgrade unlocks powerful team collaboration features while maintaining our privacy-first approach. All data stays under your control - team cache uses YOUR S3 bucket with YOUR credentials.
+
+Thank you for your continued support!

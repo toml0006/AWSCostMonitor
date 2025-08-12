@@ -1,0 +1,23 @@
+{
+  "trialDurationDays": 3,
+  "promoCodesEnabled": true,
+  "minimumVersion": "1.3.0",
+  "features": {
+    "teamCache": true,
+    "unlimitedProfiles": true,
+    "advancedForecasting": true,
+    "dataExport": true
+  },
+  "marketing": {
+    "showTrialExtension": false,
+    "campaignMessage": null,
+    "specialOfferActive": false
+  },
+  "endpoints": {
+    "supportUrl": "mailto:support@example.com",
+    "documentationUrl": "https://docs.example.com/awscostmonitor",
+    "whatsNewUrl": "https://example.com/release-notes"
+  },
+  "lastUpdated": "2025-08-12T17:00:00Z",
+  "formatVersion": "1.0"
+}

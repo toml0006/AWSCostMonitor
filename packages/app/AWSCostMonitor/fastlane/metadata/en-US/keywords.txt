@@ -1,0 +1,1 @@
+aws,cloud,costs,monitoring,billing,devops,developer,tools,budget,spending,tracker,macos,menubar

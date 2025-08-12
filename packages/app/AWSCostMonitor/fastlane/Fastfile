@@ -1,0 +1,381 @@
+# Fastfile for AWSCostMonitor
+# Automates App Store submission and management
+
+default_platform(:mac)
+
+platform :mac do
+  
+  # =====================================
+  # Setup and Configuration
+  # =====================================
+  
+  desc "Setup Fastlane for first time use"
+  lane :setup do
+    UI.message("🚀 Setting up Fastlane for AWSCostMonitor")
+    
+    # Create App Store Connect API key if needed
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_PATH"],
+      in_house: false
+    ) if ENV["APP_STORE_CONNECT_API_KEY_ID"]
+    
+    UI.success("✅ Setup complete!")
+  end
+  
+  # =====================================
+  # Development Lanes
+  # =====================================
+  
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      scheme: "AWSCostMonitor",
+      clean: true,
+      code_coverage: true
+    )
+  end
+  
+  desc "Build a debug version"
+  lane :build_debug do
+    build_mac_app(
+      scheme: "AWSCostMonitor",
+      configuration: "Debug",
+      clean: true,
+      output_directory: "./build",
+      export_method: "developer-id"
+    )
+  end
+  
+  # =====================================
+  # Screenshots
+  # =====================================
+  
+  desc "Generate new App Store screenshots"
+  lane :screenshots do
+    capture_screenshots(
+      workspace: "AWSCostMonitor.xcworkspace",
+      scheme: "AWSCostMonitorUITests",
+      output_directory: "./fastlane/screenshots",
+      clear_previous_screenshots: true,
+      reinstall_app: true,
+      app_identifier: "middleout.AWSCostMonitor"
+    )
+    
+    # Frame the screenshots with device frames
+    frame_screenshots(
+      path: "./fastlane/screenshots"
+    )
+  end
+  
+  desc "Upload screenshots to App Store Connect"
+  lane :upload_screenshots do
+    upload_to_app_store(
+      skip_binary_upload: true,
+      skip_metadata: true,
+      screenshots_path: "./fastlane/screenshots",
+      overwrite_screenshots: true
+    )
+  end
+  
+  # =====================================
+  # Version Management
+  # =====================================
+  
+  desc "Bump version number"
+  lane :bump_version do |options|
+    # Options: type:major|minor|patch or version:x.x.x
+    if options[:version]
+      increment_version_number(
+        version_number: options[:version]
+      )
+    else
+      increment_version_number(
+        bump_type: options[:type] || "patch"
+      )
+    end
+    
+    # Also increment build number
+    increment_build_number
+    
+    version = get_version_number
+    build = get_build_number
+    UI.success("📦 Version bumped to #{version} (#{build})")
+  end
+  
+  # =====================================
+  # App Store Submission
+  # =====================================
+  
+  desc "Instructions for creating app on App Store Connect"
+  lane :create_app do
+    UI.important("🚧 App creation requires manual setup due to Fastlane API key limitations")
+    UI.message("")
+    UI.message("📋 Please follow these steps:")
+    UI.message("1. Go to https://appstoreconnect.apple.com")
+    UI.message("2. Click 'My Apps' then '+' to create new app")
+    UI.message("3. Use these details:")
+    UI.message("   - Platform: macOS")
+    UI.message("   - Name: AWSCostMonitor")
+    UI.message("   - Bundle ID: middleout.AWSCostMonitor")
+    UI.message("   - SKU: awscostmonitor-2025")
+    UI.message("   - Language: English")
+    UI.message("")
+    UI.message("4. After creation, configure:")
+    UI.message("   - Category: Developer Tools")
+    UI.message("   - Pricing: Free with In-App Purchase")
+    UI.message("   - Age Rating: 4+")
+    UI.message("")
+    UI.important("📖 See App-Store-Setup.md for detailed instructions")
+    UI.message("")
+    UI.message("🚀 Once created, use these commands:")
+    UI.message("   bundle exec fastlane mac upload_metadata")
+    UI.message("   bundle exec fastlane mac beta")
+    UI.message("   bundle exec fastlane mac release")
+  end
+  
+  desc "Upload metadata to App Store Connect"
+  lane :upload_metadata do
+    # Configure API key authentication
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_PATH"],
+      in_house: false
+    )
+    
+    # Use deliver directly with proper metadata handling
+    deliver(
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      force: true,
+      app_identifier: "middleout.AWSCostMonitor",
+      
+      # Metadata content (embedded to avoid path issues)
+      description: "AWSCostMonitor is a powerful, privacy-first macOS menu bar app that provides real-time visibility into your AWS cloud spending. With intelligent screen-aware monitoring and beautiful visualizations, it helps developers, DevOps teams, and cloud managers prevent bill shock and optimize costs.\n\nKEY FEATURES:\n\n📅 Visual Calendar View\n• Monthly heat map visualization of daily spending\n• Interactive donut charts for service breakdowns\n• Click any day for detailed cost analysis\n• Beautiful Memphis-design aesthetic\n\n🧠 Intelligent Monitoring\n• Screen-aware refresh - pauses when you're not looking\n• Reduces AWS API costs by 40-60%\n• Battery optimization for MacBook users\n• Automatic lock-state detection\n\n⌨️ Power User Features\n• Keyboard shortcuts (⌘K for calendar, ⌘R refresh)\n• Multi-AWS profile support with quick switching (⌘1-9)\n• Configurable refresh intervals and budgets\n• Smart refresh based on budget proximity\n\n🔒 Privacy-First Design\n• 100% local - your data never leaves your Mac\n• Uses your existing AWS credentials securely\n• No external services or telemetry\n• Open source for complete transparency\n\n💎 Pro Features (One-time $3.99 purchase)\n• Team cache sharing via S3 - reduce API costs across your team\n• Advanced cost forecasting and analytics\n• Unlimited AWS profiles\n• Priority support\n• 3-day free trial included\n\n🎨 Native macOS Experience\n• Beautiful SwiftUI interface\n• Bold Memphis design aesthetic\n• Menu bar integration for ambient awareness\n• Optimized for macOS 13.0+\n• Native Apple Silicon support\n\nPerfect for:\n• Developers managing personal AWS accounts\n• DevOps teams monitoring multiple environments\n• Small businesses tracking cloud costs\n• Anyone wanting to prevent AWS bill shock\n\nThe app respects your workflow - it lives quietly in your menu bar, keeping you informed without interruption. When you need details, the interactive calendar and charts are just a click away.\n\nNo account creation required. No subscription fees. Just install and start monitoring your AWS costs immediately.",
+      keywords: "aws,cloud,costs,monitoring,billing,devops,developer,tools,budget,spending,tracker,macos,menubar",
+      release_notes: "Version 1.3.0 - Team Features & Pro Upgrade\n\nNEW FEATURES:\n• Team Cache Sharing (Pro) - Share cost data across your team via S3\n• Advanced Forecasting (Pro) - Enhanced cost predictions and analytics\n• 3-Day Free Trial - Try all Pro features before purchasing\n• One-time $3.99 upgrade - No subscriptions!\n\nIMPROVEMENTS:\n• Enhanced calendar view with better service breakdown\n• Improved keyboard shortcuts (⌘1-9 for profile switching)\n• Optimized API usage for even lower costs\n• Better error handling and recovery\n\nBUG FIXES:\n• Fixed memory leak in long-running sessions\n• Resolved profile switching delays\n• Fixed chart rendering on external displays\n• Improved AWS credential file parsing\n\nThe Pro upgrade unlocks powerful team collaboration features while maintaining our privacy-first approach. All data stays under your control - team cache uses YOUR S3 bucket with YOUR credentials.\n\nThank you for your continued support!",
+      
+      # Static metadata
+      name: "AWSCostMonitor",
+      subtitle: "Real-time AWS cost tracking in your menu bar",
+      promotional_text: "Track AWS costs without leaving your workflow. Smart refresh saves API costs. Beautiful visualizations. Privacy-first design.",
+      
+      # URLs
+      support_url: "https://github.com/toml0006/AWSCostMonitor/issues",
+      marketing_url: "https://github.com/toml0006/AWSCostMonitor",
+      privacy_url: "https://github.com/toml0006/AWSCostMonitor/blob/main/PRIVACY_POLICY.md",
+      
+      # Review information
+      app_review_information: {
+        first_name: "Jackson",
+        last_name: "Tomlinson", 
+        phone_number: "+1234567890",
+        email_address: "jackson.tomlinson@gmail.com",
+        demo_user: "",
+        demo_password: "",
+        notes: "App requires access to ~/.aws/config for AWS credentials. Look for menu bar icon after launch. Press ⌘K for calendar view. 3-day Pro trial available."
+      }
+    )
+  end
+  
+  desc "Build and upload to App Store Connect"
+  lane :release do |options|
+    # Configure API key authentication
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_PATH"],
+      in_house: false
+    )
+    
+    # Ensure we're on the right branch
+    ensure_git_status_clean
+    ensure_git_branch(branch: "release/*")
+    
+    # Bump version if requested
+    if options[:bump]
+      bump_version(type: options[:bump])
+    end
+    
+    # Build the app for App Store
+    gym(
+      scheme: "AWSCostMonitor",
+      configuration: "Release",
+      clean: true,
+      output_directory: "./build",
+      output_name: "AWSCostMonitor",
+      export_method: "app-store",
+      
+      # Skip problematic settings for now
+      skip_profile_detection: true,
+      
+      # Build settings for premium features
+      xcargs: {
+        "PREMIUM_FEATURES" => "1",
+        "APPSTORE_BUILD" => "1",
+        "CODE_SIGN_STYLE" => "Automatic",
+        "INFOPLIST_KEY_LSApplicationCategoryType" => "public.app-category.developer-tools",
+        "ARCHS" => "arm64 x86_64",
+        "VALID_ARCHS" => "arm64 x86_64",
+        "ONLY_ACTIVE_ARCH" => "NO"
+      }
+    )
+    
+    # Upload to App Store Connect
+    upload_to_app_store(
+      force: true, # Skip HTML preview
+      skip_screenshots: options[:skip_screenshots],
+      skip_metadata: options[:skip_metadata],
+      
+      # Submission config
+      submit_for_review: options[:submit],
+      automatic_release: options[:auto_release],
+      
+      # Phased release
+      phased_release: true,
+      
+      # In-App Purchase
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false
+      }
+    )
+    
+    # Create git tag
+    version = get_version_number
+    add_git_tag(tag: "v#{version}")
+    push_git_tags
+    
+    UI.success("🎉 Successfully uploaded v#{version} to App Store Connect!")
+  end
+  
+  desc "Submit app for review"
+  lane :submit_for_review do
+    upload_to_app_store(
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: true,
+      
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        export_compliance_is_exempt: true
+      },
+      
+      automatic_release: true,
+      phased_release: true
+    )
+    
+    UI.success("📤 App submitted for review!")
+  end
+  
+  # =====================================
+  # In-App Purchase Management
+  # =====================================
+  
+  desc "Create In-App Purchase on App Store Connect"
+  lane :create_iap do
+    # This needs to be done manually through App Store Connect API
+    # or through the web interface
+    UI.important("Creating In-App Purchase: com.middleout.awscostmonitor.pro")
+    UI.message("Price: $3.99 (Tier 4)")
+    UI.message("Type: Non-Consumable")
+    UI.message("Reference Name: AWSCostMonitor Pro")
+    
+    UI.user_error!("Please create the IAP manually in App Store Connect for now")
+  end
+  
+  # =====================================
+  # Beta Testing
+  # =====================================
+  
+  desc "Build app for manual App Store upload"
+  lane :beta do
+    UI.important("🔧 Building app for manual upload due to provisioning profile requirements")
+    
+    # Archive the app (this works as we saw)
+    gym(
+      scheme: "AWSCostMonitor", 
+      configuration: "Release",
+      clean: true,
+      archive_path: "./build/AWSCostMonitor.xcarchive",
+      skip_build_archive: false,
+      include_bitcode: false,
+      
+      # Build settings for premium features
+      xcargs: {
+        "PREMIUM_FEATURES" => "1",
+        "APPSTORE_BUILD" => "1",
+        "INFOPLIST_KEY_LSApplicationCategoryType" => "public.app-category.developer-tools",
+        "ARCHS" => "arm64 x86_64",
+        "VALID_ARCHS" => "arm64 x86_64",
+        "ONLY_ACTIVE_ARCH" => "NO"
+      },
+      
+      # Just archive, don't export yet
+      skip_package_pkg: true,
+      skip_package_ipa: true
+    )
+    
+    UI.success("✅ Archive created successfully!")
+    UI.important("📋 Next steps:")
+    UI.message("1. Open Xcode Organizer")
+    UI.message("2. Find the AWSCostMonitor archive")
+    UI.message("3. Click 'Distribute App'")
+    UI.message("4. Choose 'App Store Connect'")
+    UI.message("5. Follow the upload wizard")
+    UI.message("")
+    UI.message("Archive location: #{Dir.pwd}/build/AWSCostMonitor.xcarchive")
+  end
+  
+  # =====================================
+  # Helper Lanes
+  # =====================================
+  
+  desc "Download metadata from App Store Connect"
+  lane :download_metadata do
+    download_from_app_store(
+      username: ENV["APPLE_ID"],
+      app_identifier: "middleout.AWSCostMonitor",
+      metadata_path: "./fastlane/metadata",
+      screenshots_path: "./fastlane/screenshots"
+    )
+  end
+  
+  desc "Validate app before submission"
+  lane :validate do
+    # Run tests
+    test
+    
+    # Check version and build number
+    version = get_version_number
+    build = get_build_number
+    UI.message("Version: #{version} (#{build})")
+    
+    # Validate metadata
+    precheck(
+      app_identifier: "middleout.AWSCostMonitor"
+    )
+    
+    UI.success("✅ App is ready for submission!")
+  end
+  
+  # =====================================
+  # Error Handling
+  # =====================================
+  
+  error do |lane, exception|
+    UI.error("❌ Error in lane #{lane}: #{exception.message}")
+    
+    # Send notification if configured
+    if ENV["SLACK_URL"]
+      slack(
+        message: "Error in #{lane}: #{exception.message}",
+        success: false
+      )
+    end
+  end
+end
