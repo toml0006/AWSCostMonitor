@@ -1,0 +1,17 @@
+# Appfile for AWSCostMonitor
+# Configuration for App Store Connect
+
+app_identifier("middleout.AWSCostMonitor")
+apple_id(ENV["APPLE_ID"] || "your-apple-id@example.com")
+
+# Team ID from Apple Developer Portal
+team_id("TJSYWP4C3D")
+
+# For App Store Connect
+itc_team_id(ENV["ITC_TEAM_ID"] || "TJSYWP4C3D")
+
+# Use API key for authentication (recommended)
+# Set these environment variables:
+# APP_STORE_CONNECT_API_KEY_ID
+# APP_STORE_CONNECT_ISSUER_ID
+# APP_STORE_CONNECT_API_KEY_PATH

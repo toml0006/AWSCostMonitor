@@ -1,0 +1,31 @@
+Thank you for reviewing AWSCostMonitor!
+
+IMPORTANT NOTES FOR REVIEW:
+
+1. MENU BAR APP: This is a menu bar application. After launch, look for the app icon in the top-right menu bar of macOS (near the clock/wifi icons).
+
+2. AWS CREDENTIALS: The app requires access to ~/.aws/config to read AWS credentials. On first launch, it will prompt for file access using security-scoped bookmarks. This is required for the app to function.
+
+3. SANDBOXING: The app is fully sandboxed and only communicates with AWS APIs for cost retrieval. No other external services are used.
+
+4. PRO FEATURES: The app includes a 3-day free trial for Pro features ($3.99 one-time purchase). You can test this by:
+   - Clicking on any "Upgrade" button in the app
+   - The trial activates automatically
+   - Team cache features become available during trial
+
+5. TESTING STEPS:
+   a. Launch the app - it appears in the menu bar
+   b. Click the menu bar icon to open the dropdown
+   c. Grant access to AWS config when prompted (select ~/.aws folder)
+   d. If you have AWS credentials, select a profile from the dropdown
+   e. The app will display cost data in the menu bar
+   f. Press ⌘K to open the calendar view
+   g. Test the Pro trial by accessing Team Cache settings
+
+6. NO ACCOUNT REQUIRED: The app uses the user's existing AWS credentials. No account creation or sign-in is required for the app itself.
+
+7. PRIVACY: No user data is collected or transmitted to any servers other than AWS's own APIs for cost retrieval.
+
+The app provides real value to AWS users by giving them ambient awareness of cloud spending without the friction of logging into the AWS console. The Pro features enable team collaboration while maintaining the same privacy-first approach.
+
+If you need any clarification or have questions, please don't hesitate to contact us.

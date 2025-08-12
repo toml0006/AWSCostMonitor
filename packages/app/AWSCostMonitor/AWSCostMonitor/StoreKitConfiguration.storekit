@@ -1,0 +1,35 @@
+{
+  "identifier" : "AWSCostMonitor",
+  "nonRenewableSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "3.99",
+      "familyShareable" : false,
+      "internalID" : "com.middleout.awscostmonitor.pro",
+      "localizations" : [
+        {
+          "description" : "Unlock team cache sharing, advanced forecasting, and unlimited profiles",
+          "displayName" : "AWSCostMonitor Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.middleout.awscostmonitor.pro",
+      "referenceName" : "Pro Version",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "middleout.AWSCostMonitor",
+    "_developerTeamID" : "TJSYWP4C3D",
+    "_lastSynchronizedDate" : 745000000.0
+  },
+  "subscriptions" : [
+
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}
