@@ -92,9 +92,6 @@ class StatusBarController: NSObject {
         let useThousandsSeparator = true
         // Don't set UserDefaults here - it causes infinite recursion!
         
-        // Set the cloud icon - always use colorful icon
-        button.image = MenuBarCloudIcon.createImage(size: 18)
-        
         var titleString = ""
         var titleColor: NSColor? = nil
         
@@ -105,6 +102,8 @@ class StatusBarController: NSObject {
         
         switch displayFormat {
         case "abbreviated":
+            // No icon for abbreviated format
+            button.image = nil
             if let cost = awsManager.costData.first {
                 let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
                 formatter.maximumFractionDigits = 0
@@ -120,6 +119,8 @@ class StatusBarController: NSObject {
             }
             
         case "full":
+            // No icon for full format
+            button.image = nil
             if let cost = awsManager.costData.first {
                 let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
                 formatter.minimumFractionDigits = decimalPlaces
@@ -136,9 +137,12 @@ class StatusBarController: NSObject {
             }
             
         case "iconOnly":
+            // Show colorful cloud icon only for icon-only mode
+            button.image = MenuBarCloudIcon.createImage(size: 18)
             titleString = "" // No text when showing icon only
         
         default:
+            button.image = nil
             titleString = "$"
         }
         
