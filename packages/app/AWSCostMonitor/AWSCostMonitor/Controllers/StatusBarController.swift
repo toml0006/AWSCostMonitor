@@ -92,14 +92,8 @@ class StatusBarController: NSObject {
         let useThousandsSeparator = true
         // Don't set UserDefaults here - it causes infinite recursion!
         
-        // Set the cloud icon
-        if displayFormat == "iconOnly" {
-            // Use colorful cloud icon for icon-only mode
-            button.image = MenuBarCloudIcon.createImage(size: 18)
-        } else {
-            // Use template cloud icon when showing text
-            button.image = MenuBarCloudIcon.createTemplateImage(size: 16)
-        }
+        // Set the cloud icon - always use colorful icon
+        button.image = MenuBarCloudIcon.createImage(size: 18)
         
         var titleString = ""
         var titleColor: NSColor? = nil
