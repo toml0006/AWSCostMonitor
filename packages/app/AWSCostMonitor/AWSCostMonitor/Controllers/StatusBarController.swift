@@ -57,8 +57,9 @@ class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
         
-        // Listen to UserDefaults changes for display settings
+        // Listen to UserDefaults changes for display settings (debounced to prevent recursion)
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusItemView()
             }

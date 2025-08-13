@@ -603,16 +603,9 @@ struct PopoverContentView: View {
                         print("DEBUG: FORCING REFRESH - Cache is \(cacheAgeMinutes) minutes old (> 30 min threshold)")
                         awsManager.log(.error, category: "UI", "FORCING REFRESH - Cache is \(cacheAgeMinutes) min old")
                         
-                        // Try multiple ways to trigger refresh
+                        // Single async call to prevent race conditions
                         Task { @MainActor in
                             await awsManager.fetchCostForSelectedProfile(force: true)
-                        }
-                        
-                        // Also try dispatching to main queue
-                        DispatchQueue.main.async {
-                            Task {
-                                await awsManager.fetchCostForSelectedProfile(force: true)
-                            }
                         }
                     }
                 } else if !awsManager.isLoading {
