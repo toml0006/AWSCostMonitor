@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { 
   DollarSign, 
   TrendingDown, 
@@ -15,66 +16,90 @@ import {
 } from 'lucide-react'
 
 const features = [
+  // v1.2.1 - Latest
+  {
+    icon: BarChart3,
+    title: 'Interactive Histograms',
+    description: 'Click any histogram bar to see detailed daily breakdown. 14-day trends with smart color coding vs last month',
+    color: 'secondary',
+    badge: 'v1.2.1',
+    version: '1.2.1'
+  },
+  // v1.2.0
   {
     icon: Calendar,
     title: 'Calendar View',
     description: 'Beautiful monthly calendar showing daily spending patterns with color-coded intensity',
     color: 'primary',
-    badge: 'v1.2.0'
+    badge: 'v1.2.0',
+    version: '1.2.0'
   },
   {
     icon: PieChart,
     title: 'Interactive Charts',
     description: 'Professional donut charts with hover effects showing service cost breakdowns',
     color: 'accent',
-    badge: 'v1.2.0'
+    badge: 'v1.2.0',
+    version: '1.2.0'
   },
+  // v1.0.0 - Original features
   {
     icon: Eye,
     title: 'Always Visible',
     description: 'Lives in your menu bar for instant cost visibility without switching contexts',
-    color: 'tertiary'
-  },
-  {
-    icon: BarChart3,
-    title: 'Interactive Histograms',
-    description: 'Click any histogram bar to see detailed daily breakdown. 14-day trends with smart color coding vs last month',
-    color: 'secondary',
-    badge: 'v1.2.1'
+    color: 'tertiary',
+    badge: 'v1.0.0',
+    version: '1.0.0'
   },
   {
     icon: TrendingDown,
     title: 'Smart Projections',
     description: 'Month-end spending projection and percentage comparison to last month',
-    color: 'primary'
+    color: 'primary',
+    badge: 'v1.0.0',
+    version: '1.0.0'
   },
   {
     icon: Users,
     title: 'Multi-Profile Support',
     description: 'Switch between multiple AWS accounts with smart error handling',
-    color: 'accent'
+    color: 'accent',
+    badge: 'v1.0.0',
+    version: '1.0.0'
   },
   {
     icon: Bell,
     title: 'Budget Alerts',
     description: 'Get notified before you exceed your monthly spending limits',
-    color: 'tertiary'
+    color: 'tertiary',
+    badge: 'v1.0.0',
+    version: '1.0.0'
   },
   {
     icon: Zap,
     title: 'Intelligent Refresh',
     description: 'Adjusts polling frequency based on your spending patterns to minimize API calls',
-    color: 'secondary'
+    color: 'secondary',
+    badge: 'v1.0.0',
+    version: '1.0.0'
   },
   {
     icon: Lock,
     title: 'Privacy First',
     description: 'Zero data collection. No external servers. Your AWS data never leaves your Mac.',
-    color: 'primary'
+    color: 'primary',
+    badge: 'v1.0.0',
+    version: '1.0.0'
   }
 ]
 
 const Features = () => {
+  const navigate = useNavigate()
+  
+  const handleVersionClick = (version) => {
+    navigate(`/changelog#v${version.replace(/\./g, '-')}`)
+  }
+  
   return (
     <section id="features" className="features pattern-dots">
       <div className="container">
@@ -102,7 +127,12 @@ const Features = () => {
               <div className="feature-icon">
                 <feature.icon size={32} />
                 {feature.badge && (
-                  <span className="feature-badge">
+                  <span 
+                    className="feature-badge clickable"
+                    onClick={() => handleVersionClick(feature.version)}
+                    style={{ cursor: 'pointer' }}
+                    title={`View ${feature.badge} changelog`}
+                  >
                     {feature.badge}
                   </span>
                 )}
