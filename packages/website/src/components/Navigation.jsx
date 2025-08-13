@@ -1,10 +1,26 @@
 import { motion } from 'framer-motion'
 import { DollarSign, Menu, X } from 'lucide-react'
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, Link, useNavigate } from 'react-router-dom'
 
 const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
   const location = useLocation()
+  const navigate = useNavigate()
   const isHomePage = location.pathname === '/'
+  
+  const handleNavClick = (sectionId) => {
+    setIsMenuOpen(false)
+    if (!isHomePage) {
+      // Navigate to home page with the section hash
+      navigate('/#' + sectionId)
+      // After navigation, scroll to the section
+      setTimeout(() => {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 100)
+    }
+  }
   
   return (
     <nav className="navigation">
@@ -30,8 +46,9 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
             ) : (
               <>
                 <Link to="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
-                <Link to="/#features" onClick={() => setIsMenuOpen(false)}>Features</Link>
-                <Link to="/#installation" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
+                <a href="#" onClick={(e) => { e.preventDefault(); handleNavClick('features'); }}>Features</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); handleNavClick('installation'); }}>Get Started</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); handleNavClick('pricing'); }}>Pricing</a>
               </>
             )}
             <Link to="/changelog" onClick={() => setIsMenuOpen(false)}>Changelog</Link>

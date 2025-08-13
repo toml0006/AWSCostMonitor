@@ -47,6 +47,19 @@ import Changelog from './components/Changelog'
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
+  useEffect(() => {
+    // Check if there's a hash in the URL and scroll to it
+    if (window.location.hash) {
+      const id = window.location.hash.substring(1)
+      setTimeout(() => {
+        const element = document.getElementById(id)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 100)
+    }
+  }, [])
+
   return (
     <div className="app">
       <MoneyRain />
