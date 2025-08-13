@@ -2023,21 +2023,56 @@ class AWSManager: ObservableObject {
                 currency: "USD"
             ))
             
-            // Distribute across services with slight daily variations - more realistic distribution
-            let serviceVariation = 0.9 + Double.random(in: 0...0.2) // ±10% service variation
+            // Distribute across services with independent daily variations for realistic patterns
+            // Each service gets its own random variation to create realistic looking bar charts
             
-            let ec2Amount = dailyAmount * Decimal(0.42 * serviceVariation)  // EC2 typically dominates
-            let rdsAmount = dailyAmount * Decimal(0.18 * serviceVariation)   // RDS is often second
-            let s3Amount = dailyAmount * Decimal(0.08 * serviceVariation)    // S3 storage costs
-            let cloudFrontAmount = dailyAmount * Decimal(0.07 * serviceVariation)  // CDN costs
-            let elasticLoadBalancingAmount = dailyAmount * Decimal(0.06 * serviceVariation)  // ELB/ALB
-            let lambdaAmount = dailyAmount * Decimal(0.05 * serviceVariation)      // Lambda compute
-            let ecsAmount = dailyAmount * Decimal(0.04 * serviceVariation)         // ECS/Fargate
-            let route53Amount = dailyAmount * Decimal(0.03 * serviceVariation)     // DNS
-            let dynamoAmount = dailyAmount * Decimal(0.025 * serviceVariation)     // DynamoDB
-            let backupAmount = dailyAmount * Decimal(0.02 * serviceVariation)      // AWS Backup
-            let apiGatewayAmount = dailyAmount * Decimal(0.015 * serviceVariation) // API Gateway
-            let kmsAmount = dailyAmount * Decimal(0.01 * serviceVariation)         // KMS encryption
+            // EC2 - high variation (instances spin up/down)
+            let ec2Variation = 0.7 + Double.random(in: 0...0.6) // 70-130% variation
+            let ec2Amount = dailyAmount * Decimal(0.42 * ec2Variation)
+            
+            // RDS - moderate variation (databases are more stable)
+            let rdsVariation = 0.85 + Double.random(in: 0...0.3) // 85-115% variation
+            let rdsAmount = dailyAmount * Decimal(0.18 * rdsVariation)
+            
+            // S3 - low variation (storage grows slowly)
+            let s3Variation = 0.95 + Double.random(in: 0...0.1) // 95-105% variation
+            let s3Amount = dailyAmount * Decimal(0.08 * s3Variation)
+            
+            // CloudFront - high variation (traffic spikes)
+            let cloudFrontVariation = 0.6 + Double.random(in: 0...0.8) // 60-140% variation
+            let cloudFrontAmount = dailyAmount * Decimal(0.07 * cloudFrontVariation)
+            
+            // ELB - moderate variation
+            let elbVariation = 0.8 + Double.random(in: 0...0.4) // 80-120% variation
+            let elasticLoadBalancingAmount = dailyAmount * Decimal(0.06 * elbVariation)
+            
+            // Lambda - very high variation (event-driven)
+            let lambdaVariation = 0.3 + Double.random(in: 0...1.4) // 30-170% variation
+            let lambdaAmount = dailyAmount * Decimal(0.05 * lambdaVariation)
+            
+            // ECS - moderate variation
+            let ecsVariation = 0.75 + Double.random(in: 0...0.5) // 75-125% variation
+            let ecsAmount = dailyAmount * Decimal(0.04 * ecsVariation)
+            
+            // Route53 - very low variation (DNS is stable)
+            let route53Variation = 0.98 + Double.random(in: 0...0.04) // 98-102% variation
+            let route53Amount = dailyAmount * Decimal(0.03 * route53Variation)
+            
+            // DynamoDB - moderate to high variation
+            let dynamoVariation = 0.7 + Double.random(in: 0...0.6) // 70-130% variation
+            let dynamoAmount = dailyAmount * Decimal(0.025 * dynamoVariation)
+            
+            // Backup - low variation (scheduled jobs)
+            let backupVariation = 0.9 + Double.random(in: 0...0.2) // 90-110% variation
+            let backupAmount = dailyAmount * Decimal(0.02 * backupVariation)
+            
+            // API Gateway - high variation (API usage varies)
+            let apiGatewayVariation = 0.5 + Double.random(in: 0...1.0) // 50-150% variation
+            let apiGatewayAmount = dailyAmount * Decimal(0.015 * apiGatewayVariation)
+            
+            // KMS - very low variation (encryption is consistent)
+            let kmsVariation = 0.97 + Double.random(in: 0...0.06) // 97-103% variation
+            let kmsAmount = dailyAmount * Decimal(0.01 * kmsVariation)
             
             dailyServiceCosts.append(contentsOf: [
                 DailyServiceCost(date: date, serviceName: "Amazon Elastic Compute Cloud - Compute", amount: ec2Amount, currency: "USD"),
