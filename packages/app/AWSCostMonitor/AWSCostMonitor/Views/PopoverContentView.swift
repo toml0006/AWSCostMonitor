@@ -155,7 +155,8 @@ struct PopoverContentView: View {
             
             Divider()
             
-            // DEBUG: Force Refresh Button
+            // DEBUG: Force Refresh Button (only in debug builds)
+            #if DEBUG
             if let profile = awsManager.selectedProfile,
                let cachedData = awsManager.costCache[profile.name] {
                 let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
@@ -181,6 +182,7 @@ struct PopoverContentView: View {
                     Divider()
                 }
             }
+            #endif
             
             // Cost Display with Proper Histograms
             ScrollView {
