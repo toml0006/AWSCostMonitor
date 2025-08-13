@@ -20,11 +20,11 @@ const screenshots = [
   },
   {
     title: "Day Detail with Donut Chart",
-    description: "Interactive donut chart showing service breakdown when you click any calendar day",
+    description: "Interactive donut chart showing service breakdown - click any calendar day or histogram bar to see details",
     image: "/AWSCostMonitor/screenshots/day-detail-donut.png",
     width: 2000,
     height: 1125,
-    features: ["Interactive donut charts", "Hover effects", "Service cost breakdown", "Smart service grouping"]
+    features: ["Interactive donut charts", "Click histogram bars for daily view", "Service cost breakdown", "Smart service grouping"]
   },
   {
     title: "Settings - Refresh Rate",

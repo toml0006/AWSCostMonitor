@@ -7,12 +7,15 @@
 
 import SwiftUI
 import Charts
+import AppKit
 
 struct RealHistogramView: View {
     let dailyServiceCosts: [DailyServiceCost]
     let serviceName: String
     @EnvironmentObject var awsManager: AWSManager
+    @Binding var selectedDayDetail: DayDetailData?
     @State private var hoveredIndex: Int? = nil
+    @State private var pressedIndex: Int? = nil
     
     private func buildFullData() -> [DailyServiceCost] {
         let last14Days = getLast14DaysData()
@@ -49,14 +52,88 @@ struct RealHistogramView: View {
                         VStack {
                             Spacer()
                             Rectangle()
-                                .fill(barColor(amount: amount, lastMonthAvg: lastMonthAvg))
+                                .fill(barColor(amount: amount, lastMonthAvg: lastMonthAvg, isPressed: pressedIndex == index, isHovered: hoveredIndex == index))
                                 .frame(width: max(10, (geometry.size.width - CGFloat(13 * 1)) / 14), height: max(2, CGFloat(amount / maxAmount) * 30))  // Use almost all available width
                                 .cornerRadius(1)
-                                .onHover { isHovering in
-                                    hoveredIndex = isHovering ? index : nil
-                                }
+                                .overlay(
+                                    Rectangle()
+                                        .stroke(
+                                            hoveredIndex == index ? Color.white.opacity(0.6) : Color.clear,
+                                            lineWidth: hoveredIndex == index ? 1 : 0
+                                        )
+                                        .cornerRadius(1)
+                                )
+                                .scaleEffect(
+                                    pressedIndex == index ? 1.1 : (hoveredIndex == index ? 1.05 : 1.0)
+                                )
+                                .animation(.easeInOut(duration: 0.15), value: hoveredIndex)
+                                .animation(.easeInOut(duration: 0.1), value: pressedIndex)
                         }
                         .frame(height: 32)
+                        // Full column highlight on hover/press
+                        .background(
+                            Rectangle()
+                                .fill(
+                                    pressedIndex == index ? Color.blue.opacity(0.3) :
+                                    (hoveredIndex == index ? Color.blue.opacity(0.15) : Color.clear)
+                                )
+                                .cornerRadius(2)
+                        )
+                        .scaleEffect(pressedIndex == index ? 1.02 : (hoveredIndex == index ? 1.01 : 1.0))
+                        .shadow(color: pressedIndex == index ? Color.blue.opacity(0.4) : Color.clear, radius: pressedIndex == index ? 2 : 0)
+                        .animation(.easeInOut(duration: 0.1), value: pressedIndex)
+                        .animation(.easeInOut(duration: 0.15), value: hoveredIndex)
+                        .contentShape(Rectangle())
+                        .background(Color.clear)
+                        .overlay(
+                            Button(action: {
+                                // Handle the tap action with immediate response
+                                if index < allDays.count {
+                                    let day = allDays[index]
+                                    print("Histogram bar tapped for service: \(serviceName), day: \(day.date)")
+                                    
+                                    // Visual feedback
+                                    withAnimation(.easeInOut(duration: 0.1)) {
+                                        pressedIndex = index
+                                    }
+                                    
+                                    // Create the day detail data
+                                    selectedDayDetail = DayDetailData(
+                                        date: day.date,
+                                        dailyCost: DailyCost(
+                                            date: day.date,
+                                            amount: getTotalCostForDay(day.date),
+                                            currency: day.currency
+                                        ),
+                                        services: getAllServicesForDay(day.date),
+                                        currencyFormatter: currencyFormatter,
+                                        apiCalls: [],
+                                        highlightedService: serviceName
+                                    )
+                                    
+                                    // Reset pressed state
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                        pressedIndex = nil
+                                    }
+                                }
+                            }) {
+                                Color.clear
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        )
+                        .onHover { isHovering in
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                hoveredIndex = isHovering ? index : nil
+                            }
+                            
+                            // Direct cursor change
+                            if isHovering {
+                                NSCursor.pointingHand.set()
+                            } else {
+                                NSCursor.arrow.set()
+                            }
+                        }
                     }
                 }
             }
@@ -93,25 +170,47 @@ struct RealHistogramView: View {
         return formatter
     }
     
-    private func barColor(amount: Double, lastMonthAvg: Double) -> Color {
+    private var currencyFormatter: NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 2
+        return formatter
+    }
+    
+    private func barColor(amount: Double, lastMonthAvg: Double, isPressed: Bool = false, isHovered: Bool = false) -> Color {
         if amount == 0 {
-            return Color.gray.opacity(0.2)
+            return Color.gray.opacity(isPressed ? 0.8 : (isHovered ? 0.4 : 0.2))
         }
+        
+        var baseColor: Color
         
         // Compare to last month's daily average
         if lastMonthAvg > 0 {
             let percentDiff = ((amount - lastMonthAvg) / lastMonthAvg) * 100
             if percentDiff > 10 {
                 // More than 10% above last month's average - red
-                return Color.red.opacity(0.8)
+                baseColor = Color.red
             } else if percentDiff < -10 {
                 // More than 10% below last month's average - green
-                return Color.green.opacity(0.8)
+                baseColor = Color.green
+            } else {
+                // Within normal range - blue
+                baseColor = Color.blue
             }
+        } else {
+            // Within normal range - blue
+            baseColor = Color.blue
         }
         
-        // Within normal range - blue
-        return Color.blue.opacity(0.8)
+        if isPressed {
+            // Make pressed bars brighter and more opaque
+            return baseColor.opacity(1.0)
+        } else if isHovered {
+            // Make hovered bars brighter
+            return baseColor.opacity(0.9)
+        } else {
+            return baseColor.opacity(0.8)
+        }
     }
     
     private func getLastMonthDailyAverage() -> Double {
@@ -181,6 +280,35 @@ struct RealHistogramView: View {
         }
         
         return result
+    }
+    
+    private func getTotalCostForDay(_ date: Date) -> Decimal {
+        let calendar = Calendar.current
+        guard let profileName = awsManager.selectedProfile?.name,
+              let dailyServiceCosts = awsManager.dailyServiceCostsByProfile[profileName] else {
+            return 0
+        }
+        
+        return dailyServiceCosts
+            .filter { calendar.isDate($0.date, inSameDayAs: date) }
+            .reduce(0) { $0 + $1.amount }
+    }
+    
+    private func getAllServicesForDay(_ date: Date) -> [ServiceCost] {
+        let calendar = Calendar.current
+        guard let profileName = awsManager.selectedProfile?.name,
+              let dailyServiceCosts = awsManager.dailyServiceCostsByProfile[profileName] else {
+            return []
+        }
+        
+        let dayServices = dailyServiceCosts
+            .filter { calendar.isDate($0.date, inSameDayAs: date) }
+            .reduce(into: [String: Decimal]()) { result, cost in
+                result[cost.serviceName, default: 0] += cost.amount
+            }
+        
+        return dayServices.map { ServiceCost(serviceName: $0.key, amount: $0.value, currency: "USD") }
+            .sorted()
     }
 }
 

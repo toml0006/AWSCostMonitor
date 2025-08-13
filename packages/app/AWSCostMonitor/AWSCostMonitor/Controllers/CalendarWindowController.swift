@@ -11,7 +11,7 @@ import AppKit
 class CalendarWindowController {
     private static var windowController: NSWindowController?
     
-    static func showCalendarWindow(awsManager: AWSManager) {
+    static func showCalendarWindow(awsManager: AWSManager, highlightedService: String? = nil) {
         // If window already exists, bring it to front
         if let existingWindow = windowController?.window {
             existingWindow.makeKeyAndOrderFront(nil)
@@ -20,7 +20,7 @@ class CalendarWindowController {
         }
         
         // Create new window
-        let calendarView = CalendarView()
+        let calendarView = CalendarView(highlightedService: highlightedService)
             .environmentObject(awsManager)
         
         let hostingController = NSHostingController(rootView: calendarView)

@@ -55,6 +55,13 @@ struct MenuButton: View {
             withAnimation(.easeInOut(duration: 0.1)) {
                 hoveredItem = isHovered ? itemId : nil
             }
+            
+            // Set cursor
+            if isHovered {
+                NSCursor.pointingHand.set()
+            } else {
+                NSCursor.arrow.set()
+            }
         }
     }
 }

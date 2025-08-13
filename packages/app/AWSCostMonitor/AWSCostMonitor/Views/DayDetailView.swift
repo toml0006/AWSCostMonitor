@@ -13,6 +13,7 @@ struct DayDetailView: View {
     let services: [ServiceCost]
     let currencyFormatter: NumberFormatter
     let apiCalls: [APIRequestRecord]
+    let highlightedService: String?
     @Environment(\.dismiss) var dismiss
     @State private var hoveredService: String? = nil
     @State private var showAllServices = false
@@ -259,7 +260,10 @@ struct DayDetailView: View {
         .padding(.horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(hoveredService == service.serviceName ? Color.accentColor.opacity(0.1) : Color.clear)
+                .fill(
+                    highlightedService == service.serviceName ? Color.blue.opacity(0.2) :
+                    hoveredService == service.serviceName ? Color.accentColor.opacity(0.1) : Color.clear
+                )
         )
         .onHover { isHovered in
             hoveredService = isHovered ? service.serviceName : nil

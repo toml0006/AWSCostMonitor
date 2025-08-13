@@ -37,9 +37,10 @@ const features = [
   },
   {
     icon: BarChart3,
-    title: 'Visual Histograms',
-    description: '14-day spending histograms per service with red/green coloring vs last month',
-    color: 'secondary'
+    title: 'Interactive Histograms',
+    description: 'Click any histogram bar to see detailed daily breakdown. 14-day trends with smart color coding vs last month',
+    color: 'secondary',
+    badge: 'v1.2.1'
   },
   {
     icon: TrendingDown,

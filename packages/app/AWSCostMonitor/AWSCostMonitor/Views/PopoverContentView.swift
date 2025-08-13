@@ -17,6 +17,7 @@ struct PopoverContentView: View {
     @State private var settingsButtonHovered = false
     @State private var consoleButtonHovered = false
     @State private var calendarButtonHovered = false
+    @State private var selectedDayDetail: DayDetailData? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -44,6 +45,11 @@ struct PopoverContentView: View {
                 .buttonStyle(.plain)
                 .onHover { isHovered in
                     helpButtonHovered = isHovered
+                    if isHovered {
+                        NSCursor.pointingHand.set()
+                    } else {
+                        NSCursor.arrow.set()
+                    }
                 }
                 
                 // Quit button
@@ -57,6 +63,11 @@ struct PopoverContentView: View {
                 .buttonStyle(.plain)
                 .onHover { isHovered in
                     quitButtonHovered = isHovered
+                    if isHovered {
+                        NSCursor.pointingHand.set()
+                    } else {
+                        NSCursor.arrow.set()
+                    }
                 }
             }
             .padding(.horizontal)
@@ -362,7 +373,8 @@ struct PopoverContentView: View {
                                            !dailyServiceCosts.isEmpty {
                                             RealHistogramView(
                                                 dailyServiceCosts: dailyServiceCosts,
-                                                serviceName: service.serviceName
+                                                serviceName: service.serviceName,
+                                                selectedDayDetail: $selectedDayDetail
                                             )
                                             .environmentObject(awsManager)
                                         }
@@ -402,10 +414,21 @@ struct PopoverContentView: View {
                             Text("Refresh")
                                 .foregroundColor(refreshButtonHovered ? .blue : .primary)
                         }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(refreshButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
+                        )
                     }
                     .buttonStyle(.plain)
                     .onHover { isHovered in
                         refreshButtonHovered = isHovered
+                        if isHovered {
+                            NSCursor.pointingHand.set()
+                        } else {
+                            NSCursor.arrow.set()
+                        }
                     }
                     
                     // Team cache force refresh (when enabled)
@@ -447,10 +470,21 @@ struct PopoverContentView: View {
                             Text("Settings")
                                 .foregroundColor(settingsButtonHovered ? .blue : .primary)
                         }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(settingsButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
+                        )
                     }
                     .buttonStyle(.plain)
                     .onHover { isHovered in
                         settingsButtonHovered = isHovered
+                        if isHovered {
+                            NSCursor.pointingHand.set()
+                        } else {
+                            NSCursor.arrow.set()
+                        }
                     }
                 }
                 
@@ -466,10 +500,21 @@ struct PopoverContentView: View {
                             Text("Calendar")
                                 .foregroundColor(calendarButtonHovered ? .blue : .primary)
                         }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(calendarButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
+                        )
                     }
                     .buttonStyle(.plain)
                     .onHover { isHovered in
                         calendarButtonHovered = isHovered
+                        if isHovered {
+                            NSCursor.pointingHand.set()
+                        } else {
+                            NSCursor.arrow.set()
+                        }
                     }
                     
                     Spacer()
@@ -490,10 +535,21 @@ struct PopoverContentView: View {
                             Text("AWS Console")
                                 .foregroundColor(consoleButtonHovered ? .blue : .primary)
                         }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(consoleButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
+                        )
                     }
                     .buttonStyle(.plain)
                     .onHover { isHovered in
                         consoleButtonHovered = isHovered
+                        if isHovered {
+                            NSCursor.pointingHand.set()
+                        } else {
+                            NSCursor.arrow.set()
+                        }
                     }
                 }
                 
@@ -590,6 +646,16 @@ struct PopoverContentView: View {
                 return 500
             #endif
         }())
+        .sheet(item: $selectedDayDetail) { detail in
+            DayDetailView(
+                date: detail.date,
+                dailyCost: detail.dailyCost,
+                services: detail.services,
+                currencyFormatter: detail.currencyFormatter,
+                apiCalls: detail.apiCalls,
+                highlightedService: detail.highlightedService
+            )
+        }
         .onAppear {
             // SUPER AGGRESSIVE DEBUG CHECK - Force refresh if > 30 minutes old
             if let profile = awsManager.selectedProfile {
@@ -621,6 +687,10 @@ struct PopoverContentView: View {
             } else {
                 print("DEBUG: No selected profile in onAppear")
             }
+        }
+        .onDisappear {
+            // Dismiss any open day detail sheet when popover disappears
+            selectedDayDetail = nil
         }
     }
     
@@ -660,6 +730,18 @@ struct PopoverContentView: View {
         }
         return .primary
     }
+}
+
+// MARK: - Day Detail Data Structure
+
+struct DayDetailData: Identifiable {
+    let id = UUID()
+    let date: Date
+    let dailyCost: DailyCost
+    let services: [ServiceCost]
+    let currencyFormatter: NumberFormatter
+    let apiCalls: [APIRequestRecord]
+    let highlightedService: String
 }
 
 // MARK: - Real Histogram View with Full Graphics

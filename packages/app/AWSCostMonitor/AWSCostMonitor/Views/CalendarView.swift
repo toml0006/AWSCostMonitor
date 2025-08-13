@@ -9,12 +9,17 @@ import SwiftUI
 
 struct CalendarView: View {
     @EnvironmentObject var awsManager: AWSManager
+    let highlightedService: String?
     @State private var selectedDate: Date = Date()
     @State private var currentMonth: Date = Date()
     @State private var showingDayDetail = false
     @State private var selectedDayData: DailyCost?
     @State private var selectedDayServices: [ServiceCost] = []
     @State private var hoveredDate: Date?
+    
+    init(highlightedService: String? = nil) {
+        self.highlightedService = highlightedService
+    }
     
     private let calendar = Calendar.current
     private let dateFormatter: DateFormatter = {
@@ -207,7 +212,8 @@ struct CalendarView: View {
                 dailyCost: selectedDayData,
                 services: selectedDayServices,
                 currencyFormatter: currencyFormatter,
-                apiCalls: getAPICallsForDay(selectedDate)
+                apiCalls: getAPICallsForDay(selectedDate),
+                highlightedService: highlightedService
             )
         }
         .onAppear {
