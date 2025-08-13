@@ -16,23 +16,25 @@ import {
 } from 'lucide-react'
 
 const features = [
-  // v1.2.1 - Latest
+  // v1.2.1 - Latest (accent color from changelog)
   {
     icon: BarChart3,
     title: 'Interactive Histograms',
     description: 'Click any histogram bar to see detailed daily breakdown. 14-day trends with smart color coding vs last month',
     color: 'secondary',
     badge: 'v1.2.1',
-    version: '1.2.1'
+    version: '1.2.1',
+    badgeColor: 'accent' // matches changelog
   },
-  // v1.2.0
+  // v1.2.0 (primary color from changelog)
   {
     icon: Calendar,
     title: 'Calendar View',
     description: 'Beautiful monthly calendar showing daily spending patterns with color-coded intensity',
     color: 'primary',
     badge: 'v1.2.0',
-    version: '1.2.0'
+    version: '1.2.0',
+    badgeColor: 'primary' // matches changelog
   },
   {
     icon: PieChart,
@@ -40,16 +42,18 @@ const features = [
     description: 'Professional donut charts with hover effects showing service cost breakdowns',
     color: 'accent',
     badge: 'v1.2.0',
-    version: '1.2.0'
+    version: '1.2.0',
+    badgeColor: 'primary' // matches changelog
   },
-  // v1.0.0 - Original features
+  // v1.0.0 - Original features (tertiary color from changelog)
   {
     icon: Eye,
     title: 'Always Visible',
     description: 'Lives in your menu bar for instant cost visibility without switching contexts',
     color: 'tertiary',
     badge: 'v1.0.0',
-    version: '1.0.0'
+    version: '1.0.0',
+    badgeColor: 'tertiary' // matches changelog
   },
   {
     icon: TrendingDown,
@@ -57,7 +61,8 @@ const features = [
     description: 'Month-end spending projection and percentage comparison to last month',
     color: 'primary',
     badge: 'v1.0.0',
-    version: '1.0.0'
+    version: '1.0.0',
+    badgeColor: 'tertiary' // matches changelog
   },
   {
     icon: Users,
@@ -65,7 +70,8 @@ const features = [
     description: 'Switch between multiple AWS accounts with smart error handling',
     color: 'accent',
     badge: 'v1.0.0',
-    version: '1.0.0'
+    version: '1.0.0',
+    badgeColor: 'tertiary' // matches changelog
   },
   {
     icon: Bell,
@@ -73,7 +79,8 @@ const features = [
     description: 'Get notified before you exceed your monthly spending limits',
     color: 'tertiary',
     badge: 'v1.0.0',
-    version: '1.0.0'
+    version: '1.0.0',
+    badgeColor: 'tertiary' // matches changelog
   },
   {
     icon: Zap,
@@ -81,7 +88,8 @@ const features = [
     description: 'Adjusts polling frequency based on your spending patterns to minimize API calls',
     color: 'secondary',
     badge: 'v1.0.0',
-    version: '1.0.0'
+    version: '1.0.0',
+    badgeColor: 'tertiary' // matches changelog
   },
   {
     icon: Lock,
@@ -89,7 +97,8 @@ const features = [
     description: 'Zero data collection. No external servers. Your AWS data never leaves your Mac.',
     color: 'primary',
     badge: 'v1.0.0',
-    version: '1.0.0'
+    version: '1.0.0',
+    badgeColor: 'tertiary' // matches changelog
   }
 ]
 
@@ -122,15 +131,15 @@ const Features = () => {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className={`feature-card card card-brutal card-memphis card-${feature.color}`}
+              className={`feature-card card card-brutal card-memphis card-${feature.color} clickable-card`}
+              onClick={() => handleVersionClick(feature.version)}
+              style={{ cursor: 'pointer' }}
             >
               <div className="feature-icon">
                 <feature.icon size={32} />
                 {feature.badge && (
                   <span 
-                    className="feature-badge clickable"
-                    onClick={() => handleVersionClick(feature.version)}
-                    style={{ cursor: 'pointer' }}
+                    className={`feature-badge badge-${feature.badgeColor}`}
                     title={`View ${feature.badge} changelog`}
                   >
                     {feature.badge}

@@ -356,6 +356,38 @@
   border: 2px solid var(--color-black);
   box-shadow: 2px 2px 0 var(--color-black);
   font-family: var(--font-primary);
+  transition: all 0.3s ease;
+}
+
+/* Badge color variants matching changelog */
+.feature-badge.badge-primary {
+  background: var(--color-primary);
+}
+
+.feature-badge.badge-accent {
+  background: var(--color-accent);
+}
+
+.feature-badge.badge-tertiary {
+  background: var(--color-tertiary);
+}
+
+.feature-badge.badge-secondary {
+  background: var(--color-secondary);
+}
+
+/* Clickable card styles */
+.feature-card.clickable-card {
+  transition: all 0.3s ease;
+}
+
+.feature-card.clickable-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 4px 4px 0 var(--color-black);
+}
+
+.feature-card.clickable-card:hover .feature-badge {
+  transform: scale(1.1);
 }
 
 .feature-card h3 {

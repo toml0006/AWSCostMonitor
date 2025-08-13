@@ -34,7 +34,6 @@ import Hero from './components/Hero'
 import Features from './components/Features'
 import HowItWorks from './components/HowItWorks'
 import Pricing from './components/Pricing'
-import Screenshots from './components/Screenshots'
 import Installation from './components/Installation'
 import Footer from './components/Footer'
 import Navigation from './components/Navigation'
@@ -59,7 +58,6 @@ function HomePage() {
         <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
         <Hero />
         <Features />
-        <Screenshots />
         <Installation />
         <HowItWorks />
         <Pricing />

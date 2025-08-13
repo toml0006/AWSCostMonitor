@@ -24,7 +24,6 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
             {isHomePage ? (
               <>
                 <a href="#features" onClick={() => setIsMenuOpen(false)}>Features</a>
-                <a href="#screenshots" onClick={() => setIsMenuOpen(false)}>Screenshots</a>
                 <a href="#installation" onClick={() => setIsMenuOpen(false)}>Get Started</a>
                 <a href="#pricing" onClick={() => setIsMenuOpen(false)}>Pricing</a>
               </>
@@ -32,7 +31,7 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
               <>
                 <Link to="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
                 <Link to="/#features" onClick={() => setIsMenuOpen(false)}>Features</Link>
-                <Link to="/#screenshots" onClick={() => setIsMenuOpen(false)}>Screenshots</Link>
+                <Link to="/#installation" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
               </>
             )}
             <Link to="/changelog" onClick={() => setIsMenuOpen(false)}>Changelog</Link>
