@@ -1,6 +1,4 @@
 import { motion } from 'framer-motion'
-import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
 import { 
   Calendar,
   Sparkles,
@@ -153,20 +151,6 @@ const releases = [
 ]
 
 const Changelog = () => {
-  const location = useLocation()
-
-  useEffect(() => {
-    // Scroll to version if hash is present
-    if (location.hash) {
-      const element = document.querySelector(location.hash)
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }, 100)
-      }
-    }
-  }, [location])
-
   return (
     <section className="changelog pattern-dots">
       <div className="container">

@@ -106,7 +106,14 @@ const Features = () => {
   const navigate = useNavigate()
   
   const handleVersionClick = (version) => {
-    navigate(`/changelog#v${version.replace(/\./g, '-')}`)
+    navigate('/changelog')
+    // After navigation, scroll to the version section
+    setTimeout(() => {
+      const element = document.getElementById(`v${version.replace(/\./g, '-')}`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 200)
   }
   
   return (

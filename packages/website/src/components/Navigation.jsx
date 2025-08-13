@@ -10,15 +10,15 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
   const handleNavClick = (sectionId) => {
     setIsMenuOpen(false)
     if (!isHomePage) {
-      // Navigate to home page with the section hash
-      navigate('/#' + sectionId)
+      // Navigate to home page first
+      navigate('/')
       // After navigation, scroll to the section
       setTimeout(() => {
         const element = document.getElementById(sectionId)
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' })
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
-      }, 100)
+      }, 200)
     }
   }
   
