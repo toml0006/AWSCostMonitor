@@ -21,6 +21,42 @@ import {
 
 const releases = [
   {
+    version: '1.3.0',
+    date: 'August 14, 2025',
+    title: 'Smart Profile Management & Intelligent Filtering',
+    icon: Users,
+    color: 'secondary',
+    highlights: [
+      'Choose which AWS profiles appear in dropdowns',
+      'Automatic detection of new and removed profiles',
+      'Preserve data for removed profiles with view-only access',
+      'Smart prompts for profile changes on startup'
+    ],
+    features: [
+      {
+        icon: Users,
+        title: 'Profile Selection Management',
+        description: 'Control which AWS profiles appear in dropdowns through the settings panel for a cleaner experience'
+      },
+      {
+        icon: Bell,
+        title: 'Smart Profile Detection',
+        description: 'Automatically detect new profiles and prompt to add them, handle removed profiles intelligently'
+      },
+      {
+        icon: Eye,
+        title: 'Preserved Profile History',
+        description: 'Keep data for removed profiles with "(removed)" suffix - view historical costs even after profile cleanup'
+      }
+    ],
+    improvements: [
+      'Enhanced settings panel with dedicated profile management section',
+      'Intelligent startup scanning for AWS configuration changes',
+      'Graceful handling of profile lifecycle management',
+      'Preserved historical data maintains cost tracking continuity'
+    ]
+  },
+  {
     version: '1.2.1',
     date: 'December 13, 2024',
     title: 'Interactive Histograms & UI Polish',

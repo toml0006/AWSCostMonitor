@@ -111,6 +111,9 @@ class AWSManager: ObservableObject {
     private let historicalDataKey = "HistoricalCostData"
     private let apiRequestRecordsKey = "APIRequestRecords"
     
+    // Profile Management
+    private let profileManager = ProfileManager()
+    
     // MARK: - Number Formatting
     
     // Localized currency formatter
@@ -461,14 +464,81 @@ class AWSManager: ObservableObject {
         self.demoProfiles = [AWSProfile(name: "acme", region: "us-east-1")]
         
         // Combine: real profiles first, then demo profiles
-        self.profiles = self.realProfiles + self.demoProfiles
+        let allProfiles = self.realProfiles + self.demoProfiles
         
-        log(.info, category: "Config", "Loaded \(self.profiles.count) AWS profiles (including demo)")
+        // Check for profile changes and handle them
+        checkForProfileChanges(currentProfiles: allProfiles)
         
-        if self.profiles.isEmpty {
+        log(.info, category: "Config", "Loaded \(allProfiles.count) AWS profiles (including demo)")
+        
+        if allProfiles.isEmpty {
             let error = "No AWS profiles found in config file."
             errorMessage = error
             log(.warning, category: "Config", error)
+        }
+    }
+    
+    // Check for profile changes and handle new/removed profiles
+    private func checkForProfileChanges(currentProfiles: [AWSProfile]) {
+        // Check if we should scan for changes
+        if profileManager.shouldScanForChanges() {
+            // Detect changes and handle them
+        } else {
+            // No need to scan - just apply existing visibility settings
+            self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
+            return
+        }
+        
+        // Detect changes
+        let changes = profileManager.detectProfileChanges(currentProfiles: currentProfiles)
+        
+        // Set profiles to filtered visible profiles
+        self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
+        
+        // Handle new profiles
+        if !changes.newProfiles.isEmpty {
+            log(.info, category: "ProfileManagement", "Detected \(changes.newProfiles.count) new profiles: \(changes.newProfiles.map { $0.name })")
+            
+            DispatchQueue.main.async {
+                ProfileChangeWindowController.showNewProfilesAlert(
+                    newProfiles: changes.newProfiles,
+                    onAdd: { [weak self] selectedProfileNames in
+                        self?.profileManager.addNewProfiles(selectedProfileNames)
+                        // Refresh the visible profiles list
+                        self?.profiles = self?.profileManager.getVisibleProfiles(from: currentProfiles) ?? currentProfiles
+                        self?.log(.info, category: "ProfileManagement", "Added \(selectedProfileNames.count) new profiles")
+                    },
+                    onDismiss: {
+                        // User skipped adding new profiles - they remain hidden
+                    }
+                )
+            }
+        }
+        
+        // Handle removed profiles
+        if !changes.removedProfiles.isEmpty {
+            log(.info, category: "ProfileManagement", "Detected \(changes.removedProfiles.count) removed profiles: \(changes.removedProfiles)")
+            
+            DispatchQueue.main.async {
+                ProfileChangeWindowController.showRemovedProfilesAlert(
+                    removedProfiles: changes.removedProfiles,
+                    onRemove: { [weak self] profilesToRemove in
+                        self?.profileManager.markProfilesAsRemoved(profilesToRemove, preserveData: false)
+                        // Refresh the visible profiles list
+                        self?.profiles = self?.profileManager.getVisibleProfiles(from: currentProfiles) ?? currentProfiles
+                        self?.log(.info, category: "ProfileManagement", "Removed \(profilesToRemove.count) profiles")
+                    },
+                    onKeep: { [weak self] profilesToKeep in
+                        self?.profileManager.markProfilesAsRemoved(profilesToKeep, preserveData: true)
+                        // Refresh the visible profiles list 
+                        self?.profiles = self?.profileManager.getVisibleProfiles(from: currentProfiles) ?? currentProfiles
+                        self?.log(.info, category: "ProfileManagement", "Kept \(profilesToKeep.count) profiles as view-only")
+                    },
+                    onDismiss: {
+                        // User cancelled - no changes made
+                    }
+                )
+            }
         }
     }
     
@@ -505,6 +575,36 @@ class AWSManager: ObservableObject {
         if refreshTimer != nil {
             stopAutomaticRefresh()
             startAutomaticRefresh()
+        }
+    }
+    
+    // Public access to ProfileManager for settings integration
+    func getProfileManager() -> ProfileManager {
+        return profileManager
+    }
+    
+    // Update profile visibility and refresh the profiles list
+    func updateProfileVisibility() {
+        let allProfiles = self.realProfiles + self.demoProfiles
+        let visibleProfiles = profileManager.getVisibleProfiles(from: allProfiles)
+        
+        // Ensure UI updates happen on main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.profiles = visibleProfiles
+            
+            // If the current profile is no longer visible, switch to first available
+            if let currentProfile = self?.selectedProfile,
+               !visibleProfiles.contains(where: { $0.name == currentProfile.name }) {
+                if let firstProfile = visibleProfiles.first {
+                    self?.selectedProfile = firstProfile
+                    self?.saveSelectedProfile(profile: firstProfile)
+                    
+                    // Fetch data for the newly selected profile
+                    Task { [weak self] in
+                        await self?.fetchCostForSelectedProfile(force: true)
+                    }
+                }
+            }
         }
     }
     
@@ -583,9 +683,18 @@ class AWSManager: ObservableObject {
         // If this is the current profile, update the refresh timer
         if selectedProfile?.name == profileName {
             self.refreshInterval = refreshIntervalMinutes
-            if refreshTimer != nil {
-                stopAutomaticRefresh()
+            
+            // Enable auto-refresh when a valid interval is set
+            if refreshIntervalMinutes > 0 {
+                // If timer is already running, restart it with new interval
+                // Otherwise, start it for the first time
+                if refreshTimer != nil {
+                    stopAutomaticRefresh()
+                }
                 startAutomaticRefresh()
+            } else if refreshTimer != nil {
+                // If interval is 0 or negative, stop the timer
+                stopAutomaticRefresh()
             }
         }
     }

@@ -5,7 +5,7 @@ struct SettingsView: View {
     @AppStorage("MenuBarDisplayFormat") private var displayFormat: String = MenuBarDisplayFormat.full.rawValue
     @AppStorage("RefreshIntervalMinutes") private var refreshInterval: Int = 5
     @AppStorage("SelectedAWSProfileName") private var selectedProfileName: String = ""
-    @State private var selectedCategory = "Refresh Rate"
+    @State private var selectedCategory = "AWS"
     @State private var hoveredCategory: String? = nil
     
     private var displayFormatEnum: MenuBarDisplayFormat {
@@ -13,9 +13,9 @@ struct SettingsView: View {
     }
     
     let settingsCategories = [
+        "AWS",
         "Refresh Rate",
         "Display",
-        "AWS",
         "Team Cache",
         "Alerts",
         "Notifications",
@@ -303,46 +303,13 @@ struct AWSSettingsTab: View {
     @State private var alertThreshold: Double = 0.8
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("AWS Configuration")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Profile Visibility section (moved to top)
+                Text("Profile Visibility")
                 .font(.headline)
             
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Selected Profile:")
-                
-                Picker("AWS Profile", selection: $awsManager.selectedProfile) {
-                    if awsManager.profiles.isEmpty {
-                        Text("No profiles").tag(nil as AWSProfile?)
-                    }
-                    ForEach(awsManager.profiles, id: \.self) { profile in
-                        VStack(alignment: .leading) {
-                            Text(profile.name)
-                            if let region = profile.region {
-                                Text(region)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .tag(Optional(profile))
-                    }
-                }
-                .pickerStyle(.menu)
-                .onChange(of: awsManager.selectedProfile) { _, newProfile in
-                    if let profile = newProfile {
-                        awsManager.saveSelectedProfile(profile: profile)
-                    }
-                }
-                
-                if let profile = awsManager.selectedProfile {
-                    HStack {
-                        Text("Region:")
-                        Text(profile.region ?? "Default")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                    .font(.caption)
-                }
-            }
+            ProfileVisibilitySection()
             
             Divider()
             
@@ -423,7 +390,8 @@ struct AWSSettingsTab: View {
                 }
             }
             
-            Spacer()
+            }
+            .padding()
         }
         
         // Add the loadBudgetSettingsForProfile and saveBudgetSettingsIfValid functions
@@ -2024,6 +1992,196 @@ struct TeamCacheSettingsTab: View {
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
         formatter.countStyle = .file
         return formatter.string(fromByteCount: Int64(bytes))
+    }
+}
+
+struct ProfileVisibilitySection: View {
+    @EnvironmentObject var awsManager: AWSManager
+    @State private var profileVisibilitySettings: [String: Bool] = [:]
+    @State private var showingRemovedProfiles = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose which AWS profiles appear in the dropdown menus.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            // Show all profiles including demo
+            let allProfiles = awsManager.realProfiles + awsManager.demoProfiles
+            
+            if !allProfiles.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Available Profiles")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    // Single column with regions in second column
+                    VStack(spacing: 8) {
+                        ForEach(allProfiles, id: \.name) { profile in
+                            HStack {
+                                Toggle(isOn: Binding(
+                                    get: { 
+                                        // Demo profile (acme) is disabled by default
+                                        if profile.name == "acme" {
+                                            return profileVisibilitySettings[profile.name] ?? false
+                                        }
+                                        return profileVisibilitySettings[profile.name] ?? true
+                                    },
+                                    set: { isVisible in
+                                        profileVisibilitySettings[profile.name] = isVisible
+                                        updateProfileVisibility(profile.name, isVisible: isVisible)
+                                    }
+                                )) {
+                                    HStack(spacing: 4) {
+                                        Text(profile.name)
+                                            .font(.body)
+                                            .frame(minWidth: 150, alignment: .leading)
+                                        if profile.name == "acme" {
+                                            Text("(demo)")
+                                                .font(.caption)
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                // Region in second column
+                                if let region = profile.region {
+                                    Text(region)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .frame(minWidth: 100, alignment: .trailing)
+                                }
+                            }
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.gray.opacity(0.05))
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Show removed profiles section if any exist
+            let profileManager = awsManager.getProfileManager()
+            let settings = profileManager.loadSettings()
+            if !settings.removedProfiles.isEmpty {
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Removed Profiles")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Button(showingRemovedProfiles ? "Hide" : "Show") {
+                            showingRemovedProfiles.toggle()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    
+                    if showingRemovedProfiles {
+                        Text("These profiles are no longer in your AWS configuration but data is preserved.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        ForEach(Array(settings.removedProfiles.keys.sorted()), id: \.self) { profileName in
+                            if let info = settings.removedProfiles[profileName] {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("\(profileName) (removed)")
+                                            .font(.body)
+                                            .foregroundColor(.secondary)
+                                        Text("Last seen: \(info.lastSeenDate, style: .date)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Toggle("Show in dropdown", isOn: Binding(
+                                        get: { info.preserveData },
+                                        set: { shouldShow in
+                                            // Update the removed profile visibility
+                                            toggleRemovedProfileVisibility(profileName, shouldShow: shouldShow)
+                                        }
+                                    ))
+                                    .controlSize(.mini)
+                                }
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 8)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(4)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Information about profile management
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundColor(.blue)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Profile Management")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Text("New profiles are automatically detected and you'll be prompted to add them. Hidden profiles can be re-enabled here.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(8)
+            .background(Color.blue.opacity(0.1))
+            .cornerRadius(6)
+        }
+        .onAppear {
+            loadProfileVisibilitySettings()
+        }
+    }
+    
+    private func loadProfileVisibilitySettings() {
+        let profileManager = awsManager.getProfileManager()
+        let settings = profileManager.loadSettings()
+        
+        // Initialize visibility settings for all profiles including demo
+        let allProfiles = awsManager.realProfiles + awsManager.demoProfiles
+        
+        for profile in allProfiles {
+            // Demo profile (acme) is disabled by default
+            if profile.name == "acme" {
+                if settings.visibleProfiles.isEmpty && settings.hiddenProfiles.isEmpty {
+                    profileVisibilitySettings[profile.name] = false
+                } else {
+                    profileVisibilitySettings[profile.name] = settings.visibleProfiles.contains(profile.name)
+                }
+            } else {
+                // Regular profiles - default to visible
+                if settings.visibleProfiles.isEmpty && settings.hiddenProfiles.isEmpty {
+                    profileVisibilitySettings[profile.name] = true
+                } else {
+                    profileVisibilitySettings[profile.name] = settings.visibleProfiles.contains(profile.name)
+                }
+            }
+        }
+    }
+    
+    private func updateProfileVisibility(_ profileName: String, isVisible: Bool) {
+        let profileManager = awsManager.getProfileManager()
+        profileManager.toggleProfileVisibility(profileName, isVisible: isVisible)
+        awsManager.updateProfileVisibility()
+    }
+    
+    private func toggleRemovedProfileVisibility(_ profileName: String, shouldShow: Bool) {
+        let profileManager = awsManager.getProfileManager()
+        profileManager.markProfilesAsRemoved([profileName], preserveData: shouldShow)
+        awsManager.updateProfileVisibility()
     }
 }
 

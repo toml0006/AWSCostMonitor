@@ -102,14 +102,12 @@ struct PopoverContentView: View {
                     }
                     
                     Picker("", selection: $awsManager.selectedProfile) {
-                        ForEach(awsManager.realProfiles, id: \.self) { profile in
-                            Text(profile.name).tag(Optional(profile))
-                        }
-                        if !awsManager.realProfiles.isEmpty && !awsManager.demoProfiles.isEmpty {
-                            Divider()
-                        }
-                        ForEach(awsManager.demoProfiles, id: \.self) { profile in
-                            Text("\(profile.name) (Demo)").tag(Optional(profile))
+                        ForEach(awsManager.profiles, id: \.self) { profile in
+                            if profile.name == "acme" {
+                                Text("\(profile.name) (Demo)").tag(Optional(profile))
+                            } else {
+                                Text(profile.name).tag(Optional(profile))
+                            }
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
