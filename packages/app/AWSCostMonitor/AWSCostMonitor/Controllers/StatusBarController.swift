@@ -57,6 +57,18 @@ class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
         
+        awsManager.$errorMessage
+            .sink { [weak self] _ in
+                self?.updateStatusItemView()
+            }
+            .store(in: &cancellables)
+        
+        awsManager.$selectedProfile
+            .sink { [weak self] _ in
+                self?.updateStatusItemView()
+            }
+            .store(in: &cancellables)
+        
         // Listen to UserDefaults changes for display settings (debounced to prevent recursion)
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
@@ -115,7 +127,7 @@ class StatusBarController: NSObject {
             } else if awsManager.isLoading {
                 titleString = "..."
             } else {
-                titleString = "$"
+                titleString = "AW$"
             }
             
         case "full":
@@ -133,7 +145,7 @@ class StatusBarController: NSObject {
             } else if awsManager.isLoading {
                 titleString = "Loading..."
             } else {
-                titleString = "AWS"
+                titleString = "AW$"
             }
             
         case "iconOnly":
@@ -143,7 +155,7 @@ class StatusBarController: NSObject {
         
         default:
             button.image = nil
-            titleString = "$"
+            titleString = "AW$"
         }
         
         // Apply the title with optional color

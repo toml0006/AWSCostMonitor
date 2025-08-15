@@ -14,9 +14,9 @@ struct SettingsView: View {
     
     let settingsCategories = [
         "AWS",
+        "Team Cache",
         "Refresh Rate",
         "Display",
-        "Team Cache",
         "Alerts",
         "Notifications",
         "CloudWatch",
@@ -43,6 +43,18 @@ struct SettingsView: View {
                                 .foregroundColor(selectedCategory == category ? .white : .primary)
                                 .lineLimit(1)
                                 .fixedSize(horizontal: false, vertical: true)
+                            
+                            // Add Pro badge for Team Cache
+                            if category == "Team Cache" {
+                                Text("Pro")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.blue)
+                                    .cornerRadius(8)
+                            }
+                            
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 12)
@@ -298,9 +310,6 @@ struct RefreshSettingsTab: View {
 
 struct AWSSettingsTab: View {
     @EnvironmentObject var awsManager: AWSManager
-    @State private var selectedProfile: AWSProfile?
-    @State private var monthlyBudget: String = "100"
-    @State private var alertThreshold: Double = 0.8
     
     var body: some View {
         ScrollView {
@@ -311,121 +320,53 @@ struct AWSSettingsTab: View {
             
             ProfileVisibilitySection()
             
-            Divider()
-            
-            // AWS Spending Budget section
-            Text("AWS Spending Budget")
-                .font(.headline)
-            
-            // Profile selector for budget
-            Picker("Select Profile:", selection: $selectedProfile) {
-                Text("Choose a profile").tag(nil as AWSProfile?)
-                ForEach(awsManager.profiles, id: \.self) { profile in
-                    Text(profile.name).tag(Optional(profile))
-                }
-            }
-            .pickerStyle(.menu)
-            .onChange(of: selectedProfile) { _, newProfile in
-                if let profile = newProfile {
-                    loadBudgetSettingsForProfile(profile)
-                }
-            }
-            
-            if selectedProfile != nil {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Clarification about budget type
-                    HStack {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.blue)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Local alerting only")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                            Text("This is separate from AWS Console Budget Alerts and is used for in-app notifications.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Button("View AWS Budget Alerts →") {
-                                if let url = URL(string: "https://console.aws.amazon.com/billing/home#/budgets") {
-                                    NSWorkspace.shared.open(url)
-                                }
-                            }
-                            .buttonStyle(.link)
-                            .font(.caption)
-                        }
-                    }
-                    .padding(8)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(6)
-                    
-                    HStack {
-                        Text("Monthly Budget:")
-                        TextField("100", text: $monthlyBudget)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 80)
-                            .onChange(of: monthlyBudget) { _, _ in
-                                saveBudgetSettingsIfValid()
-                            }
-                        Text("USD")
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Alert Threshold:")
-                            Spacer()
-                            Text("\(Int(alertThreshold * 100))%")
-                                .monospacedDigit()
-                        }
-                        .frame(width: 300)
-                        
-                        Slider(value: $alertThreshold, in: 0.5...1.0, step: 0.05)
-                            .frame(width: 300)
-                            .onChange(of: alertThreshold) { _, _ in
-                                saveBudgetSettingsIfValid()
-                            }
-                        
-                        Text("Alert when spending reaches this percentage")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
             
             }
             .padding()
         }
         
-        // Add the loadBudgetSettingsForProfile and saveBudgetSettingsIfValid functions
         .onAppear {
-            // Load budget settings for currently selected AWS profile
-            if let selectedProfile = awsManager.selectedProfile {
-                self.selectedProfile = selectedProfile
-                loadBudgetSettingsForProfile(selectedProfile)
-            }
+            // AWS profiles settings loaded automatically
         }
-    }
-    
-    private func loadBudgetSettingsForProfile(_ profile: AWSProfile) {
-        let budget = awsManager.getBudget(for: profile.name)
-        monthlyBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.monthlyBudget).doubleValue)
-        alertThreshold = budget.alertThreshold
-    }
-    
-    private func saveBudgetSettingsIfValid() {
-        guard let profile = selectedProfile,
-              let budgetValue = Double(monthlyBudget), budgetValue > 0 else {
-            return
-        }
-        
-        let budget = Decimal(budgetValue)
-        awsManager.updateBudget(for: profile.name, monthlyBudget: budget, alertThreshold: alertThreshold)
     }
 }
 
 struct RefreshRateTab: View {
     @EnvironmentObject var awsManager: AWSManager
-    @State private var selectedProfile: AWSProfile?
-    @State private var apiBudget: String = "5"
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Refresh Rate Settings")
+                .font(.headline)
+            
+            Text("Configure how often each AWS profile fetches new cost data")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            if !awsManager.profiles.isEmpty {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(awsManager.profiles, id: \.self) { profile in
+                            RefreshProfileRow(profile: profile)
+                                .environmentObject(awsManager)
+                        }
+                    }
+                }
+            } else {
+                Text("No AWS profiles available")
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+    }
+}
+
+struct RefreshProfileRow: View {
+    let profile: AWSProfile
+    @EnvironmentObject var awsManager: AWSManager
     @State private var refreshInterval: Double = 360
+    @State private var apiBudget: String = "5"
     
     // Computed properties for display
     var estimatedAPICalls: Int {
@@ -442,135 +383,127 @@ struct RefreshRateTab: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Refresh Rate Settings")
-                .font(.headline)
-            
-            if !awsManager.profiles.isEmpty {
-                // Profile selector
-                Picker("Select Profile:", selection: $selectedProfile) {
-                    Text("Choose a profile").tag(nil as AWSProfile?)
-                    ForEach(awsManager.profiles, id: \.self) { profile in
-                        Text(profile.name).tag(Optional(profile))
+        VStack(alignment: .leading, spacing: 12) {
+            // Profile header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Text(profile.name)
+                            .font(.system(size: 14, weight: .medium))
+                        
+                        if profile.name == "acme" {
+                            Text("Demo")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue)
+                                .cornerRadius(8)
+                        }
+                        
+                        if profile.name == awsManager.selectedProfile?.name {
+                            Text("Active")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                        }
                     }
-                }
-                .pickerStyle(.menu)
-                .onChange(of: selectedProfile) { _, newProfile in
-                    if let profile = newProfile {
-                        loadSettingsForProfile(profile)
+                    
+                    if let region = profile.region {
+                        Text(region)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                     }
                 }
                 
-                if selectedProfile != nil {
-                    Divider()
-                    
-                    // API Budget section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Label("Cost Explorer API Budget", systemImage: "network")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        
-                        Text("AWS charges ~$0.01 per Cost Explorer API request")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        HStack {
-                            TextField("5", text: $apiBudget)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 80)
-                                .onChange(of: apiBudget) { _, _ in
-                                    updateRefreshBasedOnBudget()
-                                    saveSettingsIfValid()
-                                }
-                            
-                            Text("USD per month")
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Text("Budget allows ~\(estimatedAPICalls) API calls per month")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-                    
-                    Divider()
-                    
-                    // Refresh interval section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Label("Auto-refresh Interval", systemImage: "arrow.clockwise")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        
-                        HStack {
-                            Slider(value: $refreshInterval, in: 60...1440, step: 60)
-                                .frame(width: 300)
-                                .onChange(of: refreshInterval) { _, _ in
-                                    updateBudgetBasedOnRefresh()
-                                    saveSettingsIfValid()
-                                }
-                            
-                            Text(formatRefreshInterval(refreshInterval))
-                                .frame(width: 100, alignment: .leading)
-                                .monospacedDigit()
-                        }
-                        
-                        HStack {
-                            Text("1 hour")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            Text("24 hours")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(width: 300)
-                        
-                        // Cost estimation
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Estimated usage: \(estimatedCallsPerMonth) calls/month")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Text("Estimated cost: $\(String(format: "%.2f", estimatedMonthlyCost))/month")
-                                .font(.caption)
-                                .foregroundColor(estimatedMonthlyCost > (Double(apiBudget) ?? 5.0) ? .red : .secondary)
-                        }
-                    }
-                    
-                    
-                    Divider()
-                    
-                    // Save button
-                    HStack {
-                        if awsManager.refreshTimer != nil && selectedProfile?.name == awsManager.selectedProfile?.name {
-                            Label("Auto-refresh is active", systemImage: "checkmark.circle")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-                        
-                        Spacer()
-                        
-                        Button("Save Settings") {
-                            saveSettings()
-                        }
-                        .disabled(selectedProfile == nil)
-                    }
+                Spacer()
+                
+                // Auto-refresh status
+                if awsManager.refreshTimer != nil && profile.name == awsManager.selectedProfile?.name {
+                    Label("Auto-refresh active", systemImage: "checkmark.circle")
+                        .font(.system(size: 10))
+                        .foregroundColor(.green)
                 }
-            } else {
-                Text("No AWS profiles available")
+            }
+            
+            // API Budget controls
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("API Budget:")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    
+                    TextField("5", text: $apiBudget)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 60)
+                        .onChange(of: apiBudget) { _, _ in
+                            saveBudgetSettings()
+                        }
+                    
+                    Text("USD/month")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text("~\(estimatedAPICalls) calls")
+                        .font(.system(size: 11))
+                        .foregroundColor(.blue)
+                }
+                
+                Text("AWS charges ~$0.01 per Cost Explorer API request")
+                    .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
             
-            Spacer()
-        }
-        .onAppear {
-            if selectedProfile == nil && !awsManager.profiles.isEmpty {
-                selectedProfile = awsManager.selectedProfile ?? awsManager.profiles.first
-                if let profile = selectedProfile {
-                    loadSettingsForProfile(profile)
+            Divider()
+            
+            // Refresh interval slider
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Refresh Interval:")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(formatRefreshInterval(refreshInterval))
+                        .font(.system(size: 12, weight: .medium))
+                        .monospacedDigit()
+                }
+                
+                Slider(value: $refreshInterval, in: 60...1440, step: 60)
+                    .onChange(of: refreshInterval) { _, newValue in
+                        saveRefreshInterval(Int(newValue))
+                    }
+                
+                HStack {
+                    Text("1 hour")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("24 hours")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                
+                // Cost estimation
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Estimated usage: \(estimatedCallsPerMonth) calls/month")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text("Estimated cost: $\(String(format: "%.2f", estimatedMonthlyCost))/month")
+                        .font(.system(size: 10))
+                        .foregroundColor(estimatedMonthlyCost > (Double(apiBudget) ?? 5.0) ? .red : .secondary)
                 }
             }
+        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+        .onAppear {
+            loadBudgetSettings()
         }
     }
     
@@ -589,57 +522,117 @@ struct RefreshRateTab: View {
         }
     }
     
-    private func loadSettingsForProfile(_ profile: AWSProfile) {
+    private func loadBudgetSettings() {
         let budget = awsManager.getBudget(for: profile.name)
         apiBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.apiBudget).doubleValue)
         refreshInterval = Double(budget.refreshIntervalMinutes)
     }
     
-    private func updateRefreshBasedOnBudget() {
-        // Auto-adjust refresh interval based on budget
-        guard let budget = Double(apiBudget), budget > 0 else { return }
-        
-        let maxCallsPerMonth = Int(budget / 0.01)
-        let minutesPerMonth = 30 * 24 * 60
-        
-        // Calculate optimal refresh interval (leaving some headroom)
-        let optimalInterval = Double(minutesPerMonth) / (Double(maxCallsPerMonth) * 0.8) // Use 80% of budget
-        
-        // Round to nearest hour if over 60 minutes
-        if optimalInterval >= 60 {
-            refreshInterval = round(optimalInterval / 60) * 60
-        } else {
-            refreshInterval = max(60, optimalInterval) // Minimum 1 hour
-        }
-        
-        // Cap at 24 hours
-        refreshInterval = min(1440, refreshInterval)
-    }
-    
-    private func updateBudgetBasedOnRefresh() {
-        // Update suggested budget based on refresh interval
-        let callsPerMonth = estimatedCallsPerMonth
-        let suggestedBudget = Double(callsPerMonth) * 0.01 * 1.2 // Add 20% buffer
-        
-        // Only update if significantly different
-        if abs(suggestedBudget - (Double(apiBudget) ?? 5.0)) > 1.0 {
-            apiBudget = String(format: "%.0f", suggestedBudget)
-        }
-    }
-    
-    private func saveSettingsIfValid() {
-        guard let profile = selectedProfile,
-              let apiBudgetValue = Decimal(string: apiBudget),
+    private func saveBudgetSettings() {
+        guard let apiBudgetValue = Decimal(string: apiBudget),
               apiBudgetValue > 0 else { return }
         
-        awsManager.updateAPIBudgetAndRefresh(for: profile.name, apiBudget: apiBudgetValue, refreshIntervalMinutes: Int(refreshInterval))
+        let budget = awsManager.getBudget(for: profile.name)
+        awsManager.updateAPIBudgetAndRefresh(for: profile.name, apiBudget: apiBudgetValue, refreshIntervalMinutes: budget.refreshIntervalMinutes)
     }
     
-    private func saveSettings() {
-        saveSettingsIfValid()
+    private func saveRefreshInterval(_ minutes: Int) {
+        let budget = awsManager.getBudget(for: profile.name)
+        awsManager.updateAPIBudgetAndRefresh(for: profile.name, apiBudget: budget.apiBudget, refreshIntervalMinutes: minutes)
     }
 }
 
+struct BudgetProfileRow: View {
+    let profile: AWSProfile
+    @EnvironmentObject var awsManager: AWSManager
+    @State private var apiBudget: String = "5"
+    
+    // Computed properties for display
+    var estimatedAPICalls: Int {
+        Int((Double(apiBudget) ?? 5.0) / 0.01)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Profile header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Text(profile.name)
+                            .font(.system(size: 14, weight: .medium))
+                        
+                        if profile.name == "acme" {
+                            Text("Demo")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue)
+                                .cornerRadius(8)
+                        }
+                    }
+                    
+                    if let region = profile.region {
+                        Text(region)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+            }
+            
+            // API Budget controls
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("API Budget:")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    
+                    TextField("5", text: $apiBudget)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 60)
+                        .onChange(of: apiBudget) { _, _ in
+                            saveBudgetSettings()
+                        }
+                    
+                    Text("USD/month")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text("~\(estimatedAPICalls) calls")
+                        .font(.system(size: 11))
+                        .foregroundColor(.blue)
+                }
+                
+                Text("AWS charges ~$0.01 per Cost Explorer API request")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+        .onAppear {
+            loadBudget()
+        }
+    }
+    
+    private func loadBudget() {
+        let budget = awsManager.getBudget(for: profile.name)
+        apiBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.apiBudget).doubleValue)
+    }
+    
+    private func saveBudgetSettings() {
+        guard let apiBudgetValue = Decimal(string: apiBudget),
+              apiBudgetValue > 0 else { return }
+        
+        let budget = awsManager.getBudget(for: profile.name)
+        awsManager.updateAPIBudgetAndRefresh(for: profile.name, apiBudget: apiBudgetValue, refreshIntervalMinutes: budget.refreshIntervalMinutes)
+    }
+}
 
 struct AnomalySettingsTab: View {
     @AppStorage("EnableAnomalyDetection") private var enableAnomalyDetection: Bool = true
@@ -648,8 +641,12 @@ struct AnomalySettingsTab: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Anomaly Detection")
+            Text("Alerts")
                 .font(.headline)
+            
+            Text("Anomaly Detection")
+                .font(.subheadline)
+                .fontWeight(.semibold)
             
             Toggle("Enable spending alerts", isOn: $enableAnomalyDetection)
                 .onChange(of: enableAnomalyDetection) { _, _ in

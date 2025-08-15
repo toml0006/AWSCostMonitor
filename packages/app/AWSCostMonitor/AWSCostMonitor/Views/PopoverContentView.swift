@@ -18,6 +18,10 @@ struct PopoverContentView: View {
     @State private var consoleButtonHovered = false
     @State private var calendarButtonHovered = false
     @State private var selectedDayDetail: DayDetailData? = nil
+    @State private var currentTime = Date()
+    
+    // Timer to update the "minutes ago" display every minute
+    let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -115,47 +119,12 @@ struct PopoverContentView: View {
                     .frame(maxWidth: 150)
                     .onChange(of: awsManager.selectedProfile) { newProfile in
                         if let profile = newProfile {
-                            // Check if we have cached data for this profile
-                            if let cachedData = awsManager.costCache[profile.name] {
-                                // Use cached data and update display immediately
-                                let costData = CostData(
-                                    profileName: cachedData.profileName,
-                                    amount: cachedData.mtdTotal,
-                                    currency: cachedData.currency
-                                )
-                                awsManager.costData = [costData]
-                                awsManager.serviceCosts = cachedData.serviceCosts
-                                // Clear any error message since we have cached data
-                                awsManager.errorMessage = nil
-                                awsManager.isRateLimited = false
-                                
-                                // Check if cache is stale based on refresh interval OR budget
-                                let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-                                let budget = awsManager.getBudget(for: profile.name)
-                                let refreshIntervalSeconds = TimeInterval(budget.refreshIntervalMinutes * 60)
-                                
-                                if cacheAge > refreshIntervalSeconds {
-                                    // Cache is older than refresh interval
-                                    awsManager.log(.info, category: "Profile", "Cache for \(profile.name) is \(Int(cacheAge/60)) minutes old, refreshing")
-                                    Task {
-                                        await awsManager.fetchCostForSelectedProfile()
-                                    }
-                                } else if !cachedData.isValidForBudget(budget) {
-                                    // Cache is invalid for current budget settings
-                                    awsManager.log(.info, category: "Profile", "Cache for \(profile.name) is invalid for budget, refreshing")
-                                    Task {
-                                        await awsManager.fetchCostForSelectedProfile()
-                                    }
-                                } else {
-                                    awsManager.log(.info, category: "Profile", "Using fresh cache for \(profile.name) (\(Int(cacheAge/60)) minutes old)")
-                                }
-                            } else {
-                                // No cache, fetch data
-                                awsManager.log(.info, category: "Profile", "No cache for \(profile.name), fetching data")
-                                Task {
-                                    await awsManager.fetchCostForSelectedProfile()
-                                }
-                            }
+                            // Save the selected profile, which will handle everything:
+                            // - Clear previous data
+                            // - Load cache if available
+                            // - Fetch new data if needed
+                            // - Update refresh timer
+                            awsManager.saveSelectedProfile(profile: profile)
                         }
                     }
                 }
@@ -218,6 +187,22 @@ struct PopoverContentView: View {
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(3)
+                            
+                            // Add permissions guidance for common errors
+                            if errorMessage.contains("AccessDenied") || errorMessage.contains("UnauthorizedOperation") || errorMessage.contains("InvalidUserID.NotFound") {
+                                VStack(spacing: 4) {
+                                    Text("This profile may be missing Cost Explorer permissions.")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor(.orange)
+                                        .multilineTextAlignment(.center)
+                                    Text("Required: ce:GetCostAndUsage, ce:GetUsageReport")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.center)
+                                }
+                                .padding(.top, 4)
+                            }
+                            
                             Button("Retry") {
                                 Task {
                                     await awsManager.fetchCostForSelectedProfile(force: true)
@@ -243,10 +228,11 @@ struct PopoverContentView: View {
                                         Text("Last updated: \(cacheEntry.fetchDate, formatter: lastRefreshFormatter)")
                                             .font(.system(size: 9))
                                             .foregroundColor(.secondary)
-                                        let cacheAge = Date().timeIntervalSince(cacheEntry.fetchDate)
-                                        Text("(\(Int(cacheAge/60)) min ago)")
+                                        let cacheAge = currentTime.timeIntervalSince(cacheEntry.fetchDate)
+                                        let minutes = max(0, Int(cacheAge/60)) // Ensure non-negative
+                                        Text("(\(minutes) min ago)")
                                             .font(.system(size: 9, weight: .bold))
-                                            .foregroundColor(cacheAge > 1800 ? .red : .green) // Red if > 30 min
+                                            .foregroundColor(minutes > 30 ? .red : .green) // Red if > 30 min
                                         
                                         // Team cache sync status
                                         // TODO: Check if team cache is enabled and show last sync
@@ -689,6 +675,10 @@ struct PopoverContentView: View {
         .onDisappear {
             // Dismiss any open day detail sheet when popover disappears
             selectedDayDetail = nil
+        }
+        .onReceive(timer) { _ in
+            // Update current time every minute to refresh "minutes ago" display
+            currentTime = Date()
         }
     }
     

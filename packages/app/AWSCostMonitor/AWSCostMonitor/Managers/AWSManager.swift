@@ -567,6 +567,13 @@ class AWSManager: ObservableObject {
     func saveSelectedProfile(profile: AWSProfile) {
         UserDefaults.standard.set(profile.name, forKey: selectedProfileKey)
         
+        // Clear ALL previous data when switching profiles
+        self.costData = []
+        self.serviceCosts = []
+        self.errorMessage = nil
+        self.isRateLimited = false
+        self.isLoading = false
+        
         // Load profile-specific refresh settings
         let budget = getBudget(for: profile.name)
         self.refreshInterval = budget.refreshIntervalMinutes
@@ -575,6 +582,34 @@ class AWSManager: ObservableObject {
         if refreshTimer != nil {
             stopAutomaticRefresh()
             startAutomaticRefresh()
+        }
+        
+        // Check if we have cached data for this profile
+        if let cachedData = costCache[profile.name] {
+            // Load cached data immediately
+            let costDataItem = CostData(
+                profileName: cachedData.profileName,
+                amount: cachedData.mtdTotal,
+                currency: cachedData.currency
+            )
+            self.costData = [costDataItem]
+            self.serviceCosts = cachedData.serviceCosts
+            
+            // Check if cache is stale
+            let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
+            let refreshIntervalSeconds = TimeInterval(budget.refreshIntervalMinutes * 60)
+            
+            if cacheAge > refreshIntervalSeconds {
+                // Cache is stale, fetch new data
+                Task {
+                    await fetchCostForSelectedProfile()
+                }
+            }
+        } else {
+            // No cache, fetch data immediately
+            Task {
+                await fetchCostForSelectedProfile()
+            }
         }
     }
     
@@ -1257,6 +1292,8 @@ class AWSManager: ObservableObject {
         stopAutomaticRefresh() // Stop any existing timer
         autoRefreshEnabled = true // Persist the state
         
+        log(.warning, category: "Refresh", "🔄 Starting automatic refresh timer for profile: \(selectedProfile?.name ?? "none"), interval: \(refreshInterval) minutes")
+        
         // Check if we need to refresh immediately due to stale data
         let shouldRefreshImmediately = checkIfRefreshNeeded()
         
@@ -1310,15 +1347,18 @@ class AWSManager: ObservableObject {
         nextRefreshTime = Date().addingTimeInterval(interval)
         
         refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            self?.log(.warning, category: "Refresh", "⏰ Refresh timer fired! Starting refresh cycle...")
             Task {
                 // Check screen state before refreshing
                 if ScreenStateMonitor.shared.shouldAllowRefresh() {
+                    self?.log(.info, category: "Refresh", "Screen is active, performing refresh")
                     await self?.fetchCostForSelectedProfile()
                 } else {
                     self?.log(.info, category: "Refresh", "Skipped scheduled refresh: screen off or locked")
                 }
                 // After fetch attempt, recalculate interval and restart timer
                 await MainActor.run {
+                    self?.log(.info, category: "Refresh", "Restarting automatic refresh timer")
                     self?.startAutomaticRefresh()
                 }
             }
