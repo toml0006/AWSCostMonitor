@@ -77,6 +77,15 @@ class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
         
+        #if DEBUG
+        // Subscribe to debug timer flash for visual feedback
+        awsManager.$debugTimerFlash
+            .sink { [weak self] shouldFlash in
+                self?.updateStatusItemView(flash: shouldFlash)
+            }
+            .store(in: &cancellables)
+        #endif
+        
         // Monitor for clicks outside popover
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             if self?.popover.isShown == true {
@@ -91,7 +100,7 @@ class StatusBarController: NSObject {
         }
     }
     
-    func updateStatusItemView() {
+    func updateStatusItemView(flash: Bool = false) {
         guard let button = statusItem.button else { return }
         
         // Get display settings with defaults
@@ -158,7 +167,30 @@ class StatusBarController: NSObject {
             titleString = "AW$"
         }
         
-        // Apply the title with optional color
+        // Apply the title with optional color and flash effect
+        #if DEBUG
+        if flash {
+            // Flash with bright red when debug timer ticks
+            let attributes: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor.systemRed,
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .bold),
+                .backgroundColor: NSColor.systemYellow.withAlphaComponent(0.3)
+            ]
+            button.attributedTitle = NSAttributedString(string: "⚡\(titleString)⚡", attributes: attributes)
+        } else if showColors && titleColor != nil {
+            let attributes: [NSAttributedString.Key: Any] = [
+                .foregroundColor: titleColor!,
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+            ]
+            button.attributedTitle = NSAttributedString(string: titleString, attributes: attributes)
+        } else {
+            // Use regular title without color
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+            ]
+            button.attributedTitle = NSAttributedString(string: titleString, attributes: attributes)
+        }
+        #else
         if showColors && titleColor != nil {
             let attributes: [NSAttributedString.Key: Any] = [
                 .foregroundColor: titleColor!,
@@ -172,6 +204,7 @@ class StatusBarController: NSObject {
             ]
             button.attributedTitle = NSAttributedString(string: titleString, attributes: attributes)
         }
+        #endif
     }
     
     private func getColorForCost(_ cost: CostData) -> NSColor? {

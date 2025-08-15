@@ -44,7 +44,13 @@ class AWSManager: ObservableObject {
             }
         }
     }
-    @Published var refreshTimer: Timer?
+    private var refreshTimer: Timer?
+    
+    // Computed property to check if auto-refresh is active
+    var isAutoRefreshActive: Bool {
+        return refreshTimer != nil
+    }
+    
     @Published var historicalData: [HistoricalCostData] = []
     @Published var serviceCosts: [ServiceCost] = []
     @Published var costTrend: CostTrend = .stable
@@ -331,6 +337,13 @@ class AWSManager: ObservableObject {
         if autoRefreshEnabled {
             startAutomaticRefresh()
         }
+        
+        #if DEBUG
+        // Start debug timer automatically to monitor timer execution
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.startDebugTimer()
+        }
+        #endif
     }
     
     deinit {
@@ -481,21 +494,31 @@ class AWSManager: ObservableObject {
     // Check for profile changes and handle new/removed profiles
     private func checkForProfileChanges(currentProfiles: [AWSProfile]) {
         // Check if we should scan for changes
-        if profileManager.shouldScanForChanges() {
-            // Detect changes and handle them
-        } else {
+        if !profileManager.shouldScanForChanges() {
             // No need to scan - just apply existing visibility settings
             self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
             return
         }
         
-        // Detect changes
+        // Check if this is first launch (no settings exist)
+        let settings = profileManager.loadSettings()
+        if settings.visibleProfiles.isEmpty && 
+           settings.hiddenProfiles.isEmpty && 
+           settings.removedProfiles.isEmpty {
+            // First launch - initialize profiles without showing alerts
+            log(.info, category: "ProfileManagement", "First launch detected, initializing profiles")
+            profileManager.initializeProfiles(currentProfiles)
+            self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
+            return
+        }
+        
+        // Detect changes for existing installation
         let changes = profileManager.detectProfileChanges(currentProfiles: currentProfiles)
         
         // Set profiles to filtered visible profiles
         self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
         
-        // Handle new profiles
+        // Handle new profiles (only show alerts after first launch)
         if !changes.newProfiles.isEmpty {
             log(.info, category: "ProfileManagement", "Detected \(changes.newProfiles.count) new profiles: \(changes.newProfiles.map { $0.name })")
             
@@ -552,6 +575,12 @@ class AWSManager: ObservableObject {
             if self.selectedProfile != nil {
                 let budget = getBudget(for: storedProfileName)
                 self.refreshInterval = budget.refreshIntervalMinutes
+                
+                // Start automatic refresh if not already running
+                if refreshTimer == nil && !autoRefreshEnabled {
+                    log(.info, category: "Startup", "Starting automatic refresh for loaded profile: \(storedProfileName)")
+                    startAutomaticRefresh()
+                }
             }
         } else {
             // If no profile is stored, default to the first one if available.
@@ -559,6 +588,12 @@ class AWSManager: ObservableObject {
             if let firstProfile = self.profiles.first {
                 let budget = getBudget(for: firstProfile.name)
                 self.refreshInterval = budget.refreshIntervalMinutes
+                
+                // Start automatic refresh for the default profile
+                if refreshTimer == nil && !autoRefreshEnabled {
+                    log(.info, category: "Startup", "Starting automatic refresh for default profile: \(firstProfile.name)")
+                    startAutomaticRefresh()
+                }
             }
         }
     }
@@ -684,7 +719,7 @@ class AWSManager: ObservableObject {
             if budget.apiBudget == 0 {
                 var updated = budget
                 updated.apiBudget = 5.0
-                updated.refreshIntervalMinutes = 360
+                updated.refreshIntervalMinutes = 480  // 8 hours - matches AWS update frequency
                 profileBudgets[profileName] = updated
                 saveBudgets()
                 return updated
@@ -1289,10 +1324,29 @@ class AWSManager: ObservableObject {
     
     // Starts automatic refresh based on the current refresh interval
     func startAutomaticRefresh() {
-        stopAutomaticRefresh() // Stop any existing timer
+        #if DEBUG
+        log(.debug, category: "RefreshTimer", "startAutomaticRefresh() called")
+        #endif
+        
+        // Invalidate existing timer if present
+        if refreshTimer != nil {
+            refreshTimer?.invalidate()
+            refreshTimer = nil
+            nextRefreshTime = nil
+        }
+        
         autoRefreshEnabled = true // Persist the state
         
-        log(.warning, category: "Refresh", "🔄 Starting automatic refresh timer for profile: \(selectedProfile?.name ?? "none"), interval: \(refreshInterval) minutes")
+        // Get the profile-specific refresh interval
+        let intervalMinutes: Int
+        if let profile = selectedProfile {
+            let budget = getBudget(for: profile.name)
+            intervalMinutes = budget.refreshIntervalMinutes
+        } else {
+            intervalMinutes = refreshInterval // Fallback to global interval
+        }
+        
+        log(.info, category: "Refresh", "Starting automatic refresh timer for profile: \(selectedProfile?.name ?? "none"), interval: \(intervalMinutes) minutes")
         
         // Check if we need to refresh immediately due to stale data
         let shouldRefreshImmediately = checkIfRefreshNeeded()
@@ -1326,9 +1380,17 @@ class AWSManager: ObservableObject {
         // Also check if data is too old based on last API call time
         if let lastCall = lastAPICallTime {
             let timeSinceLastCall = Date().timeIntervalSince(lastCall)
-            let maxAge = TimeInterval(refreshInterval * 60)
+            // Use profile-specific interval if available
+            let intervalMinutes: Int
+            if let profile = selectedProfile {
+                let budget = getBudget(for: profile.name)
+                intervalMinutes = budget.refreshIntervalMinutes
+            } else {
+                intervalMinutes = refreshInterval
+            }
+            let maxAge = TimeInterval(intervalMinutes * 60)
             if timeSinceLastCall > maxAge {
-                log(.info, category: "Refresh", "Data is stale (last fetch: \(Int(timeSinceLastCall/60)) minutes ago, max age: \(refreshInterval) minutes)")
+                log(.info, category: "Refresh", "Data is stale (last fetch: \(Int(timeSinceLastCall/60)) minutes ago, max age: \(intervalMinutes) minutes)")
                 return true
             }
         }
@@ -1338,37 +1400,54 @@ class AWSManager: ObservableObject {
     
     // Helper to schedule the next refresh
     private func scheduleNextRefresh() {
-        let smartInterval = calculateSmartRefreshInterval()
-        let interval = TimeInterval(smartInterval * 60) // Convert minutes to seconds
+        // Use the profile's configured refresh interval, not the smart interval
+        guard let profile = selectedProfile else {
+            log(.warning, category: "Refresh", "No profile selected, cannot schedule refresh")
+            return
+        }
         
-        log(.info, category: "Refresh", "Scheduling next refresh in \(smartInterval) minutes")
+        let budget = getBudget(for: profile.name)
+        let intervalMinutes = budget.refreshIntervalMinutes
+        let interval = TimeInterval(intervalMinutes * 60) // Convert minutes to seconds
+        
+        log(.info, category: "Refresh", "Scheduling next refresh in \(intervalMinutes) minutes for profile: \(profile.name)")
         
         // Calculate and store next refresh time
         nextRefreshTime = Date().addingTimeInterval(interval)
         
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
-            self?.log(.warning, category: "Refresh", "⏰ Refresh timer fired! Starting refresh cycle...")
-            Task {
+        // Create the timer and ensure it's added to the main RunLoop
+        refreshTimer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            
+            #if DEBUG
+            self.log(.debug, category: "RefreshTimer", "Refresh timer fired at \(Date())")
+            #endif
+            
+            Task { @MainActor in
                 // Check screen state before refreshing
                 if ScreenStateMonitor.shared.shouldAllowRefresh() {
-                    self?.log(.info, category: "Refresh", "Screen is active, performing refresh")
-                    await self?.fetchCostForSelectedProfile()
+                    self.log(.info, category: "Refresh", "Screen is active, performing refresh")
+                    await self.fetchCostForSelectedProfile()
                 } else {
-                    self?.log(.info, category: "Refresh", "Skipped scheduled refresh: screen off or locked")
+                    self.log(.info, category: "Refresh", "Skipped scheduled refresh: screen off or locked")
                 }
-                // After fetch attempt, recalculate interval and restart timer
-                await MainActor.run {
-                    self?.log(.info, category: "Refresh", "Restarting automatic refresh timer")
-                    self?.startAutomaticRefresh()
-                }
+                // After fetch attempt, restart the automatic refresh
+                self.startAutomaticRefresh()
             }
         }
+        
+        // Add timer to the main RunLoop with common mode to ensure it fires even when menus are open
+        RunLoop.main.add(refreshTimer!, forMode: .common)
+        
+        log(.info, category: "Refresh", "Timer scheduled successfully. Next refresh at: \(nextRefreshTime!)")
     }
     
     // Stops automatic refresh
     func stopAutomaticRefresh() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
+        if refreshTimer != nil {
+            refreshTimer?.invalidate()
+            refreshTimer = nil
+        }
         nextRefreshTime = nil
         autoRefreshEnabled = false // Persist the state
     }
@@ -1387,6 +1466,8 @@ class AWSManager: ObservableObject {
     // MARK: - Debug Timer Functions (only in DEBUG builds)
     
     #if DEBUG
+    @Published var debugTimerFlash: Bool = false
+    
     // Start debug timer with 1-minute intervals
     func startDebugTimer() {
         stopDebugTimer() // Stop any existing debug timer
@@ -1416,7 +1497,13 @@ class AWSManager: ObservableObject {
         let timeString = Date().formatted(date: .omitted, time: .standard)
         debugTimerMessage = "Debug tick #\(debugTimerCount) at \(timeString)"
         
-        log(.info, category: "Debug", "Debug timer tick #\(debugTimerCount) at \(timeString)")
+        log(.warning, category: "Debug", "🔥 DEBUG TIMER TICK #\(debugTimerCount) at \(timeString) - FLASHING MENU BAR")
+        
+        // Flash the menu bar by toggling a flag
+        debugTimerFlash = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.debugTimerFlash = false
+        }
         
         // Also log the state of the refresh timer
         if let refreshTimer = refreshTimer {
@@ -1424,7 +1511,7 @@ class AWSManager: ObservableObject {
             let nextFire = refreshTimer.fireDate
             log(.info, category: "Debug", "Refresh timer is \(isValid ? "valid" : "invalid"), next fire: \(nextFire)")
         } else {
-            log(.info, category: "Debug", "Refresh timer is nil")
+            log(.warning, category: "Debug", "⚠️ Refresh timer is nil - auto-refresh not running!")
         }
         
         if let nextRefresh = nextRefreshTime {

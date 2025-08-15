@@ -62,14 +62,14 @@ func showExportWindow(awsManager: AWSManager) {
 var globalSettingsWindow: NSWindow?
 
 // Helper function to show settings window
-func showSettingsWindowForApp(awsManager: AWSManager) {
+func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "AWS") {
     if let window = globalSettingsWindow {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         return
     }
     
-    let settingsView = SettingsView()
+    let settingsView = SettingsView(initialSelectedCategory: selectedTab)
         .environmentObject(awsManager)
     
     let controller = NSHostingController(rootView: settingsView)
@@ -85,6 +85,11 @@ func showSettingsWindowForApp(awsManager: AWSManager) {
     globalSettingsWindow = window
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
+}
+
+// Helper function to show refresh settings specifically
+func showRefreshSettingsForApp(awsManager: AWSManager) {
+    showSettingsWindowForApp(awsManager: awsManager, selectedTab: "Refresh Rate")
 }
 
 // MARK: - App Delegate for NSStatusItem Management

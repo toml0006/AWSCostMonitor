@@ -120,7 +120,7 @@ struct ScreenStateTests {
         
         // Start automatic refresh
         awsManager.startAutomaticRefresh()
-        #expect(awsManager.refreshTimer != nil)
+        #expect(awsManager.isAutoRefreshActive)
         #expect(awsManager.autoRefreshEnabled == true)
         
         // Simulate screen off
@@ -131,7 +131,7 @@ struct ScreenStateTests {
         awsManager.handleScreenStateChange()
         
         // Timer should be stopped but autoRefreshEnabled should remain true
-        #expect(awsManager.refreshTimer == nil)
+        #expect(!awsManager.isAutoRefreshActive)
         #expect(awsManager.autoRefreshEnabled == true)
     }
     
@@ -147,7 +147,7 @@ struct ScreenStateTests {
         awsManager.handleScreenStateChange()
         
         // Verify paused state
-        #expect(awsManager.refreshTimer == nil)
+        #expect(!awsManager.isAutoRefreshActive)
         #expect(awsManager.autoRefreshEnabled == true)
         
         // Simulate screen on and unlock
@@ -159,7 +159,7 @@ struct ScreenStateTests {
         awsManager.handleScreenStateChange()
         
         // Timer should be restarted
-        #expect(awsManager.refreshTimer != nil)
+        #expect(awsManager.isAutoRefreshActive)
         #expect(awsManager.autoRefreshEnabled == true)
         
         // Cleanup
@@ -251,13 +251,13 @@ extension AWSManager {
         let screenMonitor = ScreenStateMonitor.shared
         if screenMonitor.canRefresh {
             // Screen is on and unlocked - resume refresh if needed
-            if autoRefreshEnabled && refreshTimer == nil {
+            if autoRefreshEnabled && !isAutoRefreshActive {
                 log(.info, category: "Refresh", "Resuming automatic refresh - screen is on and unlocked")
                 startAutomaticRefresh()
             }
         } else {
             // Screen is off or locked - pause refresh
-            if refreshTimer != nil {
+            if isAutoRefreshActive {
                 log(.info, category: "Refresh", "Pausing automatic refresh - screen is off or locked")
                 stopAutomaticRefresh()
                 // Remember to resume when screen comes back

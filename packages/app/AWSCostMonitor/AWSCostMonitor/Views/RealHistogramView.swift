@@ -39,9 +39,6 @@ struct RealHistogramView: View {
         let amounts = allDays.map { NSDecimalNumber(decimal: $0.amount).doubleValue }
         let maxAmount = amounts.max() ?? 1.0
         
-        // Debug: Log the actual count
-        let _ = print("🔵 RealHistogramView: FORCED to \(allDays.count) bars for service: \(serviceName)")
-        
         // Get last month's average daily spend for comparison
         let lastMonthAvg = getLastMonthDailyAverage()
         

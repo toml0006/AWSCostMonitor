@@ -5,8 +5,12 @@ struct SettingsView: View {
     @AppStorage("MenuBarDisplayFormat") private var displayFormat: String = MenuBarDisplayFormat.full.rawValue
     @AppStorage("RefreshIntervalMinutes") private var refreshInterval: Int = 5
     @AppStorage("SelectedAWSProfileName") private var selectedProfileName: String = ""
-    @State private var selectedCategory = "AWS"
+    @State private var selectedCategory: String
     @State private var hoveredCategory: String? = nil
+    
+    init(initialSelectedCategory: String = "AWS") {
+        _selectedCategory = State(initialValue: initialSelectedCategory)
+    }
     
     private var displayFormatEnum: MenuBarDisplayFormat {
         MenuBarDisplayFormat(rawValue: displayFormat) ?? .full
@@ -287,14 +291,14 @@ struct RefreshSettingsTab: View {
                 
                 HStack {
                     Text("Auto-refresh is currently:")
-                    Text(awsManager.refreshTimer != nil ? "On" : "Off")
+                    Text(awsManager.isAutoRefreshActive ? "On" : "Off")
                         .fontWeight(.semibold)
-                        .foregroundColor(awsManager.refreshTimer != nil ? .green : .secondary)
+                        .foregroundColor(awsManager.isAutoRefreshActive ? .green : .secondary)
                     
                     Spacer()
                     
-                    Button(awsManager.refreshTimer != nil ? "Stop" : "Start") {
-                        if awsManager.refreshTimer != nil {
+                    Button(awsManager.isAutoRefreshActive ? "Stop" : "Start") {
+                        if awsManager.isAutoRefreshActive {
                             awsManager.stopAutomaticRefresh()
                         } else {
                             awsManager.startAutomaticRefresh()
@@ -339,6 +343,24 @@ struct RefreshRateTab: View {
             Text("Refresh Rate Settings")
                 .font(.headline)
             
+            // AWS Update Info - prominent at the top
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.blue)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("AWS billing data updates ~3 times daily")
+                        .font(.system(size: 12, weight: .medium))
+                    Text("Updates occur approximately every 8-12 hours. More frequent refreshes won't show new data.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding()
+            .background(Color.blue.opacity(0.1))
+            .cornerRadius(8)
+            
             Text("Configure how often each AWS profile fetches new cost data")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
@@ -365,14 +387,9 @@ struct RefreshRateTab: View {
 struct RefreshProfileRow: View {
     let profile: AWSProfile
     @EnvironmentObject var awsManager: AWSManager
-    @State private var refreshInterval: Double = 360
-    @State private var apiBudget: String = "5"
+    @State private var refreshInterval: Double = 480  // 8 hours default
     
     // Computed properties for display
-    var estimatedAPICalls: Int {
-        Int((Double(apiBudget) ?? 5.0) / 0.01)
-    }
-    
     var estimatedCallsPerMonth: Int {
         let minutesPerMonth = 30 * 24 * 60
         return minutesPerMonth / Int(refreshInterval)
@@ -422,41 +439,11 @@ struct RefreshProfileRow: View {
                 Spacer()
                 
                 // Auto-refresh status
-                if awsManager.refreshTimer != nil && profile.name == awsManager.selectedProfile?.name {
+                if awsManager.isAutoRefreshActive && profile.name == awsManager.selectedProfile?.name {
                     Label("Auto-refresh active", systemImage: "checkmark.circle")
                         .font(.system(size: 10))
                         .foregroundColor(.green)
                 }
-            }
-            
-            // API Budget controls
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("API Budget:")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                    
-                    TextField("5", text: $apiBudget)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 60)
-                        .onChange(of: apiBudget) { _, _ in
-                            saveBudgetSettings()
-                        }
-                    
-                    Text("USD/month")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("~\(estimatedAPICalls) calls")
-                        .font(.system(size: 11))
-                        .foregroundColor(.blue)
-                }
-                
-                Text("AWS charges ~$0.01 per Cost Explorer API request")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
             }
             
             Divider()
@@ -473,13 +460,13 @@ struct RefreshProfileRow: View {
                         .monospacedDigit()
                 }
                 
-                Slider(value: $refreshInterval, in: 60...1440, step: 60)
+                Slider(value: $refreshInterval, in: 480...1440, step: 60)
                     .onChange(of: refreshInterval) { _, newValue in
                         saveRefreshInterval(Int(newValue))
                     }
                 
                 HStack {
-                    Text("1 hour")
+                    Text("8 hours")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -488,15 +475,40 @@ struct RefreshProfileRow: View {
                         .foregroundColor(.secondary)
                 }
                 
-                // Cost estimation
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Estimated usage: \(estimatedCallsPerMonth) calls/month")
-                        .font(.system(size: 10))
+                // Quick preset buttons
+                HStack(spacing: 8) {
+                    Text("Quick Set:")
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                    Text("Estimated cost: $\(String(format: "%.2f", estimatedMonthlyCost))/month")
-                        .font(.system(size: 10))
-                        .foregroundColor(estimatedMonthlyCost > (Double(apiBudget) ?? 5.0) ? .red : .secondary)
+                    
+                    Button("8h") {
+                        refreshInterval = 480
+                        saveRefreshInterval(480)
+                    }
+                    .buttonStyle(.accessoryBar)
+                    .help("Refresh 3x daily (matches AWS update frequency)")
+                    
+                    Button("12h") {
+                        refreshInterval = 720
+                        saveRefreshInterval(720)
+                    }
+                    .buttonStyle(.accessoryBar)
+                    .help("Refresh 2x daily")
+                    
+                    Button("24h") {
+                        refreshInterval = 1440
+                        saveRefreshInterval(1440)
+                    }
+                    .buttonStyle(.accessoryBar)
+                    .help("Refresh once daily")
+                    
+                    Spacer()
                 }
+                
+                // Cost estimation
+                Text("Estimated monthly cost: $\(String(format: "%.2f", estimatedMonthlyCost)) (\(estimatedCallsPerMonth) API calls)")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
         }
         .padding()
@@ -524,16 +536,7 @@ struct RefreshProfileRow: View {
     
     private func loadBudgetSettings() {
         let budget = awsManager.getBudget(for: profile.name)
-        apiBudget = String(format: "%.0f", NSDecimalNumber(decimal: budget.apiBudget).doubleValue)
         refreshInterval = Double(budget.refreshIntervalMinutes)
-    }
-    
-    private func saveBudgetSettings() {
-        guard let apiBudgetValue = Decimal(string: apiBudget),
-              apiBudgetValue > 0 else { return }
-        
-        let budget = awsManager.getBudget(for: profile.name)
-        awsManager.updateAPIBudgetAndRefresh(for: profile.name, apiBudget: apiBudgetValue, refreshIntervalMinutes: budget.refreshIntervalMinutes)
     }
     
     private func saveRefreshInterval(_ minutes: Int) {

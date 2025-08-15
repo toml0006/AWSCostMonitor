@@ -20,7 +20,7 @@ struct ProfileBudget: Codable, Identifiable {
         case profileName, monthlyBudget, alertThreshold, apiBudget, refreshIntervalMinutes
     }
     
-    init(profileName: String, monthlyBudget: Decimal = 100.0, alertThreshold: Double = 0.8, apiBudget: Decimal = 5.0, refreshIntervalMinutes: Int = 360) {
+    init(profileName: String, monthlyBudget: Decimal = 100.0, alertThreshold: Double = 0.8, apiBudget: Decimal = 5.0, refreshIntervalMinutes: Int = 480) {
         self.profileName = profileName
         self.monthlyBudget = monthlyBudget
         self.alertThreshold = alertThreshold

@@ -221,33 +221,39 @@ struct PopoverContentView: View {
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                // Last updated time in header
+                                // Update time display - clickable to open refresh settings
                                 if let selectedProfile = awsManager.selectedProfile,
                                    let cacheEntry = awsManager.costCache[selectedProfile.name] {
-                                    VStack(alignment: .trailing, spacing: 2) {
-                                        Text("Last updated: \(cacheEntry.fetchDate, formatter: lastRefreshFormatter)")
-                                            .font(.system(size: 9))
-                                            .foregroundColor(.secondary)
-                                        let cacheAge = currentTime.timeIntervalSince(cacheEntry.fetchDate)
-                                        let minutes = max(0, Int(cacheAge/60)) // Ensure non-negative
-                                        Text("(\(minutes) min ago)")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundColor(minutes > 30 ? .red : .green) // Red if > 30 min
-                                        
-                                        // Team cache sync status
-                                        // TODO: Check if team cache is enabled and show last sync
-                                        let teamCacheEnabled = false // This should be loaded from profile settings
-                                        if teamCacheEnabled {
-                                            HStack(spacing: 3) {
-                                                Circle()
-                                                    .fill(Color.blue)
-                                                    .frame(width: 4, height: 4)
-                                                Text("Team synced")
-                                                    .font(.system(size: 8))
-                                                    .foregroundColor(.blue)
+                                    let budget = awsManager.getBudget(for: selectedProfile.name)
+                                    let nextUpdateTime = cacheEntry.fetchDate.addingTimeInterval(TimeInterval(budget.refreshIntervalMinutes * 60))
+                                    
+                                    Button(action: {
+                                        showRefreshSettingsForApp(awsManager: awsManager)
+                                    }) {
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            Text("Updated \(cacheEntry.fetchDate, formatter: timeOnlyFormatter)")
+                                                .font(.system(size: 9))
+                                                .foregroundColor(.secondary)
+                                            Text("Next Update \(nextUpdateTime, formatter: timeOnlyFormatter)")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundColor(.blue)
+                                            
+                                            // Team cache sync status
+                                            // TODO: Check if team cache is enabled and show last sync
+                                            let teamCacheEnabled = false // This should be loaded from profile settings
+                                            if teamCacheEnabled {
+                                                HStack(spacing: 3) {
+                                                    Circle()
+                                                        .fill(Color.blue)
+                                                        .frame(width: 4, height: 4)
+                                                    Text("Team synced")
+                                                        .font(.system(size: 8))
+                                                        .foregroundColor(.blue)
+                                                }
                                             }
                                         }
                                     }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             HStack(alignment: .top) {
@@ -597,7 +603,7 @@ struct PopoverContentView: View {
                                     .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
-                            .disabled(awsManager.refreshTimer != nil)
+                            .disabled(awsManager.isAutoRefreshActive)
                             
                             Button(action: {
                                 awsManager.stopAutomaticRefresh()
@@ -610,10 +616,10 @@ struct PopoverContentView: View {
                                     .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
-                            .disabled(awsManager.refreshTimer == nil)
+                            .disabled(!awsManager.isAutoRefreshActive)
                         }
                         
-                        Text("Debug: \(awsManager.debugTimer != nil ? "✓" : "✗") | Auto: \(awsManager.refreshTimer != nil ? "✓" : "✗")")
+                        Text("Debug: \(awsManager.debugTimer != nil ? "✓" : "✗") | Auto: \(awsManager.isAutoRefreshActive ? "✓" : "✗")")
                             .font(.system(size: 9))
                             .foregroundColor(.secondary)
                     }
@@ -682,7 +688,7 @@ struct PopoverContentView: View {
         }
     }
     
-    private var lastRefreshFormatter: DateFormatter {
+    private var timeOnlyFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short

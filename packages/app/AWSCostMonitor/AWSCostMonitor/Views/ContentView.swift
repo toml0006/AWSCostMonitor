@@ -667,7 +667,7 @@ struct ContentView: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .disabled(awsManager.refreshTimer != nil)
+                        .disabled(awsManager.isAutoRefreshActive)
                         
                         Button(action: {
                             awsManager.stopAutomaticRefresh()
@@ -682,14 +682,14 @@ struct ContentView: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .disabled(awsManager.refreshTimer == nil)
+                        .disabled(!awsManager.isAutoRefreshActive)
                     }
                     
                     // Show timer states
                     Text("Debug Timer: \(awsManager.debugTimer != nil ? "Running" : "Stopped")")
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    Text("Refresh Timer: \(awsManager.refreshTimer != nil ? "Running" : "Stopped")")
+                    Text("Refresh Timer: \(awsManager.isAutoRefreshActive ? "Running" : "Stopped")")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }

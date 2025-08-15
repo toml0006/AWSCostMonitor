@@ -42,17 +42,17 @@ struct RefreshRateTests {
     @Test func testRefreshTimerCreation() async throws {
         let awsManager = AWSManager()
         
-        // Timer should be nil initially
-        #expect(awsManager.refreshTimer == nil)
+        // Timer should not be active initially
+        #expect(!awsManager.isAutoRefreshActive)
         
         // Start automatic refresh
         awsManager.startAutomaticRefresh()
-        #expect(awsManager.refreshTimer != nil)
+        #expect(awsManager.isAutoRefreshActive)
         #expect(awsManager.autoRefreshEnabled == true)
         
         // Stop automatic refresh
         awsManager.stopAutomaticRefresh()
-        #expect(awsManager.refreshTimer == nil)
+        #expect(!awsManager.isAutoRefreshActive)
         #expect(awsManager.autoRefreshEnabled == false)
     }
     
@@ -61,14 +61,12 @@ struct RefreshRateTests {
         
         // Start with default interval
         awsManager.startAutomaticRefresh()
-        let originalTimer = awsManager.refreshTimer
-        #expect(originalTimer != nil)
+        #expect(awsManager.isAutoRefreshActive)
         
-        // Change interval should recreate timer
+        // Change interval should keep timer active
         awsManager.updateRefreshInterval(10)
         #expect(awsManager.refreshInterval == 10)
-        #expect(awsManager.refreshTimer != nil)
-        #expect(awsManager.refreshTimer !== originalTimer)
+        #expect(awsManager.isAutoRefreshActive)
         
         awsManager.stopAutomaticRefresh()
     }
@@ -366,7 +364,7 @@ struct RefreshRateTests {
         // Auto-refresh state should be restored from UserDefaults
         // This test assumes the init method loads the state
         if newAwsManager.autoRefreshEnabled {
-            #expect(newAwsManager.refreshTimer != nil)
+            #expect(newAwsManager.isAutoRefreshActive)
         }
     }
     

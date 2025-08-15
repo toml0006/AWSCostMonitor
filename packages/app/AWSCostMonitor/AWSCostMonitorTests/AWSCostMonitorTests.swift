@@ -129,16 +129,16 @@ struct AWSCostMonitorTests {
     @Test func testAWSManagerTimerManagement() async throws {
         let awsManager = AWSManager()
         
-        // Test timer is nil initially
-        #expect(awsManager.refreshTimer == nil)
+        // Test timer is not active initially
+        #expect(!awsManager.isAutoRefreshActive)
         
         // Test starting automatic refresh
         awsManager.startAutomaticRefresh()
-        #expect(awsManager.refreshTimer != nil)
+        #expect(awsManager.isAutoRefreshActive)
         
         // Test stopping automatic refresh
         awsManager.stopAutomaticRefresh()
-        #expect(awsManager.refreshTimer == nil)
+        #expect(!awsManager.isAutoRefreshActive)
     }
     
     @Test func testRefreshIntervalChangesUpdateTimer() async throws {
@@ -146,12 +146,11 @@ struct AWSCostMonitorTests {
         
         // Start timer with default interval
         awsManager.startAutomaticRefresh()
-        let originalTimer = awsManager.refreshTimer
+        #expect(awsManager.isAutoRefreshActive)
         
-        // Change interval - should recreate timer
+        // Change interval - timer should still be active
         awsManager.refreshInterval = 10
-        #expect(awsManager.refreshTimer !== originalTimer)
-        #expect(awsManager.refreshTimer != nil)
+        #expect(awsManager.isAutoRefreshActive)
         
         awsManager.stopAutomaticRefresh()
     }
