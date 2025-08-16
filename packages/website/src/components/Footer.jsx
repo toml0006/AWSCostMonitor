@@ -27,6 +27,7 @@ const Footer = () => {
             <a href="https://github.com/toml0006/AWSCostMonitor">GitHub</a>
             <a href="https://github.com/toml0006/AWSCostMonitor/wiki">Documentation</a>
             <a href="https://github.com/toml0006/AWSCostMonitor/issues">Support</a>
+            <a href="#/privacy">Privacy Policy</a>
             <a href="https://github.com/toml0006/AWSCostMonitor/blob/main/LICENSE">License</a>
           </div>
           

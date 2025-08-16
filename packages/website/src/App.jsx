@@ -43,6 +43,7 @@ import UnsignedAppGuide from './components/UnsignedAppGuide'
 import MoneyRain from './components/MoneyRain'
 import ThemeToggle from './components/ThemeToggle'
 import Changelog from './components/Changelog'
+import Privacy from './components/Privacy'
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -94,6 +95,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/changelog" element={<ChangelogPage />} />
           <Route path="/unsigned-app-guide" element={<UnsignedAppGuide />} />
+          <Route path="/privacy" element={<Privacy />} />
         </Routes>
       </Router>
     </ThemeProvider>
