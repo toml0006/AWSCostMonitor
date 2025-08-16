@@ -49,13 +49,14 @@ jobs:
       run: |
         cd packages/app/AWSCostMonitor
         xcodebuild -project AWSCostMonitor.xcodeproj \
-                   -scheme AWSCostMonitor \
+                   -scheme AWSCostMonitor-OpenSource \
                    -destination 'platform=macOS' \
                    -configuration Debug \
                    -allowProvisioningUpdates \
                    CODE_SIGN_IDENTITY="" \
                    CODE_SIGNING_REQUIRED=NO \
                    DEVELOPMENT_TEAM="" \
+                   OTHER_SWIFT_FLAGS="-D OPENSOURCE" \
                    -derivedDataPath ./DerivedData \
                    clean build
     

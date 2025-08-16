@@ -39,14 +39,15 @@ jobs:
         cd packages/app/AWSCostMonitor
         
         # Clean build folder
-        xcodebuild clean -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor
+        xcodebuild clean -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor-OpenSource
         
         # Test compile to catch any Swift errors early
         echo "Testing Swift compilation..."
         xcodebuild -project AWSCostMonitor.xcodeproj \
-                   -scheme AWSCostMonitor \
+                   -scheme AWSCostMonitor-OpenSource \
                    -destination 'platform=macOS' \
                    -configuration Debug \
+                   OTHER_SWIFT_FLAGS="-D OPENSOURCE" \
                    build || exit 1
         
         # Check if we have signing certificates
@@ -56,7 +57,7 @@ jobs:
           
           # Build and archive with signing
           xcodebuild -project AWSCostMonitor.xcodeproj \
-                     -scheme AWSCostMonitor \
+                     -scheme AWSCostMonitor-OpenSource \
                      -destination 'platform=macOS' \
                      -configuration Release \
                      -archivePath ./AWSCostMonitor.xcarchive \
@@ -64,18 +65,20 @@ jobs:
                      CODE_SIGN_STYLE=Manual \
                      CODE_SIGN_IDENTITY="$IDENTITY" \
                      DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}" \
+                     OTHER_SWIFT_FLAGS="-D OPENSOURCE" \
                      archive
         else
           echo "No Developer ID found, building without code signing..."
           # Build and archive without signing
           xcodebuild -project AWSCostMonitor.xcodeproj \
-                     -scheme AWSCostMonitor \
+                     -scheme AWSCostMonitor-OpenSource \
                      -destination 'platform=macOS' \
                      -configuration Release \
                      -archivePath ./AWSCostMonitor.xcarchive \
                      -allowProvisioningUpdates \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
+                     OTHER_SWIFT_FLAGS="-D OPENSOURCE" \
                      archive
         fi
         
@@ -157,38 +160,34 @@ jobs:
       id: notes
       run: |
         cat > release_notes.md << EOF
-        # AWS Cost Monitor ${{ steps.version.outputs.VERSION }} - Screen-Aware Refresh & API Cost Optimization
+        # AWSCostMonitor ${{ steps.version.outputs.VERSION }} - Open Source Release
         
-        ## 🎉 What's New
+        ## 🎉 Open Source Build
         
-        **Your app is now smarter about when to check AWS costs!**
+        **This is the open source version of AWSCostMonitor with all features included for free!**
         
-        This release introduces intelligent screen-aware refresh that automatically pauses cost updates when you're not looking:
+        ### What's Included:
+        - ✅ **All Pro Features Free** - Team Cache, multi-profile support, and all display formats
+        - ✅ **No In-App Purchases** - Everything is unlocked
+        - ✅ **No Restrictions** - Full functionality without any limitations
         
-        - 💰 **Lower API costs** - Reduces AWS Cost Explorer calls by 40-60% 
-        - 🔋 **Better battery life** - Extends laptop battery by up to 50%
-        - 🧠 **Smart caching** - Shows your last known costs instead of errors when offline
+        ## ✨ Key Features
         
-        ## ✨ Features Added
+        - **Real-time Cost Monitoring** - Always-visible MTD spending in your menu bar
+        - **Multi-Profile Support** - Switch between unlimited AWS profiles
+        - **Team Cache (S3)** - Share cost data with your team to reduce API calls by 90%
+        - **Smart Refresh** - Budget-based refresh intervals to minimize API costs
+        - **Cost Forecasting** - Predictive month-end projections
+        - **Service Breakdown** - See costs by AWS service
+        - **Calendar View** - Visual daily spending patterns
+        - **Keyboard Shortcuts** - Quick access with ⌘K for calendar, ⌘R to refresh
         
-        - **Screen-aware refresh** - Automatically pauses updates when your display sleeps or system locks
-        - **User activity detection** - Knows when you've stepped away from your desk (5+ min idle)
-        - **Intelligent cache management** - Uses cached data smartly when refresh is paused
-        - **Comprehensive test coverage** - Added 50+ new tests for enterprise reliability
+        ## 🔧 Recent Improvements
         
-        ## 🐛 Bug Fixes
-        
-        - Fixed potential crashes during test execution
-        - Improved handling of private AppStorage properties in tests
-        - Better error handling when screen state changes
-        - Resolved GitHub Actions workflow compilation issues
-        
-        ## 🔧 Technical Improvements
-        
-        - Added ScreenStateMonitor class for system state detection
-        - Integrated screen state checks into refresh logic  
-        - Enhanced test suite with UI and unit tests for all major features
-        - Improved refresh rate logic with budget-based intervals
+        - Screen-aware refresh that pauses when display sleeps
+        - User activity detection (5+ min idle)
+        - Intelligent cache management
+        - Comprehensive test coverage
         
         ## Installation
         
