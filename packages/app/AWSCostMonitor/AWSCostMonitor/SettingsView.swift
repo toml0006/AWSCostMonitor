@@ -8,7 +8,7 @@ struct SettingsView: View {
     @State private var selectedCategory: String
     @State private var hoveredCategory: String? = nil
     
-    init(initialSelectedCategory: String = "AWS") {
+    init(initialSelectedCategory: String = "Profiles") {
         _selectedCategory = State(initialValue: initialSelectedCategory)
     }
     
@@ -17,7 +17,7 @@ struct SettingsView: View {
     }
     
     let settingsCategories = [
-        "AWS",
+        "Profiles",
         "Team Cache",
         "Refresh Rate",
         "Display",
@@ -128,8 +128,8 @@ struct SettingsView: View {
             return "arrow.clockwise"
         case "Display":
             return "textformat"
-        case "AWS":
-            return "cloud"
+        case "Profiles":
+            return "person.2"
         case "Team Cache":
             return "externaldrive.connected.to.line.below"
         case "Alerts":
@@ -160,7 +160,7 @@ struct SettingsView: View {
                     }
                 )
             )
-        case "AWS":
+        case "Profiles":
             AWSSettingsTab()
         case "Team Cache":
             TeamCacheSettingsTab()

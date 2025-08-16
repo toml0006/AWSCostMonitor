@@ -62,7 +62,7 @@ func showExportWindow(awsManager: AWSManager) {
 var globalSettingsWindow: NSWindow?
 
 // Helper function to show settings window
-func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "AWS") {
+func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "Profiles") {
     if let window = globalSettingsWindow {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -77,7 +77,7 @@ func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "AWS
     let window = NSWindow(
         contentViewController: controller
     )
-    window.title = "AWS Cost Monitor Settings"
+    window.title = "AWSCostMonitor Settings"
     window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
     window.setContentSize(NSSize(width: 600, height: 450))
     window.center()

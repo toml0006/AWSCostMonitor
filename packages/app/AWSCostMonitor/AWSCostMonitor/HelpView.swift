@@ -108,7 +108,7 @@ struct HelpView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
             
-            Text("Welcome to AWS Cost Monitor! This app helps you keep track of your AWS spending directly from your Mac's menu bar.")
+            Text("Welcome to AWSCostMonitor! This app helps you keep track of your AWS spending directly from your Mac's menu bar.")
                 .font(.body)
             
             VStack(alignment: .leading, spacing: 12) {
@@ -324,7 +324,7 @@ struct HelpView: View {
                             .foregroundColor(.green)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("AWS Cost Monitor")
+                            Text("AWSCostMonitor")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                             Text("Version 1.0.0")

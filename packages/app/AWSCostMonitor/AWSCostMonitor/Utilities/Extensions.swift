@@ -9,7 +9,7 @@ import Foundation
 import OSLog
 
 extension Logger {
-    /// Custom logging subsystem for AWS Cost Monitor
+    /// Custom logging subsystem for AWSCostMonitor
     static let app = Logger(subsystem: "com.awscostmonitor.app", category: "general")
     static let aws = Logger(subsystem: "com.awscostmonitor.app", category: "aws")
     static let ui = Logger(subsystem: "com.awscostmonitor.app", category: "ui")

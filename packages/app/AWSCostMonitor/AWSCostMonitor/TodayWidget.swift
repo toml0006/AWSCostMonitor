@@ -285,7 +285,7 @@ struct LargeWidgetView: View {
                 Image(systemName: "dollarsign.circle.fill")
                     .foregroundColor(.blue)
                     .font(.title2)
-                Text("AWS Cost Monitor")
+                Text("AWSCostMonitor")
                     .font(.title3)
                     .fontWeight(.semibold)
                 Spacer()
@@ -382,7 +382,7 @@ struct CostWidget: Widget {
         StaticConfiguration(kind: kind, provider: CostWidgetProvider()) { entry in
             CostWidgetView(entry: entry)
         }
-        .configurationDisplayName("AWS Cost Monitor")
+        .configurationDisplayName("AWSCostMonitor")
         .description("Monitor your current AWS spending and budget status")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

@@ -26,7 +26,7 @@ struct CheckAWSCostIntent: AppIntent {
             targetProfile = selectedProfile.name
         } else {
             return .result(
-                dialog: "No AWS profile selected. Please open AWS Cost Monitor to configure profiles.",
+                dialog: "No AWS profile selected. Please open AWSCostMonitor to configure profiles.",
                 view: CostDisplaySnippet(
                     profileName: "No Profile",
                     amount: "N/A",
@@ -72,7 +72,7 @@ struct CheckAWSCostIntent: AppIntent {
             )
         } else {
             return .result(
-                dialog: "No cost data available for \(targetProfile). Try refreshing in AWS Cost Monitor.",
+                dialog: "No cost data available for \(targetProfile). Try refreshing in AWSCostMonitor.",
                 view: CostDisplaySnippet(
                     profileName: targetProfile,
                     amount: "No Data",
@@ -187,7 +187,7 @@ struct GetAllProfilesCostIntent: AppIntent {
         let manager = AWSManager.shared
         
         guard !manager.costData.isEmpty else {
-            return .result(dialog: "No cost data available. Please refresh data in AWS Cost Monitor.")
+            return .result(dialog: "No cost data available. Please refresh data in AWSCostMonitor.")
         }
         
         let totalCost = manager.costData.reduce(Decimal(0)) { $0 + $1.amount }

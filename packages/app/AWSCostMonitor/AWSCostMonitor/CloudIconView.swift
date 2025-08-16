@@ -101,7 +101,7 @@ struct MenuBarCloudIcon {
     
     static func createTemplateImage(size: CGFloat = 18) -> NSImage? {
         // Simple cloud shape for template (monochrome)
-        let image = NSImage(systemSymbolName: "cloud.fill", accessibilityDescription: "AWS Cost Monitor")
+        let image = NSImage(systemSymbolName: "cloud.fill", accessibilityDescription: "AWSCostMonitor")
         image?.isTemplate = true
         return image
     }

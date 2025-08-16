@@ -22,7 +22,7 @@ struct OnboardingView: View {
                     .font(.system(size: 60))
                     .foregroundColor(.accentColor)
                 
-                Text("Welcome to AWS Cost Monitor")
+                Text("Welcome to AWSCostMonitor")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
@@ -350,7 +350,7 @@ struct OnboardingView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("AWS Cost Monitor is ready to help you track your spending")
+            Text("AWSCostMonitor is ready to help you track your spending")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -431,7 +431,7 @@ func showOnboardingWindow(awsManager: AWSManager) {
     
     let hostingController = NSHostingController(rootView: onboardingView)
     let window = NSWindow(contentViewController: hostingController)
-    window.title = "Welcome to AWS Cost Monitor"
+    window.title = "Welcome to AWSCostMonitor"
     window.styleMask = [.titled, .closable]
     window.isMovableByWindowBackground = true
     window.center()

@@ -28,7 +28,7 @@ struct PopoverContentView: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("AWS Cost Monitor")
+                    Text("AWSCostMonitor")
                         .font(.system(size: 16, weight: .semibold))
                     #if DEBUG
                     Text("DEBUG BUILD")

@@ -387,7 +387,7 @@ struct DayDetailView: View {
                     .foregroundColor(Color(.systemBlue))
                     .font(.caption)
                 
-                Text("These are API calls made by this AWS Cost Monitor app only, not your total AWS account API usage.")
+                Text("These are API calls made by this AWSCostMonitor app only, not your total AWS account API usage.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

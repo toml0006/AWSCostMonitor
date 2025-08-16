@@ -702,7 +702,7 @@ struct ContentView: View {
                 action: {
                     NSApplication.shared.terminate(nil)
                 },
-                label: "Quit AWS Cost Monitor",
+                label: "Quit AWSCostMonitor",
                 systemImage: "power",
                 shortcut: "⌘Q",
                 hoveredItem: $hoveredItem,
