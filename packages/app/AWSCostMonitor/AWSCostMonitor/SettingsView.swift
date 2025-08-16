@@ -1946,14 +1946,24 @@ struct TeamCacheSettingsTab: View {
     }
     
     private func loadTeamCacheSettings(for profile: AWSProfile) {
-        // Load team cache settings for the selected profile
-        // This would need to be implemented in AWSManager to get/set per-profile team cache settings
+        // Load team cache settings for the selected profile from UserDefaults
+        let key = "TeamCacheConfig_\(profile.name)"
         
-        // For now, using default values - this will need to be connected to actual storage
-        teamCacheEnabled = false
-        s3BucketName = ""
-        s3Region = "us-east-1"
-        cachePrefix = "awscost-team-cache"
+        if let data = UserDefaults.standard.data(forKey: key),
+           let config = try? JSONDecoder().decode(TeamCacheConfig.self, from: data) {
+            teamCacheEnabled = config.enabled
+            s3BucketName = config.s3BucketName
+            s3Region = config.s3Region
+            cachePrefix = config.cachePrefix
+        } else {
+            // Use default values if no saved settings
+            teamCacheEnabled = false
+            s3BucketName = ""
+            s3Region = "us-east-1"
+            cachePrefix = "awscost-team-cache"
+        }
+        
+        // Reset UI state
         connectionTestResult = nil
         connectionTestIcon = nil
         cacheStatistics = nil
@@ -1963,9 +1973,22 @@ struct TeamCacheSettingsTab: View {
     private func saveTeamCacheSettings() {
         guard let profile = selectedProfile else { return }
         
-        // TODO: Implement saving team cache settings to AWSManager
-        // This should save per-profile team cache configuration
-        awsManager.log(.info, category: "TeamCache", "Team cache settings updated for profile: \(profile.name)")
+        // Create configuration object
+        let config = TeamCacheConfig(
+            enabled: teamCacheEnabled,
+            s3BucketName: s3BucketName,
+            s3Region: s3Region,
+            cachePrefix: cachePrefix
+        )
+        
+        // Save to UserDefaults
+        let key = "TeamCacheConfig_\(profile.name)"
+        if let data = try? JSONEncoder().encode(config) {
+            UserDefaults.standard.set(data, forKey: key)
+            awsManager.log(.info, category: "TeamCache", "Team cache settings saved for profile: \(profile.name)")
+        } else {
+            awsManager.log(.error, category: "TeamCache", "Failed to save team cache settings for profile: \(profile.name)")
+        }
     }
     
     private func testConnection() {
