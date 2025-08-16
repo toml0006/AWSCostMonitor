@@ -10,7 +10,7 @@ import SwiftUI
 
 // Product IDs for App Store
 enum ProductID: String, CaseIterable {
-    case teamCache = "com.middleout.awscostmonitor.teamcache"
+    case teamCache = "middleout.AWSCostMonitor.teamcache"
     
     var displayName: String {
         switch self {
@@ -49,11 +49,6 @@ class StoreManager: ObservableObject {
         Task {
             await loadProducts()
             await updatePurchasedProducts()
-            
-            // DEBUG: Simulate successful purchase for testing
-            #if DEBUG
-            simulateSuccessfulPurchase()
-            #endif
         }
     }
     

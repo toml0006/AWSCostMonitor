@@ -15,14 +15,14 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.middleout.awscostmonitor.teamcache",
+      "productID" : "middleout.AWSCostMonitor.teamcache",
       "referenceName" : "Team Cache",
       "type" : "NonConsumable"
     }
   ],
   "settings" : {
     "_applicationInternalID" : "AWSCOSTMONITOR",
-    "_developerTeamID" : "YOUR_TEAM_ID",
+    "_developerTeamID" : "TJSYWP4C3D",
     "_lastSynchronizedDate" : 736589423.84899998
   },
   "subscriptions" : [
