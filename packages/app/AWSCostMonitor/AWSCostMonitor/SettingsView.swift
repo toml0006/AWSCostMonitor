@@ -1596,6 +1596,32 @@ struct TeamCacheSettingsTab: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            // Debug toggle for testing purchase state
+            #if DEBUG
+            HStack {
+                Text("DEBUG: Simulate Purchase")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { storeManager.hasTeamCache },
+                    set: { newValue in
+                        if newValue {
+                            storeManager.simulateSuccessfulPurchase()
+                        } else {
+                            storeManager.clearPurchase()
+                        }
+                    }
+                ))
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(Color.yellow.opacity(0.1))
+            .cornerRadius(4)
+            
+            Divider()
+            #endif
+            
             // Check if user has Team Cache access
             if !storeManager.hasTeamCache {
                 // Show purchase UI

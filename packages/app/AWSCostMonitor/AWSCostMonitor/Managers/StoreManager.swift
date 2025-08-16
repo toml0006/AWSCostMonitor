@@ -49,6 +49,11 @@ class StoreManager: ObservableObject {
         Task {
             await loadProducts()
             await updatePurchasedProducts()
+            
+            // DEBUG: Simulate successful purchase for testing
+            #if DEBUG
+            simulateSuccessfulPurchase()
+            #endif
         }
     }
     
@@ -219,6 +224,29 @@ class StoreManager: ObservableObject {
     func formattedPrice(for product: Product) -> String {
         return product.displayPrice
     }
+    
+    // MARK: - Debug Helpers
+    
+    #if DEBUG
+    func simulateSuccessfulPurchase() {
+        // Simulate that the user has purchased Team Cache
+        purchasedProductIDs.insert(ProductID.teamCache.rawValue)
+        hasTeamCache = true
+        UserDefaults.standard.set(true, forKey: "HasTeamCache")
+        purchaseError = nil
+        
+        print("🎉 DEBUG: Simulating successful Team Cache purchase")
+    }
+    
+    func clearPurchase() {
+        // Clear the simulated purchase for testing
+        purchasedProductIDs.removeAll()
+        hasTeamCache = false
+        UserDefaults.standard.set(false, forKey: "HasTeamCache")
+        
+        print("🗑️ DEBUG: Cleared Team Cache purchase")
+    }
+    #endif
 }
 
 // MARK: - Store Errors
