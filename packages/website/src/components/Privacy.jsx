@@ -17,7 +17,7 @@ function Privacy() {
       <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
 
       {/* Hero Section */}
-      <section className="privacy-hero memphis-decoration">
+      <section className="hero memphis-decoration">
         <div className="memphis-hero-bg" />
         <div className="memphis-grid-overlay" />
         <div className="container">
@@ -25,11 +25,11 @@ function Privacy() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="privacy-hero-content"
+            className="hero-text" style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}
           >
             <div className="hero-badge">
-              <Shield size={20} />
-              <span>Your Privacy Matters</span>
+              <span className="badge-primary">PRIVACY FIRST</span>
+              <span>Your data stays yours</span>
             </div>
             
             <h1 className="hero-title">
@@ -42,23 +42,36 @@ function Privacy() {
               to protect your data. Here's our commitment to keeping your information secure.
             </p>
             
-            <p className="privacy-updated">Last Updated: August 16, 2025</p>
+            <div className="hero-stats">
+              <div className="stat">
+                <span className="stat-number">Zero</span>
+                <span className="stat-label">Data Collection</span>
+              </div>
+              <div className="stat">
+                <span className="stat-number">100%</span>
+                <span className="stat-label">Local Processing</span>
+              </div>
+              <div className="stat">
+                <span className="stat-number">Open</span>
+                <span className="stat-label">Source Code</span>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
 
       {/* Privacy Highlights */}
-      <section className="privacy-highlights">
+      <section className="features pattern-dots" style={{ paddingTop: '60px', paddingBottom: '60px' }}>
         <div className="container">
-          <div className="features-grid">
+          <div className="features-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="feature-card privacy-feature-card"
+              className="feature-card card card-brutal card-memphis card-primary"
             >
               <div className="feature-icon">
-                <UserX size={24} />
+                <UserX size={32} />
               </div>
               <h3>No Data Collection</h3>
               <p>We don't collect, store, or transmit any of your personal or usage data</p>
@@ -68,10 +81,10 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="feature-card privacy-feature-card"
+              className="feature-card card card-brutal card-memphis card-secondary"
             >
               <div className="feature-icon">
-                <Database size={24} />
+                <Database size={32} />
               </div>
               <h3>100% Local</h3>
               <p>Everything runs on your Mac - no external servers or cloud services</p>
@@ -81,10 +94,10 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="feature-card privacy-feature-card"
+              className="feature-card card card-brutal card-memphis card-tertiary"
             >
               <div className="feature-icon">
-                <Key size={24} />
+                <Key size={32} />
               </div>
               <h3>Your AWS, Your Control</h3>
               <p>Direct connection to AWS using your credentials - we never see them</p>
@@ -94,8 +107,20 @@ function Privacy() {
       </section>
 
       {/* Privacy Content */}
-      <section className="privacy-content">
+      <section className="privacy-content pattern-squiggle">
         <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="section-header"
+            style={{ textAlign: 'center', marginBottom: '3rem' }}
+          >
+            <h2>How We Protect <span className="text-gradient">Your Privacy</span></h2>
+            <p>Everything you need to know about how AWSCostMonitor handles your data</p>
+          </motion.div>
+          
           <div className="privacy-sections">
             
             {/* How It Works */}
@@ -103,7 +128,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="privacy-section memphis-card"
+              className="card card-brutal card-memphis"
             >
               <div className="section-header">
                 <Lock size={24} />
@@ -132,7 +157,7 @@ function Privacy() {
 
               <div className="privacy-subsection">
                 <h3>Data Flow</h3>
-                <div className="code-block">
+                <div className="code-block card card-brutal" style={{ background: 'var(--color-secondary)', color: 'white', fontWeight: 'bold' }}>
                   Your Mac → AWS Cost Explorer API → Cost Data → Display in Menu Bar
                 </div>
                 <p className="privacy-note">That's it. No detours. No middleman. Just direct, secure communication.</p>
@@ -144,7 +169,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="privacy-section memphis-card"
+              className="card card-brutal card-memphis"
             >
               <div className="section-header">
                 <Server size={24} />
@@ -172,7 +197,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="privacy-section memphis-card"
+              className="card card-brutal card-memphis"
             >
               <div className="section-header">
                 <Cloud size={24} />
@@ -194,7 +219,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
-              className="privacy-section memphis-card"
+              className="card card-brutal card-memphis"
             >
               <div className="section-header">
                 <Eye size={24} />
@@ -215,7 +240,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
-              className="privacy-promise memphis-card-highlight"
+              className="privacy-highlight card-gradient"
             >
               <h2>Privacy Promise</h2>
               <p className="promise-text">
@@ -247,15 +272,16 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
-              className="privacy-contact"
+              className="card card-brutal card-memphis"
+              style={{ textAlign: 'center', padding: '2rem' }}
             >
-              <h3>Questions about privacy?</h3>
-              <p>We're here to help:</p>
-              <div className="contact-links">
-                <a href="https://github.com/toml0006/AWSCostMonitor/issues" className="btn btn-outline">
+              <h3 style={{ marginBottom: '1rem' }}>Questions about privacy?</h3>
+              <p style={{ marginBottom: '1.5rem' }}>We're here to help:</p>
+              <div className="hero-cta" style={{ justifyContent: 'center' }}>
+                <a href="https://github.com/toml0006/AWSCostMonitor/issues" className="btn btn-outline btn-memphis">
                   Report an Issue
                 </a>
-                <a href="https://github.com/toml0006/AWSCostMonitor" className="btn btn-outline">
+                <a href="https://github.com/toml0006/AWSCostMonitor" className="btn btn-primary btn-memphis">
                   View Source Code
                 </a>
               </div>
@@ -267,55 +293,6 @@ function Privacy() {
       <Footer />
 
       <style jsx>{`
-        .privacy-hero {
-          padding: 120px 0 60px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .privacy-hero-content {
-          text-align: center;
-          max-width: 800px;
-          margin: 0 auto;
-          position: relative;
-          z-index: 10;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 2rem;
-          border-radius: 20px;
-          backdrop-filter: blur(10px);
-        }
-
-        .dark .privacy-hero-content {
-          background: rgba(26, 26, 26, 0.95);
-        }
-
-        .privacy-updated {
-          margin-top: 1rem;
-          opacity: 0.7;
-          font-size: 0.9rem;
-        }
-
-        .privacy-highlights {
-          padding: 60px 0;
-          background: #f9fafb;
-        }
-
-        .dark .privacy-highlights {
-          background: #0f0f0f;
-        }
-
-        .privacy-feature-card {
-          background: white !important;
-          border: 2px solid #e5e7eb;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .dark .privacy-feature-card {
-          background: #1a1a1a !important;
-          border: 2px solid #2a2a2a;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-
         .privacy-content {
           padding: 60px 0 100px;
           background: var(--bg-secondary);
@@ -330,19 +307,9 @@ function Privacy() {
           padding: 0 20px;
         }
 
-        .privacy-section {
-          background: white;
-          border: 2px solid var(--border-color);
-          border-radius: 20px;
-          padding: 2rem;
+        .privacy-sections .card {
           margin-bottom: 2rem;
-          position: relative;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .dark .privacy-section {
-          background: #1a1a1a;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+          padding: 2rem;
         }
 
         .section-header {
@@ -388,36 +355,21 @@ function Privacy() {
           gap: 2rem;
         }
 
-        .code-block {
-          background: #f3f4f6;
-          color: #10b981;
-          padding: 1rem;
-          border-radius: 8px;
-          font-family: monospace;
-          font-size: 0.9rem;
-          margin: 1rem 0;
-          border: 1px solid #e5e7eb;
-        }
-
-        .dark .code-block {
-          background: #0a0a0a;
-          border: 1px solid #2a2a2a;
-        }
-
         .privacy-note {
           margin-top: 0.5rem;
           opacity: 0.8;
           font-size: 0.95rem;
         }
 
-        .privacy-promise {
-          background: linear-gradient(135deg, #667eea, #764ba2);
+        .privacy-highlight {
+          background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
           color: white;
           padding: 3rem;
-          border-radius: 20px;
+          border-radius: var(--radius-xl);
           text-align: center;
           margin: 3rem 0;
-          box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+          box-shadow: 12px 12px 0 var(--color-black);
+          border: 3px solid var(--color-black);
         }
 
         .promise-text {
@@ -440,50 +392,33 @@ function Privacy() {
           text-align: left;
         }
 
-        .privacy-contact {
-          text-align: center;
-          padding: 2rem 0;
-        }
-
-        .privacy-contact h3 {
-          font-size: 1.5rem;
-          margin-bottom: 0.5rem;
-        }
-
-        .contact-links {
-          display: flex;
-          gap: 1rem;
-          justify-content: center;
-          margin-top: 1.5rem;
-          flex-wrap: wrap;
-        }
-
         .text-link {
-          color: var(--primary-color);
+          color: var(--color-primary);
           text-decoration: none;
-          border-bottom: 1px solid transparent;
+          border-bottom: 2px solid transparent;
           transition: border-color 0.3s;
+          font-weight: 600;
         }
 
         .text-link:hover {
-          border-bottom-color: var(--primary-color);
+          border-bottom-color: var(--color-primary);
         }
 
         @media (max-width: 768px) {
-          .privacy-section {
+          .privacy-sections .card {
             padding: 1.5rem;
           }
 
-          .section-header h2 {
-            font-size: 1.5rem;
-          }
-
-          .privacy-promise {
+          .privacy-highlight {
             padding: 2rem 1.5rem;
           }
 
           .promise-text {
             font-size: 1.1rem;
+          }
+
+          .features-grid {
+            grid-template-columns: 1fr !important;
           }
         }
       `}</style>
