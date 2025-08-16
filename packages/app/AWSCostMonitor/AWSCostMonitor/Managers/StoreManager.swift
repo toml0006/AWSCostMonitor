@@ -42,6 +42,7 @@ class StoreManager: ObservableObject {
     private var updateListenerTask: Task<Void, Error>?
     
     init() {
+        #if !OPENSOURCE
         // Start listening for transactions
         updateListenerTask = listenForTransactions()
         
@@ -50,6 +51,10 @@ class StoreManager: ObservableObject {
             await loadProducts()
             await updatePurchasedProducts()
         }
+        #else
+        // Open source build - no in-app purchases
+        hasTeamCache = true // Always enabled in open source
+        #endif
     }
     
     deinit {

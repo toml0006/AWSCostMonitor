@@ -16,16 +16,27 @@ struct SettingsView: View {
         MenuBarDisplayFormat(rawValue: displayFormat) ?? .full
     }
     
-    let settingsCategories = [
-        "Profiles",
-        "Team Cache",
-        "Refresh Rate",
-        "Display",
-        "Alerts",
-        "Notifications",
-        "CloudWatch",
-        "Debug"
-    ]
+    var settingsCategories: [String] {
+        var categories = [
+            "Profiles",
+        ]
+        
+        // Only include Team Cache in non-open source builds
+        #if !OPENSOURCE
+        categories.append("Team Cache")
+        #endif
+        
+        categories.append(contentsOf: [
+            "Refresh Rate",
+            "Display",
+            "Alerts",
+            "Notifications",
+            "CloudWatch",
+            "Debug"
+        ])
+        
+        return categories
+    }
     
     var body: some View {
         HStack(spacing: 0) {
@@ -48,7 +59,8 @@ struct SettingsView: View {
                                 .lineLimit(1)
                                 .fixedSize(horizontal: false, vertical: true)
                             
-                            // Add Pro badge for Team Cache
+                            // Add Pro badge for Team Cache (non-open source only)
+                            #if !OPENSOURCE
                             if category == "Team Cache" {
                                 Text("Pro")
                                     .font(.system(size: 9, weight: .bold))
@@ -58,6 +70,7 @@ struct SettingsView: View {
                                     .background(Color.blue)
                                     .cornerRadius(8)
                             }
+                            #endif
                             
                             Spacer(minLength: 0)
                         }
@@ -162,8 +175,10 @@ struct SettingsView: View {
             )
         case "Profiles":
             AWSSettingsTab()
+        #if !OPENSOURCE
         case "Team Cache":
             TeamCacheSettingsTab()
+        #endif
         case "Alerts":
             AnomalySettingsTab()
         case "Notifications":
@@ -1596,6 +1611,7 @@ struct TeamCacheSettingsTab: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            #if !OPENSOURCE
             // Debug toggle for testing purchase state
             #if DEBUG
             HStack {
@@ -1628,7 +1644,11 @@ struct TeamCacheSettingsTab: View {
                 TeamCachePurchaseView()
                     .environmentObject(storeManager)
             } else {
-                // Show Team Cache settings for users who purchased
+                // Show Team Cache settings for users who purchased - fall through to show config
+            }
+            #endif  // !OPENSOURCE
+            
+            // Team Cache configuration (available in both versions)
                 Text("Team Cache Configuration")
                     .font(.headline)
             
@@ -1931,7 +1951,9 @@ struct TeamCacheSettingsTab: View {
                     Text("No AWS profiles available")
                         .foregroundColor(.secondary)
                 }
-            } // End of Pro access check
+            #if !OPENSOURCE
+                // Pro access check was here
+            #endif
             
             Spacer()
         }
