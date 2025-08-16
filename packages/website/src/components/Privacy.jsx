@@ -55,7 +55,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="feature-card memphis-card"
+              className="feature-card privacy-feature-card"
             >
               <div className="feature-icon">
                 <UserX size={24} />
@@ -68,7 +68,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="feature-card memphis-card"
+              className="feature-card privacy-feature-card"
             >
               <div className="feature-icon">
                 <Database size={24} />
@@ -81,7 +81,7 @@ function Privacy() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="feature-card memphis-card"
+              className="feature-card privacy-feature-card"
             >
               <div className="feature-icon">
                 <Key size={24} />
@@ -279,6 +279,14 @@ function Privacy() {
           margin: 0 auto;
           position: relative;
           z-index: 10;
+          background: rgba(255, 255, 255, 0.95);
+          padding: 2rem;
+          border-radius: 20px;
+          backdrop-filter: blur(10px);
+        }
+
+        .dark .privacy-hero-content {
+          background: rgba(26, 26, 26, 0.95);
         }
 
         .privacy-updated {
@@ -289,10 +297,28 @@ function Privacy() {
 
         .privacy-highlights {
           padding: 60px 0;
+          background: #f9fafb;
+        }
+
+        .dark .privacy-highlights {
+          background: #0f0f0f;
+        }
+
+        .privacy-feature-card {
+          background: white !important;
+          border: 2px solid #e5e7eb;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .dark .privacy-feature-card {
+          background: #1a1a1a !important;
+          border: 2px solid #2a2a2a;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
 
         .privacy-content {
           padding: 60px 0 100px;
+          background: var(--bg-secondary);
         }
 
         .privacy-sections {
@@ -301,12 +327,18 @@ function Privacy() {
         }
 
         .privacy-section {
-          background: var(--card-bg);
+          background: white;
           border: 2px solid var(--border-color);
           border-radius: 20px;
           padding: 2rem;
           margin-bottom: 2rem;
           position: relative;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark .privacy-section {
+          background: #1a1a1a;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
         .section-header {
@@ -353,13 +385,19 @@ function Privacy() {
         }
 
         .code-block {
-          background: var(--code-bg, #1a1a1a);
-          color: var(--code-text, #10b981);
+          background: #f3f4f6;
+          color: #10b981;
           padding: 1rem;
           border-radius: 8px;
           font-family: monospace;
           font-size: 0.9rem;
           margin: 1rem 0;
+          border: 1px solid #e5e7eb;
+        }
+
+        .dark .code-block {
+          background: #0a0a0a;
+          border: 1px solid #2a2a2a;
         }
 
         .privacy-note {
@@ -369,12 +407,13 @@ function Privacy() {
         }
 
         .privacy-promise {
-          background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+          background: linear-gradient(135deg, #667eea, #764ba2);
           color: white;
           padding: 3rem;
           border-radius: 20px;
           text-align: center;
           margin: 3rem 0;
+          box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
 
         .promise-text {
