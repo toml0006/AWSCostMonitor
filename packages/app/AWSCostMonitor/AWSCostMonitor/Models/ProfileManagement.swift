@@ -14,10 +14,12 @@ struct ProfileVisibilitySettings: Codable {
     var hiddenProfiles: Set<String> = []
     var removedProfiles: [String: RemovedProfileInfo] = [:]
     var lastScanDate: Date?
+    var hasCompletedInitialSetup: Bool = false
     
     // Initialize with all profiles visible by default
     init() {
         self.lastScanDate = Date()
+        self.hasCompletedInitialSetup = false
     }
 }
 
@@ -192,7 +194,10 @@ class ProfileManager {
                 settings.hiddenProfiles.insert(profile.name)
             }
         }
+        // Set last scan date to prevent immediate re-scan
         settings.lastScanDate = Date()
+        // Mark as initialized to prevent showing alerts
+        settings.hasCompletedInitialSetup = true
         saveSettings(settings)
     }
 }

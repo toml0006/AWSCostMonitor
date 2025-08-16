@@ -494,33 +494,40 @@ class AWSManager: ObservableObject {
     // Check for profile changes and handle new/removed profiles
     private func checkForProfileChanges(currentProfiles: [AWSProfile]) {
         // Check if we should scan for changes
-        if !profileManager.shouldScanForChanges() {
+        let shouldScan = profileManager.shouldScanForChanges()
+        log(.info, category: "ProfileManagement", "Should scan for changes: \(shouldScan)")
+        
+        if !shouldScan {
             // No need to scan - just apply existing visibility settings
+            log(.info, category: "ProfileManagement", "Not scanning - applying existing visibility settings")
             self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
             return
         }
         
         // Check if this is first launch (no settings exist)
         let settings = profileManager.loadSettings()
-        if settings.visibleProfiles.isEmpty && 
-           settings.hiddenProfiles.isEmpty && 
-           settings.removedProfiles.isEmpty {
-            // First launch - initialize profiles without showing alerts
-            log(.info, category: "ProfileManagement", "First launch detected, initializing profiles")
+        log(.info, category: "ProfileManagement", "Current settings - visible: \(settings.visibleProfiles.count), hidden: \(settings.hiddenProfiles.count), removed: \(settings.removedProfiles.count), initialized: \(settings.hasCompletedInitialSetup)")
+        
+        if !settings.hasCompletedInitialSetup {
+            // First launch or incomplete setup - initialize profiles without showing alerts
+            log(.info, category: "ProfileManagement", "First launch or incomplete setup detected, initializing profiles without alerts")
             profileManager.initializeProfiles(currentProfiles)
             self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
             return
         }
         
         // Detect changes for existing installation
+        log(.info, category: "ProfileManagement", "Detecting changes for existing installation")
         let changes = profileManager.detectProfileChanges(currentProfiles: currentProfiles)
+        
+        log(.info, category: "ProfileManagement", "Changes detected - new: \(changes.newProfiles.count), removed: \(changes.removedProfiles.count)")
         
         // Set profiles to filtered visible profiles
         self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
         
         // Handle new profiles (only show alerts after first launch)
         if !changes.newProfiles.isEmpty {
-            log(.info, category: "ProfileManagement", "Detected \(changes.newProfiles.count) new profiles: \(changes.newProfiles.map { $0.name })")
+            log(.info, category: "ProfileManagement", "Showing alert for \(changes.newProfiles.count) new profiles: \(changes.newProfiles.map { $0.name })")
             
             DispatchQueue.main.async {
                 ProfileChangeWindowController.showNewProfilesAlert(
@@ -540,7 +547,7 @@ class AWSManager: ObservableObject {
         
         // Handle removed profiles
         if !changes.removedProfiles.isEmpty {
-            log(.info, category: "ProfileManagement", "Detected \(changes.removedProfiles.count) removed profiles: \(changes.removedProfiles)")
+            log(.info, category: "ProfileManagement", "Showing alert for \(changes.removedProfiles.count) removed profiles: \(changes.removedProfiles)")
             
             DispatchQueue.main.async {
                 ProfileChangeWindowController.showRemovedProfilesAlert(

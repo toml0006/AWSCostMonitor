@@ -1560,6 +1560,7 @@ struct EditMetricSheet: View {
 
 struct TeamCacheSettingsTab: View {
     @EnvironmentObject var awsManager: AWSManager
+    @StateObject private var storeManager = StoreManager.shared
     @State private var selectedProfile: AWSProfile?
     @State private var teamCacheEnabled: Bool = false
     @State private var s3BucketName: String = ""
@@ -1595,10 +1596,17 @@ struct TeamCacheSettingsTab: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Team Cache Configuration")
-                .font(.headline)
+            // Check if user has Team Cache access
+            if !storeManager.hasTeamCache {
+                // Show purchase UI
+                TeamCachePurchaseView()
+                    .environmentObject(storeManager)
+            } else {
+                // Show Team Cache settings for users who purchased
+                Text("Team Cache Configuration")
+                    .font(.headline)
             
-            if !awsManager.profiles.isEmpty {
+                if !awsManager.profiles.isEmpty {
                 // Profile selector
                 Picker("Select Profile:", selection: $selectedProfile) {
                     Text("Choose a profile").tag(nil as AWSProfile?)
@@ -1893,10 +1901,11 @@ struct TeamCacheSettingsTab: View {
                         }
                     }
                 }
-            } else {
-                Text("No AWS profiles available")
-                    .foregroundColor(.secondary)
-            }
+                } else {
+                    Text("No AWS profiles available")
+                        .foregroundColor(.secondary)
+                }
+            } // End of Pro access check
             
             Spacer()
         }

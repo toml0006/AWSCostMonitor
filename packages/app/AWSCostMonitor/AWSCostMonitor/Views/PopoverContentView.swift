@@ -478,6 +478,53 @@ struct PopoverContentView: View {
                     }
                 }
                 
+                // Upgrade to Pro button (only in DEBUG for testing)
+                #if DEBUG
+                Button(action: {
+                    PurchaseWindowController.showPurchaseWindow()
+                }) {
+                    HStack {
+                        Image(systemName: "crown.fill")
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.yellow, .orange],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        Text("Upgrade to Pro")
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text("Unlock All Features")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 8)
+                #endif
+                
                 // Bottom row: Calendar and AWS Console
                 HStack {
                     Button(action: {

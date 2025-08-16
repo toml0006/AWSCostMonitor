@@ -1,0 +1,38 @@
+{
+  "identifier" : "AWSCostMonitor",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "3.99",
+      "familyShareable" : false,
+      "internalID" : "TEAM_CACHE",
+      "localizations" : [
+        {
+          "description" : "Enable S3 caching to share cost data with your team and reduce API calls",
+          "displayName" : "Team Cache",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.middleout.awscostmonitor.teamcache",
+      "referenceName" : "Team Cache",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "AWSCOSTMONITOR",
+    "_developerTeamID" : "YOUR_TEAM_ID",
+    "_lastSynchronizedDate" : 736589423.84899998
+  },
+  "subscriptions" : [
+
+  ],
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}
