@@ -319,11 +319,15 @@ function Privacy() {
         .privacy-content {
           padding: 60px 0 100px;
           background: var(--bg-secondary);
+          display: flex;
+          justify-content: center;
         }
 
         .privacy-sections {
           max-width: 900px;
+          width: 100%;
           margin: 0 auto;
+          padding: 0 20px;
         }
 
         .privacy-section {
