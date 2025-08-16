@@ -1422,9 +1422,11 @@ class AWSManager: ObservableObject {
         // Calculate and store next refresh time
         nextRefreshTime = Date().addingTimeInterval(interval)
         
-        // Create the timer and ensure it's added to the main RunLoop
-        refreshTimer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+        // Create a scheduled timer (same pattern as debug timer which works reliably)
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             guard let self = self else { return }
+            
+            self.log(.warning, category: "RefreshTimer", "🔄 Refresh timer FIRED at \(Date())")
             
             #if DEBUG
             self.log(.debug, category: "RefreshTimer", "Refresh timer fired at \(Date())")
@@ -1443,10 +1445,12 @@ class AWSManager: ObservableObject {
             }
         }
         
-        // Add timer to the main RunLoop with common mode to ensure it fires even when menus are open
-        RunLoop.main.add(refreshTimer!, forMode: .common)
-        
-        log(.info, category: "Refresh", "Timer scheduled successfully. Next refresh at: \(nextRefreshTime!)")
+        // Validate timer was created successfully
+        if let timer = refreshTimer {
+            log(.info, category: "Refresh", "Timer scheduled successfully (valid: \(timer.isValid)). Next refresh at: \(nextRefreshTime!)")
+        } else {
+            log(.error, category: "Refresh", "⚠️ Failed to create refresh timer!")
+        }
     }
     
     // Stops automatic refresh

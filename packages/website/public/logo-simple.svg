@@ -1,49 +1,57 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with colorful sections -->
   <defs>
-    <!-- Shadow filter -->
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="16" dy="16" stdDeviation="0" flood-color="#1A1A2E" flood-opacity="1"/>
-    </filter>
-    
-    <!-- Gradient for dollar sign -->
-    <linearGradient id="dollarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6BCB77;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#4D96FF;stop-opacity:1" />
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ee2a7b;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#6b4c93;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#5fa8d3;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#f9c74f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#43aa8b;stop-opacity:1" />
     </linearGradient>
+    
+    <!-- Create angular background sections -->
+    <clipPath id="roundedSquare">
+      <rect x="0" y="0" width="1024" height="1024" rx="200" ry="200"/>
+    </clipPath>
   </defs>
   
-  <!-- Background -->
-  <rect width="1024" height="1024" fill="#FFF8E7"/>
-  
-  <!-- Memphis decorative elements -->
-  <rect x="160" y="160" width="120" height="120" fill="#FFD93D" transform="rotate(15 220 220)" opacity="0.4"/>
-  <circle cx="800" cy="240" r="60" fill="#FF6B6B" opacity="0.4"/>
-  <polygon points="760,760 840,720 840,800" fill="#6BCB77" opacity="0.4"/>
-  <rect x="200" y="700" width="160" height="16" fill="#4D96FF" transform="rotate(-20 280 708)" opacity="0.6"/>
-  
-  <!-- Squiggly decorations -->
-  <path d="M 160,400 Q 200,360 240,400 T 320,400" stroke="#FF6B6B" stroke-width="8" fill="none" opacity="0.5"/>
-  <path d="M 680,640 Q 720,600 760,640 T 840,640" stroke="#FFD93D" stroke-width="8" fill="none" opacity="0.5"/>
-  
-  <!-- Main container with shadow -->
-  <g filter="url(#shadow)">
-    <!-- Background rounded square -->
-    <rect x="312" y="312" width="400" height="400" rx="80" fill="#4D96FF"/>
+  <!-- Colorful angular background -->
+  <g clip-path="url(#roundedSquare)">
+    <!-- Pink section -->
+    <path d="M 0 0 L 512 0 L 400 400 L 0 300 Z" fill="#ee2a7b"/>
     
-    <!-- Inner lighter square -->
-    <rect x="332" y="332" width="360" height="360" rx="60" fill="#5DA3FF"/>
+    <!-- Blue section -->
+    <path d="M 512 0 L 1024 0 L 1024 500 L 600 400 Z" fill="#5fa8d3"/>
+    
+    <!-- Purple section -->
+    <path d="M 1024 500 L 1024 1024 L 700 1024 L 600 600 Z" fill="#8b5aa3"/>
+    
+    <!-- Yellow section -->
+    <path d="M 0 300 L 400 400 L 500 1024 L 0 1024 Z" fill="#f9c74f"/>
+    
+    <!-- Additional purple overlay -->
+    <path d="M 400 400 L 600 400 L 700 700 L 500 800 Z" fill="#6b4c93" opacity="0.7"/>
   </g>
   
   <!-- Dollar sign -->
-  <text x="512" y="600" font-family="Arial Black, sans-serif" font-size="320" font-weight="900" text-anchor="middle" fill="#FFF8E7">$</text>
+  <g transform="translate(250, 200)">
+    <text x="0" y="350" font-family="SF Pro Display, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" 
+          font-size="550" font-weight="bold" fill="#1dd3b0">$</text>
+  </g>
   
-  <!-- Corner dots -->
-  <circle cx="360" cy="360" r="16" fill="#FFD93D"/>
-  <circle cx="664" cy="360" r="16" fill="#FF6B6B"/>
-  <circle cx="360" cy="664" r="16" fill="#6BCB77"/>
-  <circle cx="664" cy="664" r="16" fill="#FFD93D"/>
-  
-  <!-- Small triangular accents -->
-  <polygon points="280,480 300,460 300,500" fill="#FF6B6B"/>
-  <polygon points="724,544 744,524 744,564" fill="#6BCB77"/>
+  <!-- Bar chart -->
+  <g transform="translate(450, 400)">
+    <!-- Bar 1 -->
+    <rect x="0" y="200" width="80" height="200" fill="#90c55d" rx="10"/>
+    
+    <!-- Bar 2 -->
+    <rect x="100" y="100" width="80" height="300" fill="#7fc45d" rx="10"/>
+    
+    <!-- Bar 3 -->
+    <rect x="200" y="50" width="80" height="350" fill="#6db65d" rx="10"/>
+    
+    <!-- Bar 4 -->
+    <rect x="300" y="0" width="80" height="400" fill="#5da85d" rx="10"/>
+  </g>
 </svg>
