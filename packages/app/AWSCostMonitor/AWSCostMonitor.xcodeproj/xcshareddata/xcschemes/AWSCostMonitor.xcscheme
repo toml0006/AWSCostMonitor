@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4F8E7EBD2C56AE8100ED9B38"
+               BlueprintIdentifier = "7A8F6BCF2E3D700F00A26D48"
                BuildableName = "AWSCostMonitor.app"
                BlueprintName = "AWSCostMonitor"
                ReferencedContainer = "container:AWSCostMonitor.xcodeproj">
@@ -31,7 +31,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4F8E7EBD2C56AE8100ED9B38"
+            BlueprintIdentifier = "7A8F6BCF2E3D700F00A26D48"
             BuildableName = "AWSCostMonitor.app"
             BlueprintName = "AWSCostMonitor"
             ReferencedContainer = "container:AWSCostMonitor.xcodeproj">
@@ -43,7 +43,7 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4F8E7ECE2C56AE8300ED9B38"
+               BlueprintIdentifier = "7A8F6BDD2E3D701000A26D48"
                BuildableName = "AWSCostMonitorTests.xctest"
                BlueprintName = "AWSCostMonitorTests"
                ReferencedContainer = "container:AWSCostMonitor.xcodeproj">
@@ -54,7 +54,7 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4F8E7ED82C56AE8300ED9B38"
+               BlueprintIdentifier = "7A8F6BE72E3D701000A26D48"
                BuildableName = "AWSCostMonitorUITests.xctest"
                BlueprintName = "AWSCostMonitorUITests"
                ReferencedContainer = "container:AWSCostMonitor.xcodeproj">
@@ -76,7 +76,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4F8E7EBD2C56AE8100ED9B38"
+            BlueprintIdentifier = "7A8F6BCF2E3D700F00A26D48"
             BuildableName = "AWSCostMonitor.app"
             BlueprintName = "AWSCostMonitor"
             ReferencedContainer = "container:AWSCostMonitor.xcodeproj">
@@ -96,7 +96,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4F8E7EBD2C56AE8100ED9B38"
+            BlueprintIdentifier = "7A8F6BCF2E3D700F00A26D48"
             BuildableName = "AWSCostMonitor.app"
             BlueprintName = "AWSCostMonitor"
             ReferencedContainer = "container:AWSCostMonitor.xcodeproj">
