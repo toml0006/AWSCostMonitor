@@ -95,7 +95,7 @@ const Pricing = () => {
             
             <div className="price-amount">
               <span className="currency">$</span>
-              <span className="number">4.99</span>
+              <span className="number">3.99</span>
               <span className="period">/once</span>
             </div>
             
