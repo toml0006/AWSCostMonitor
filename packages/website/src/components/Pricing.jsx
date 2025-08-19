@@ -139,11 +139,10 @@ const Pricing = () => {
               </div>
             </div>
             
-            <a href="https://apps.apple.com/app/awscostmonitor" 
-               className="btn btn-primary price-cta">
+            <button className="btn btn-primary price-cta" disabled>
               <Apple size={18} />
-              Get on App Store
-            </a>
+              Coming Soon
+            </button>
             
             <p className="support-note">
               Supporting indie development, one coffee at a time ☕
