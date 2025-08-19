@@ -282,6 +282,7 @@ class AWSConfigAccessManager: ObservableObject {
 extension Notification.Name {
     static let awsConfigAccessGranted = Notification.Name("awsConfigAccessGranted")
     static let awsConfigAccessRevoked = Notification.Name("awsConfigAccessRevoked")
+    static let awsConfigDemoMode = Notification.Name("awsConfigDemoMode")
 }
 
 // MARK: - SwiftUI View for First Run
@@ -290,6 +291,7 @@ import SwiftUI
 struct AWSConfigAccessView: View {
     @ObservedObject private var accessManager = AWSConfigAccessManager.shared
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("HasDismissedConfigAccess") private var hasDismissedConfigAccess: Bool = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -329,6 +331,22 @@ struct AWSConfigAccessView: View {
                 .controlSize(.large)
             }
             .padding(.top)
+            
+            // Later button styled as a link with explanation
+            Button(action: {
+                // Set flag to remember user chose to use demo mode
+                hasDismissedConfigAccess = true
+                // Post notification to load demo mode
+                NotificationCenter.default.post(name: .awsConfigDemoMode, object: nil)
+                dismiss()
+            }) {
+                Text("Continue with demo data instead")
+                    .foregroundColor(.accentColor)
+                    .underline()
+            }
+            .buttonStyle(.plain)
+            .help("Explore the app with sample data without granting access")
+            .padding(.top, 8)
         }
         .padding(30)
         .frame(width: 450)

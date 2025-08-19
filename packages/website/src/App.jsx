@@ -25,6 +25,7 @@ import './styles/memphis.css'
 import './styles/unsigned-guide.css'
 import './styles/themes.css'
 import './styles/changelog.css'
+import './styles/team-cache.css'
 
 // Context
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -44,6 +45,7 @@ import MoneyRain from './components/MoneyRain'
 import ThemeToggle from './components/ThemeToggle'
 import Changelog from './components/Changelog'
 import Privacy from './components/Privacy'
+import TeamCacheSetup from './components/TeamCacheSetup'
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -96,6 +98,7 @@ function App() {
           <Route path="/changelog" element={<ChangelogPage />} />
           <Route path="/unsigned-app-guide" element={<UnsignedAppGuide />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/team-cache-setup" element={<TeamCacheSetup />} />
         </Routes>
       </Router>
     </ThemeProvider>

@@ -36,20 +36,26 @@ class CostAlertManager: ObservableObject {
     init() {
         loadSettings()
         loadSentAlerts()
-        checkNotificationPermissions()
+        // Delay permission check slightly to ensure proper initialization
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.checkNotificationPermissions()
+        }
     }
     
     // MARK: - Notification Permissions
     
     func requestNotificationPermissions() async {
         do {
+            // Mark that we've now asked for permission
+            UserDefaults.standard.set(true, forKey: "HasRequestedNotificationPermission")
+            
             let granted = try await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
             await MainActor.run {
                 checkNotificationPermissions()
             }
-            print("Notification permission \(granted ? "granted" : "denied")")
+            print("[NotificationPermissions] Permission \(granted ? "granted" : "denied")")
         } catch {
-            print("Error requesting notification permissions: \(error)")
+            print("[NotificationPermissions] Error requesting permissions: \(error)")
             // If notifications are blocked at system level, update status
             await MainActor.run {
                 if (error as NSError).code == 1 {
@@ -63,8 +69,40 @@ class CostAlertManager: ObservableObject {
     func checkNotificationPermissions() {
         notificationCenter.getNotificationSettings { settings in
             Task { @MainActor in
-                self.notificationPermissionStatus = settings.authorizationStatus
+                // Log the actual status for debugging
+                print("[NotificationPermissions] Authorization status: \(settings.authorizationStatus.rawValue)")
+                print("[NotificationPermissions] Status description: \(self.describeStatus(settings.authorizationStatus))")
+                
+                // On macOS, if we've never asked for permission but notifications are disabled,
+                // the system might report it as denied. We need to check if we've ever asked.
+                let hasAskedBefore = UserDefaults.standard.bool(forKey: "HasRequestedNotificationPermission")
+                
+                // Additional check: on macOS, apps that have never requested permission might
+                // show as denied if notifications are globally disabled or if the app doesn't
+                // appear in notification settings yet
+                if !hasAskedBefore && (settings.authorizationStatus == .denied || settings.authorizationStatus == .notDetermined) {
+                    // If we haven't asked before, always show as notDetermined
+                    print("[NotificationPermissions] First time check - treating as notDetermined")
+                    self.notificationPermissionStatus = .notDetermined
+                } else if hasAskedBefore {
+                    // If we have asked before, use the actual status
+                    self.notificationPermissionStatus = settings.authorizationStatus
+                } else {
+                    // Fallback to actual status
+                    self.notificationPermissionStatus = settings.authorizationStatus
+                }
             }
+        }
+    }
+    
+    private func describeStatus(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: return "notDetermined"
+        case .denied: return "denied"
+        case .authorized: return "authorized"
+        case .provisional: return "provisional"
+        case .ephemeral: return "ephemeral"
+        @unknown default: return "unknown"
         }
     }
     

@@ -21,6 +21,7 @@ class AWSManager: ObservableObject {
     @Published var profiles: [AWSProfile] = []
     @Published var realProfiles: [AWSProfile] = []
     @Published var demoProfiles: [AWSProfile] = []
+    @Published var isDemoMode: Bool = false
     @Published var selectedProfile: AWSProfile?
     @Published var costData: [CostData] = [] {
         didSet {
@@ -210,6 +211,9 @@ class AWSManager: ObservableObject {
         log(.info, category: "Config", "AWSManager initialized")
         print("DEBUG: AWSManager init() called at \(Date())")
         
+        // Initialize team cache services for all profiles
+        initializeTeamCacheServices()
+        
         // Set up AWS SDK environment variables early if we're sandboxed
         if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
             log(.info, category: "Config", "App is sandboxed - configuring AWS SDK environment variables")
@@ -262,10 +266,17 @@ class AWSManager: ObservableObject {
             object: nil
         )
         
+        // Listen for demo mode selection
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(enableDemoMode),
+            name: .awsConfigDemoMode,
+            object: nil
+        )
+        
         // Load profiles on initialization
         loadProfiles()
-        // Load the stored user preference for the selected profile
-        loadSelectedProfile()
+        // Note: loadSelectedProfile() is now called after profiles are loaded in loadProfiles()
         // Load the display format preference
         loadDisplayFormat()
         // Load profile budgets
@@ -330,7 +341,24 @@ class AWSManager: ObservableObject {
         
         // Also schedule a secondary check after a delay to catch any edge cases
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            self?.checkForStartupRefresh()
+            guard let self = self else { return }
+            
+            // Final failsafe: if still no profile selected, select the first one
+            if self.selectedProfile == nil && !self.profiles.isEmpty {
+                print("[DEBUG] FAILSAFE: No profile selected after 2 seconds, selecting first profile")
+                self.selectedProfile = self.profiles.first
+                if let firstProfile = self.profiles.first {
+                    self.log(.warning, category: "Startup", "FAILSAFE: Auto-selected first profile: \(firstProfile.name)")
+                    self.saveSelectedProfile(profile: firstProfile)
+                    
+                    // Trigger immediate refresh
+                    Task {
+                        await self.fetchCostForSelectedProfile()
+                    }
+                }
+            }
+            
+            self.checkForStartupRefresh()
         }
         
         // Restore auto-refresh state if it was enabled
@@ -424,14 +452,43 @@ class AWSManager: ObservableObject {
     
     // Handle AWS config access granted notification
     @objc func awsConfigAccessGranted() {
-        log(.info, category: "Config", "AWS config access granted, reloading profiles")
+        log(.info, category: "Config", "AWS config access granted, transitioning from demo mode")
+        
+        // Clear demo mode flag
+        isDemoMode = false
+        
         // Clear any previous error
         errorMessage = nil
-        // Reload profiles
+        
+        // Clear all demo data and caches
+        costData = []
+        serviceCosts = []
+        dailyCostsByProfile.removeAll()
+        dailyServiceCostsByProfile.removeAll()
+        costCache.removeAll()
+        cacheStatus.removeAll()
+        lastMonthData.removeAll()
+        
+        // Clear the selected profile if it was a demo profile
+        if let currentProfile = selectedProfile,
+           demoProfiles.contains(where: { $0.name == currentProfile.name }) {
+            selectedProfile = nil
+            UserDefaults.standard.removeObject(forKey: "SelectedAWSProfileName")
+        }
+        
+        // Reload profiles from AWS config
         loadProfiles()
-        // Load the selected profile
-        loadSelectedProfile()
-        // Fetch cost data if we have a selected profile
+        
+        // If we now have real profiles but no selection, select the first one
+        if selectedProfile == nil && !realProfiles.isEmpty {
+            selectedProfile = realProfiles.first
+            if let profile = selectedProfile {
+                log(.info, category: "Config", "Auto-selected first real profile: \(profile.name)")
+                saveSelectedProfile(profile: profile)
+            }
+        }
+        
+        // Fetch cost data for the selected profile
         if selectedProfile != nil {
             Task {
                 await fetchCostForSelectedProfile()
@@ -439,9 +496,54 @@ class AWSManager: ObservableObject {
         }
     }
     
+    @objc func enableDemoMode() {
+        log(.info, category: "Config", "User selected demo mode - loading demo profiles only")
+        
+        // Set demo mode flag
+        isDemoMode = true
+        
+        // Clear any previous error
+        errorMessage = nil
+        
+        // Clear any existing real profile data
+        costData = []
+        serviceCosts = []
+        dailyCostsByProfile.removeAll()
+        dailyServiceCostsByProfile.removeAll()
+        costCache.removeAll()
+        cacheStatus.removeAll()
+        lastMonthData.removeAll()
+        
+        // Set profiles to only demo profiles
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.profiles = self.demoProfiles
+            self.realProfiles = []
+        }
+        
+        // Select the demo profile if no profile is selected
+        if selectedProfile == nil && !demoProfiles.isEmpty {
+            selectedProfile = demoProfiles.first
+            if let profile = selectedProfile {
+                log(.info, category: "Demo", "Auto-selected demo profile: \(profile.name)")
+                // Save the selection
+                saveSelectedProfile(profile: profile)
+                // Fetch demo data
+                Task {
+                    await fetchCostForSelectedProfile()
+                }
+            }
+        }
+    }
+    
     // Function to find the AWS config file and parse profiles.
     func loadProfiles() {
         log(.debug, category: "Config", "Loading AWS profiles")
+        
+        // Add demo profiles for App Store review
+        #if !OPENSOURCE
+        self.demoProfiles = DemoDataProvider.demoProfiles
+        #endif
         
         // Use AWSConfigAccessManager for sandboxed file access
         let accessManager = AWSConfigAccessManager.shared
@@ -451,6 +553,26 @@ class AWSManager: ObservableObject {
             let error = "AWS config access not granted. Please grant access to your .aws folder."
             errorMessage = error
             log(.error, category: "Config", error)
+            
+            // If no AWS access, enable demo mode for App Store review
+            #if !OPENSOURCE
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.isDemoMode = true
+                self.profiles = self.demoProfiles
+                // Auto-select first demo profile or restore saved selection
+                self.loadSelectedProfile()
+                if self.selectedProfile == nil && !self.demoProfiles.isEmpty {
+                    self.selectedProfile = self.demoProfiles[0]
+                }
+                // Load demo data if we have a profile
+                if self.selectedProfile != nil {
+                    Task {
+                        await self.loadDemoData()
+                    }
+                }
+            }
+            #endif
             return
         }
         
@@ -459,6 +581,26 @@ class AWSManager: ObservableObject {
             let error = "Failed to read AWS config file. Please ensure ~/.aws/config exists."
             errorMessage = error
             log(.error, category: "Config", error)
+            
+            // If config read fails, enable demo mode for App Store review
+            #if !OPENSOURCE
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.isDemoMode = true
+                self.profiles = self.demoProfiles
+                // Auto-select first demo profile or restore saved selection
+                self.loadSelectedProfile()
+                if self.selectedProfile == nil && !self.demoProfiles.isEmpty {
+                    self.selectedProfile = self.demoProfiles[0]
+                }
+                // Load demo data if we have a profile
+                if self.selectedProfile != nil {
+                    Task {
+                        await self.loadDemoData()
+                    }
+                }
+            }
+            #endif
             return
         }
         
@@ -500,7 +642,10 @@ class AWSManager: ObservableObject {
         if !shouldScan {
             // No need to scan - just apply existing visibility settings
             log(.info, category: "ProfileManagement", "Not scanning - applying existing visibility settings")
-            self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.profiles = self.profileManager.getVisibleProfiles(from: currentProfiles)
+            }
             return
         }
         
@@ -512,7 +657,10 @@ class AWSManager: ObservableObject {
             // First launch or incomplete setup - initialize profiles without showing alerts
             log(.info, category: "ProfileManagement", "First launch or incomplete setup detected, initializing profiles without alerts")
             profileManager.initializeProfiles(currentProfiles)
-            self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.profiles = self.profileManager.getVisibleProfiles(from: currentProfiles)
+            }
             return
         }
         
@@ -523,7 +671,47 @@ class AWSManager: ObservableObject {
         log(.info, category: "ProfileManagement", "Changes detected - new: \(changes.newProfiles.count), removed: \(changes.removedProfiles.count)")
         
         // Set profiles to filtered visible profiles
-        self.profiles = profileManager.getVisibleProfiles(from: currentProfiles)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let visibleProfiles = self.profileManager.getVisibleProfiles(from: currentProfiles)
+            self.profiles = visibleProfiles
+            
+            print("[DEBUG] Profiles loaded: \(visibleProfiles.map { $0.name })")
+            print("[DEBUG] Current selectedProfile: \(self.selectedProfile?.name ?? "nil")")
+            
+            // After profiles are loaded, restore the selected profile
+            self.loadSelectedProfile()
+            
+            print("[DEBUG] After loadSelectedProfile: \(self.selectedProfile?.name ?? "nil")")
+            
+            // If still no profile selected and we have profiles, select the first one
+            if self.selectedProfile == nil && !self.profiles.isEmpty {
+                print("[DEBUG] No profile selected, auto-selecting first from \(self.profiles.count) profiles")
+                self.selectedProfile = self.profiles.first
+                if let firstProfile = self.profiles.first {
+                    print("[DEBUG] Auto-selected profile: \(firstProfile.name)")
+                    self.log(.info, category: "Startup", "No saved profile found, auto-selected first profile: \(firstProfile.name)")
+                    self.saveSelectedProfile(profile: firstProfile)
+                    
+                    // Load budget and start refresh for the selected profile
+                    let budget = self.getBudget(for: firstProfile.name)
+                    self.refreshInterval = budget.refreshIntervalMinutes
+                    
+                    // Start automatic refresh if not already running
+                    if self.refreshTimer == nil && !self.autoRefreshEnabled {
+                        self.log(.info, category: "Startup", "Starting automatic refresh for auto-selected profile: \(firstProfile.name)")
+                        self.startAutomaticRefresh()
+                    }
+                    
+                    // Trigger immediate refresh to load data
+                    Task {
+                        await self.fetchCostForSelectedProfile()
+                    }
+                }
+            } else if self.selectedProfile != nil {
+                print("[DEBUG] Profile already selected: \(self.selectedProfile!.name)")
+            }
+        }
         
         // Handle new profiles (only show alerts after first launch)
         if !changes.newProfiles.isEmpty {
@@ -578,8 +766,10 @@ class AWSManager: ObservableObject {
             // Find the profile object corresponding to the stored name
             self.selectedProfile = self.profiles.first { $0.name == storedProfileName }
             
-            // Load profile-specific refresh settings
             if self.selectedProfile != nil {
+                log(.info, category: "Startup", "Restored saved profile: \(storedProfileName)")
+                
+                // Load profile-specific refresh settings
                 let budget = getBudget(for: storedProfileName)
                 self.refreshInterval = budget.refreshIntervalMinutes
                 
@@ -588,21 +778,13 @@ class AWSManager: ObservableObject {
                     log(.info, category: "Startup", "Starting automatic refresh for loaded profile: \(storedProfileName)")
                     startAutomaticRefresh()
                 }
+            } else {
+                log(.warning, category: "Startup", "Saved profile '\(storedProfileName)' not found in current profiles")
             }
         } else {
-            // If no profile is stored, default to the first one if available.
-            self.selectedProfile = self.profiles.first
-            if let firstProfile = self.profiles.first {
-                let budget = getBudget(for: firstProfile.name)
-                self.refreshInterval = budget.refreshIntervalMinutes
-                
-                // Start automatic refresh for the default profile
-                if refreshTimer == nil && !autoRefreshEnabled {
-                    log(.info, category: "Startup", "Starting automatic refresh for default profile: \(firstProfile.name)")
-                    startAutomaticRefresh()
-                }
-            }
+            log(.info, category: "Startup", "No saved profile preference found")
         }
+        // Note: Fallback to first profile is handled in loadProfiles() after this function is called
     }
     
     // Saves the selected profile name to UserDefaults.
@@ -1644,6 +1826,14 @@ class AWSManager: ObservableObject {
             return
         }
         
+        // Check if we're in demo mode
+        #if !OPENSOURCE
+        if isDemoMode || profile.name.hasPrefix("demo-") {
+            await loadDemoData()
+            return
+        }
+        #endif
+        
         // Check screen state before making API call (unless forced)
         if !force && !ScreenStateMonitor.shared.shouldAllowRefresh() {
             log(.info, category: "API", "Skipping refresh: screen is off or system is locked")
@@ -1916,7 +2106,12 @@ class AWSManager: ObservableObject {
                     self.dailyCostsByProfile[profile.name] = dailyCosts
                     self.dailyServiceCostsByProfile[profile.name] = dailyServiceCosts
                     self.cacheStatus[profile.name] = Date()
-                    
+                }
+                
+                // Update team cache after successful API call
+                await updateTeamCacheAfterAPICall()
+                
+                await MainActor.run {
                     // Update UI data
                     self.costData.removeAll()
                     self.costData.append(CostData(
@@ -2730,16 +2925,23 @@ class AWSManager: ObservableObject {
     }
     
     // Initialize S3 cache services for enabled profiles
-    private func initializeTeamCacheServices() {
+    func initializeTeamCacheServices() {
+        print("[TeamCache] Initializing team cache services...")
         teamCacheServices.removeAll()
         
         Task { @MainActor in
+            print("[TeamCache] Found \(profileTeamCacheSettings.count) profiles with team cache settings")
             for (profileName, settings) in profileTeamCacheSettings {
                 if settings.teamCacheEnabled, let config = settings.teamCacheConfig, config.isValid {
                     do {
-                        let s3Service = try S3CacheService(config: config)
+                        // Create credentials provider for this profile
+                        let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
+                        
+                        // Initialize S3 service with profile-specific credentials
+                        let s3Service = try await S3CacheService(config: config, profileName: profileName, credentialsProvider: credentialsProvider)
                         teamCacheServices[profileName] = s3Service
-                        log(.debug, category: "TeamCache", "Initialized S3 cache service for profile: \(profileName)")
+                        print("[TeamCache] ✅ Initialized S3 cache service for profile: \(profileName)")
+                        log(.info, category: "TeamCache", "Initialized S3 cache service for profile: \(profileName)")
                     } catch {
                         log(.error, category: "TeamCache", "Failed to initialize S3 cache service for \(profileName): \(error.localizedDescription)")
                     }
@@ -2818,9 +3020,16 @@ class AWSManager: ObservableObject {
         let settings = getTeamCacheSettings(for: profile.name)
         guard settings.teamCacheEnabled,
               let cacheService = teamCacheServices[profile.name] else {
-            log(.debug, category: "TeamCache", "Team cache not enabled for profile: \(profile.name)")
+            log(.info, category: "TeamCache", "Team cache not enabled for profile: \(profile.name)")
             return false
         }
+        
+        guard let cacheService = teamCacheServices[profile.name] else {
+            log(.warning, category: "TeamCache", "Team cache service not initialized for profile: \(profile.name)")
+            return false
+        }
+        
+        log(.info, category: "TeamCache", "📥 Team cache service found for profile: \(profile.name)")
         
         // Resolve account ID and generate cache key
         guard let accountId = await resolveAccountId(for: profile.name) else {
@@ -2875,13 +3084,22 @@ class AWSManager: ObservableObject {
     
     // Update team cache after successful API call
     private func updateTeamCacheAfterAPICall() async {
-        log(.debug, category: "TeamCache", "Updating team cache after API call")
+        print("[TeamCache] 📤 Starting team cache update after API call")
+        log(.info, category: "TeamCache", "📤 Starting team cache update after API call")
         
         for (profileName, cacheEntry) in costCache {
+            print("[TeamCache] Checking team cache for profile: \(profileName)")
+            log(.debug, category: "TeamCache", "Checking team cache for profile: \(profileName)")
+            
             // Check if team cache is enabled for this profile
             let settings = getTeamCacheSettings(for: profileName)
-            guard settings.teamCacheEnabled,
-                  let cacheService = teamCacheServices[profileName] else {
+            guard settings.teamCacheEnabled else {
+                log(.debug, category: "TeamCache", "Team cache not enabled for profile: \(profileName)")
+                continue
+            }
+            
+            guard let cacheService = teamCacheServices[profileName] else {
+                log(.warning, category: "TeamCache", "Team cache service not initialized for profile: \(profileName)")
                 continue
             }
             
@@ -2896,7 +3114,8 @@ class AWSManager: ObservableObject {
                 let remoteCacheEntry = convertToRemoteCacheEntry(cacheEntry, accountId: accountId)
                 
                 try await cacheService.putObject(key: cacheKey, entry: remoteCacheEntry)
-                log(.info, category: "TeamCache", "Updated team cache for profile: \(profileName)")
+                print("[TeamCache] ✅ Successfully stored cache in S3 for profile: \(profileName), key: \(cacheKey)")
+                log(.info, category: "TeamCache", "✅ Successfully stored cache in S3 for profile: \(profileName), key: \(cacheKey)")
             } catch {
                 log(.error, category: "TeamCache", "Failed to update team cache for \(profileName): \(error.localizedDescription)")
             }
@@ -2921,8 +3140,12 @@ class AWSManager: ObservableObject {
     // Resolve AWS account ID for a profile
     private func resolveAccountId(for profileName: String) async -> String? {
         do {
-            // Use AWS STS to get account ID
+            // Create credentials provider for the specific profile
+            let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
+            
+            // Use AWS STS to get account ID with profile-specific credentials
             let stsConfig = try await STSClient.STSClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
                 region: "us-east-1" // STS is available in all regions
             )
             let stsClient = STSClient(config: stsConfig)
@@ -2947,6 +3170,8 @@ class AWSManager: ObservableObject {
     private func convertToRemoteCacheEntry(_ localEntry: CostCacheEntry, accountId: String) -> RemoteCacheEntry {
         let cacheKey = generateCacheKey(accountId: accountId)
         let metadata = CacheMetadata(
+            createdBy: "AWSCostMonitor",
+            createdAt: Date(),
             ttl: 3600, // 1 hour TTL
             cacheKey: cacheKey
         )
@@ -3057,18 +3282,44 @@ class AWSManager: ObservableObject {
     // Test team cache connection for a profile
     func testTeamCacheConnection(for profileName: String) async -> Bool {
         let settings = getTeamCacheSettings(for: profileName)
-        guard settings.teamCacheEnabled,
-              let cacheService = teamCacheServices[profileName] else {
+        guard settings.teamCacheEnabled else {
             log(.warning, category: "TeamCache", "Team cache not enabled for profile: \(profileName)")
             return false
         }
         
+        // Check if service exists, if not try to create it
+        var cacheService = teamCacheServices[profileName]
+        if cacheService == nil {
+            log(.info, category: "TeamCache", "Cache service not found, initializing for test...")
+            
+            // Try to initialize the service
+            if let config = settings.teamCacheConfig, config.isValid {
+                do {
+                    let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
+                    cacheService = try await S3CacheService(config: config, profileName: profileName, credentialsProvider: credentialsProvider)
+                    teamCacheServices[profileName] = cacheService
+                    log(.info, category: "TeamCache", "Initialized cache service for test")
+                } catch {
+                    log(.error, category: "TeamCache", "Failed to initialize cache service for test: \(error.localizedDescription)")
+                    return false
+                }
+            } else {
+                log(.error, category: "TeamCache", "Invalid team cache configuration for profile: \(profileName)")
+                return false
+            }
+        }
+        
+        guard let service = cacheService else {
+            log(.error, category: "TeamCache", "Could not get cache service for profile: \(profileName)")
+            return false
+        }
+        
         do {
-            try await cacheService.testConnection()
-            log(.info, category: "TeamCache", "Team cache connection test successful for: \(profileName)")
+            try await service.testConnection()
+            log(.info, category: "TeamCache", "✅ Team cache connection test successful for: \(profileName)")
             return true
         } catch {
-            log(.error, category: "TeamCache", "Team cache connection test failed for \(profileName): \(error.localizedDescription)")
+            log(.error, category: "TeamCache", "❌ Team cache connection test failed for \(profileName): \(error.localizedDescription)")
             return false
         }
     }
@@ -3140,6 +3391,113 @@ class AWSManager: ObservableObject {
         anomalies = detectedAnomalies
         log(.info, category: "Analytics", "Detected \(anomalies.count) anomalies for \(profileName)")
     }
+    
+    // MARK: - Demo Mode Support
+    
+    #if !OPENSOURCE
+    // Load demo data for App Store review
+    func loadDemoData() async {
+        await MainActor.run {
+            self.isLoading = true
+            self.errorMessage = nil
+        }
+        
+        // Generate realistic demo data
+        let demoData = DemoDataProvider.generateDemoCostData()
+        
+        await MainActor.run {
+            // Clear any existing data
+            self.costData = []
+            self.serviceCosts = []
+            
+            // Use consistent profile name for demo data
+            let demoProfileName = DemoDataProvider.demoProfileName
+            
+            // Set the MTD cost
+            self.costData = [CostData(
+                profileName: demoProfileName,
+                amount: Decimal(demoData.mtdSpend),
+                currency: "USD"
+            )]
+            
+            // Set service breakdown
+            self.serviceCosts = demoData.services
+            
+            // Create and populate cost cache entry for demo data
+            let calendar = Calendar.current
+            let now = Date()
+            let startOfMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
+            let endOfMonth = calendar.dateInterval(of: .month, for: now)?.end ?? now
+            
+            let cacheEntry = CostCacheEntry(
+                profileName: demoProfileName,
+                fetchDate: Date(),
+                mtdTotal: Decimal(demoData.mtdSpend),
+                currency: "USD",
+                dailyCosts: demoData.dailyCosts.map { dailyCost in
+                    DailyCost(
+                        date: dailyCost.date,
+                        amount: Decimal(dailyCost.amount),
+                        currency: "USD"
+                    )
+                },
+                serviceCosts: demoData.services,
+                startDate: startOfMonth,
+                endDate: endOfMonth
+            )
+            self.costCache[demoProfileName] = cacheEntry
+            
+            // Set daily costs for calendar view - use the same profile name as CostData
+            if true {  // Always set for demo data
+                let profileName = demoProfileName
+                self.dailyCostsByProfile[profileName] = demoData.dailyCosts.map { dailyCost in
+                    DailyCost(
+                        date: dailyCost.date,
+                        amount: Decimal(dailyCost.amount),
+                        currency: "USD"
+                    )
+                }
+                
+                // Convert to daily service costs for histogram
+                var dailyServiceCosts: [DailyServiceCost] = []
+                for dailyCost in demoData.dailyCosts {
+                    for service in dailyCost.services {
+                        dailyServiceCosts.append(DailyServiceCost(
+                            date: dailyCost.date,
+                            serviceName: service.serviceName,
+                            amount: service.amount,
+                            currency: service.currency
+                        ))
+                    }
+                }
+                self.dailyServiceCostsByProfile[profileName] = dailyServiceCosts
+                
+                // Set cache status
+                self.cacheStatus[profileName] = Date()
+                
+                // Set forecast
+                self.projectedMonthlyTotal = Decimal(demoData.forecast)
+                
+                // Determine trend
+                let percentageChange = ((demoData.mtdSpend - demoData.previousMonthSpend) / demoData.previousMonthSpend) * 100
+                if demoData.mtdSpend > demoData.previousMonthSpend * 1.1 {
+                    self.costTrend = .up(percentage: percentageChange)
+                } else if demoData.mtdSpend < demoData.previousMonthSpend * 0.9 {
+                    self.costTrend = .down(percentage: abs(percentageChange))
+                } else {
+                    self.costTrend = .stable
+                }
+            }
+            
+            self.isLoading = false
+            self.lastAPICallTime = Date()
+            self.nextRefreshTime = Date().addingTimeInterval(TimeInterval(self.refreshInterval * 60))
+            
+            // Log demo data load
+            log(.info, category: "Demo", "Loaded demo data for profile: \(self.selectedProfile?.name ?? "unknown")")
+        }
+    }
+    #endif
 }
 
 // Error enum for cost fetching

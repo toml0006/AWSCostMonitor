@@ -9,6 +9,8 @@ import Foundation
 import OSLog
 import AWSS3
 import AWSClientRuntime
+import AWSSDKIdentity
+import SmithyIdentity
 import Compression
 import ClientRuntime
 
@@ -28,6 +30,7 @@ protocol S3CacheServiceProtocol {
 class S3CacheService: ObservableObject, S3CacheServiceProtocol {
     private let logger = Logger(subsystem: "com.middleout.AWSCostMonitor", category: "S3CacheService")
     private let config: TeamCacheConfig
+    private let profileName: String
     private let s3Client: S3Client
     private let retryPolicy: RetryPolicy
     
@@ -35,21 +38,23 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
     @Published var isConnected = false
     @Published var lastError: CacheError?
     
-    init(config: TeamCacheConfig) throws {
+    init(config: TeamCacheConfig, profileName: String, credentialsProvider: any AWSCredentialIdentityResolver) async throws {
         guard config.isValid else {
             throw CacheError.invalidConfiguration
         }
         
         self.config = config
+        self.profileName = profileName
         self.retryPolicy = RetryPolicy()
         
-        // Initialize S3 client with region and credentials
-        let s3Config = try S3Client.S3ClientConfiguration(
+        // Initialize S3 client with region and profile-specific credentials
+        let s3Config = try await S3Client.S3ClientConfiguration(
+            awsCredentialIdentityResolver: credentialsProvider,
             region: config.s3Region
         )
         self.s3Client = S3Client(config: s3Config)
         
-        logger.info("S3CacheService initialized for bucket: \(config.s3BucketName), region: \(config.s3Region)")
+        logger.info("S3CacheService initialized for profile: \(profileName), bucket: \(config.s3BucketName), region: \(config.s3Region)")
     }
     
     // MARK: - Public Interface

@@ -229,9 +229,10 @@ struct AWSCostMonitorApp: App {
     }
     
     var body: some Scene {
-        // Show AWS config access window if needed
+        // Show AWS config access window if needed (but not during onboarding)
         WindowGroup("AWS Configuration Access") {
-            if configAccessManager.needsAccessGrant {
+            let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "HasCompletedOnboarding")
+            if configAccessManager.needsAccessGrant && hasCompletedOnboarding {
                 AWSConfigAccessView()
                     .frame(width: 450, height: 400)
             }

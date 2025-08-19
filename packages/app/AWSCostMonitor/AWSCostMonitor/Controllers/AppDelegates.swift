@@ -63,28 +63,40 @@ var globalSettingsWindow: NSWindow?
 
 // Helper function to show settings window
 func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "Profiles") {
-    if let window = globalSettingsWindow {
+    // Use async dispatch to ensure proper window management after transitions
+    DispatchQueue.main.async {
+        if let window = globalSettingsWindow, window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        
+        let settingsView = SettingsView(initialSelectedCategory: selectedTab)
+            .environmentObject(awsManager)
+        
+        let controller = NSHostingController(rootView: settingsView)
+        
+        let window = NSWindow(
+            contentViewController: controller
+        )
+        window.title = "AWSCostMonitor Settings"
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.setContentSize(NSSize(width: 600, height: 450))
+        window.center()
+        
+        // Clean up reference when window closes
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            globalSettingsWindow = nil
+        }
+        
+        globalSettingsWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        return
     }
-    
-    let settingsView = SettingsView(initialSelectedCategory: selectedTab)
-        .environmentObject(awsManager)
-    
-    let controller = NSHostingController(rootView: settingsView)
-    
-    let window = NSWindow(
-        contentViewController: controller
-    )
-    window.title = "AWSCostMonitor Settings"
-    window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-    window.setContentSize(NSSize(width: 600, height: 450))
-    window.center()
-    
-    globalSettingsWindow = window
-    window.makeKeyAndOrderFront(nil)
-    NSApp.activate(ignoringOtherApps: true)
 }
 
 // Helper function to show refresh settings specifically
@@ -98,8 +110,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Initialize the status bar controller
-        statusBarController = StatusBarController(awsManager: AWSManager.shared)
+        // Initialize the status bar controller with a small delay to ensure proper setup
+        DispatchQueue.main.async { [weak self] in
+            self?.statusBarController = StatusBarController(awsManager: AWSManager.shared)
+        }
         
         // Hide the dock icon
         NSApp.setActivationPolicy(.accessory)

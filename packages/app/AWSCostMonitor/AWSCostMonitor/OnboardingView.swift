@@ -11,8 +11,10 @@ struct OnboardingView: View {
     @State private var enableAutoRefresh = true
     @State private var enableAnomalyAlerts = true
     @State private var refreshInterval: Double = 360
+    @State private var awsAccessGranted = false
+    @ObservedObject private var accessManager = AWSConfigAccessManager.shared
     
-    let totalSteps = 5
+    let totalSteps = 6 // Increased from 5 to include AWS access step
     
     var body: some View {
         VStack(spacing: 0) {
@@ -44,17 +46,20 @@ struct OnboardingView: View {
                 welcomeStep
                     .tag(0)
                 
-                profileSelectionStep
+                awsAccessStep
                     .tag(1)
                 
-                budgetSetupStep
+                profileSelectionStep
                     .tag(2)
                 
-                notificationStep
+                budgetSetupStep
                     .tag(3)
                 
-                completionStep
+                notificationStep
                     .tag(4)
+                
+                completionStep
+                    .tag(5)
             }
             .tabViewStyle(.automatic)
             .frame(height: 350)
@@ -80,7 +85,7 @@ struct OnboardingView: View {
                     }
                     .keyboardShortcut(.rightArrow, modifiers: [])
                     .buttonStyle(.borderedProminent)
-                    .disabled(currentStep == 1 && selectedProfile == nil)
+                    .disabled(currentStep == 2 && selectedProfile == nil)
                 } else {
                     Button("Get Started") {
                         completeOnboarding()
@@ -118,6 +123,71 @@ struct OnboardingView: View {
             .font(.body)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 80)
+        }
+    }
+    
+    var awsAccessStep: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "folder.badge.questionmark")
+                .font(.system(size: 48))
+                .foregroundColor(.orange)
+            
+            Text("Grant AWS Configuration Access")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("AWSCostMonitor needs permission to read your AWS configuration files to load your profiles and monitor costs.")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Read AWS profiles from ~/.aws/config", systemImage: "doc.text")
+                Label("Access is limited to read-only", systemImage: "lock")
+                Label("Your credentials remain secure", systemImage: "shield.checkered")
+            }
+            .font(.system(size: 13))
+            .padding()
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(8)
+            
+            HStack(spacing: 15) {
+                if !accessManager.hasAccess {
+                    Button("Grant Access") {
+                        accessManager.requestAccess()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    
+                    Button("Use Demo Data") {
+                        // Enable demo mode
+                        awsManager.enableDemoMode()
+                        awsAccessGranted = false
+                        // Mark that user chose demo mode during onboarding
+                        UserDefaults.standard.set(true, forKey: "HasDismissedConfigAccess")
+                        currentStep += 1 // Skip to next step
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Access Granted")
+                            .foregroundColor(.green)
+                            .fontWeight(.medium)
+                    }
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .awsConfigAccessGranted)) { _ in
+            awsAccessGranted = true
+            // Auto-advance after a short delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation {
+                    currentStep += 1
+                }
+            }
         }
     }
     
@@ -410,16 +480,20 @@ struct OnboardingView: View {
         // Mark onboarding as completed
         UserDefaults.standard.set(true, forKey: "HasCompletedOnboarding")
         
-        // Close the window
-        if let window = NSApp.keyWindow {
-            window.close()
-        }
-        
-        // Fetch initial data
+        // Fetch initial data first before closing window
         if selectedProfile != nil {
             Task {
                 await awsManager.fetchCostForSelectedProfile()
             }
+        }
+        
+        // Close the window and ensure app remains active
+        DispatchQueue.main.async {
+            if let window = NSApp.keyWindow {
+                window.close()
+            }
+            // Ensure the app remains active after onboarding
+            NSApp.activate(ignoringOtherApps: false)
         }
     }
 }

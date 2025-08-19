@@ -329,21 +329,72 @@ struct RefreshSettingsTab: View {
 
 struct AWSSettingsTab: View {
     @EnvironmentObject var awsManager: AWSManager
+    @AppStorage("HasDismissedConfigAccess") private var hasDismissedConfigAccess: Bool = false
+    @ObservedObject private var accessManager = AWSConfigAccessManager.shared
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Profile Visibility section (moved to top)
+                // Show AWS folder selection if in demo mode
+                if awsManager.isDemoMode || (awsManager.realProfiles.isEmpty && !awsManager.demoProfiles.isEmpty) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "folder.badge.questionmark")
+                                .font(.system(size: 16))
+                                .foregroundColor(.orange)
+                            Text("AWS Configuration")
+                                .font(.headline)
+                        }
+                        
+                        Text("You're currently using demo data. Grant access to your AWS configuration folder to see your real AWS profiles and costs.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        HStack {
+                            Button("Select AWS Folder") {
+                                // Request AWS config access
+                                accessManager.requestAccess()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            
+                            Text("Select your ~/.aws folder")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Show current status
+                        if accessManager.hasAccess {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.green)
+                                Text("AWS folder access granted")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.green)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(8)
+                    
+                    Divider()
+                }
+                
+                // Profile Visibility section
                 Text("Profile Visibility")
-                .font(.headline)
+                    .font(.headline)
             
-            ProfileVisibilitySection()
-            
-            
+                ProfileVisibilitySection()
             }
             .padding()
         }
-        
+        .onReceive(NotificationCenter.default.publisher(for: .awsConfigAccessGranted)) { _ in
+            // Clear the dismissed flag when access is granted
+            hasDismissedConfigAccess = false
+            // The AWSManager will automatically reload profiles
+        }
         .onAppear {
             // AWS profiles settings loaded automatically
         }
@@ -745,6 +796,7 @@ struct DebugSettingsTab: View {
     @AppStorage("MaxLogEntries") private var maxLogEntries: Int = 1000
     @State private var showingExportSuccess = false
     @State private var exportedFileURL: URL?
+    @State private var showingResetConfirmation = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -880,6 +932,29 @@ struct DebugSettingsTab: View {
                 Spacer()
             }
             
+            Divider()
+            
+            // Reset All Settings Section
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Reset Application")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.red)
+                
+                Text("This will clear all settings and data, including profile configurations, preferences, and onboarding status. The app will restart as if freshly installed.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Button("Reset All Settings") {
+                    showingResetConfirmation = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            }
+            .padding()
+            .background(Color.red.opacity(0.05))
+            .cornerRadius(8)
+            
             Spacer()
         }
         .alert("Logs Exported", isPresented: $showingExportSuccess) {
@@ -893,6 +968,69 @@ struct DebugSettingsTab: View {
             if let url = exportedFileURL {
                 Text("Logs saved to: \(url.lastPathComponent)")
             }
+        }
+        .alert("Reset All Settings?", isPresented: $showingResetConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset Everything", role: .destructive) {
+                resetAllSettings()
+            }
+        } message: {
+            Text("This action cannot be undone. All your settings, preferences, and cached data will be permanently deleted. The app will quit and you'll need to restart it.")
+        }
+    }
+    
+    private func resetAllSettings() {
+        // Log the reset action
+        awsManager.log(.warning, category: "Config", "User initiated full settings reset")
+        
+        // Get all UserDefaults keys and remove them
+        let domain = Bundle.main.bundleIdentifier ?? "middleout.AWSCostMonitor"
+        UserDefaults.standard.removePersistentDomain(forName: domain)
+        UserDefaults.standard.synchronize()
+        
+        // Clear specific keys that might be stored outside the app's domain
+        let keysToReset = [
+            "HasCompletedOnboarding",
+            "HasDismissedConfigAccess",
+            "SelectedAWSProfileName",
+            "MenuBarDisplayFormat",
+            "RefreshIntervalMinutes",
+            "ShowCurrencySymbol",
+            "DecimalPlaces",
+            "UseThousandsSeparator",
+            "ShowMenuBarColors",
+            "DebugMode",
+            "MaxLogEntries",
+            "EnableAnomalyDetection",
+            "AnomalyThresholdPercentage",
+            "ProfileVisibilitySettings",
+            "ProfileBudgets",
+            "ProfileRemovedList",
+            "SeenProfiles",
+            "HiddenProfiles",
+            "VisibleProfiles"
+        ]
+        
+        for key in keysToReset {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        
+        // Clear any Team Cache settings
+        let profiles = awsManager.profiles
+        for profile in profiles {
+            UserDefaults.standard.removeObject(forKey: "TeamCacheConfig_\(profile.name)")
+            UserDefaults.standard.removeObject(forKey: "ProfileBudget_\(profile.name)")
+        }
+        
+        // Synchronize to ensure all changes are written
+        UserDefaults.standard.synchronize()
+        
+        // Log completion
+        awsManager.log(.info, category: "Config", "Settings reset complete. Quitting application.")
+        
+        // Quit the application after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NSApplication.shared.terminate(nil)
         }
     }
 }
@@ -914,10 +1052,17 @@ struct NotificationSettingsTab: View {
                 VStack(alignment: .leading) {
                     Text(permissionText)
                         .font(.subheadline)
-                    if awsManager.alertManager.notificationPermissionStatus != .authorized {
+                    if awsManager.alertManager.notificationPermissionStatus == .notDetermined {
                         Button("Request Permission") {
                             Task {
                                 await awsManager.alertManager.requestNotificationPermissions()
+                            }
+                        }
+                        .buttonStyle(.link)
+                    } else if awsManager.alertManager.notificationPermissionStatus == .denied {
+                        Button("Open System Settings") {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
+                                NSWorkspace.shared.open(url)
                             }
                         }
                         .buttonStyle(.link)
@@ -1078,7 +1223,7 @@ struct NotificationSettingsTab: View {
         case .provisional:
             return "Provisional notifications enabled"
         case .notDetermined:
-            return "Notification permission not requested"
+            return "Notification permission not yet requested"
         @unknown default:
             return "Unknown notification status"
         }
@@ -1713,11 +1858,15 @@ struct TeamCacheSettingsTab: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("S3 Bucket Name")
                                         .font(.caption)
-                                    TextField("my-team-cost-cache", text: $s3BucketName)
-                                        .textFieldStyle(.roundedBorder)
-                                        .onChange(of: s3BucketName) { _, _ in
-                                            saveTeamCacheSettings()
-                                        }
+                                    MacTextField(
+                                        placeholder: "my-team-cost-cache",
+                                        text: $s3BucketName,
+                                        onCommit: saveTeamCacheSettings
+                                    )
+                                    .frame(height: 22)
+                                    .onChange(of: s3BucketName) { _, _ in
+                                        saveTeamCacheSettings()
+                                    }
                                     Text("Must be globally unique and accessible by all team members")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
@@ -1747,11 +1896,15 @@ struct TeamCacheSettingsTab: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Cache Prefix")
                                         .font(.caption)
-                                    TextField("awscost-team-cache", text: $cachePrefix)
-                                        .textFieldStyle(.roundedBorder)
-                                        .onChange(of: cachePrefix) { _, _ in
-                                            saveTeamCacheSettings()
-                                        }
+                                    MacTextField(
+                                        placeholder: "awscost-team-cache",
+                                        text: $cachePrefix,
+                                        onCommit: saveTeamCacheSettings
+                                    )
+                                    .frame(height: 22)
+                                    .onChange(of: cachePrefix) { _, _ in
+                                        saveTeamCacheSettings()
+                                    }
                                     Text("Used to organize cache entries in the S3 bucket")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
@@ -1993,7 +2146,10 @@ struct TeamCacheSettingsTab: View {
     }
     
     private func saveTeamCacheSettings() {
-        guard let profile = selectedProfile else { return }
+        guard let profile = selectedProfile else { 
+            awsManager.log(.warning, category: "TeamCache", "No profile selected when saving team cache settings")
+            return 
+        }
         
         // Create configuration object
         let config = TeamCacheConfig(
@@ -2003,56 +2159,83 @@ struct TeamCacheSettingsTab: View {
             cachePrefix: cachePrefix
         )
         
-        // Save to UserDefaults
+        // Create profile settings
+        let profileSettings = ProfileTeamCacheSettings(
+            teamCacheEnabled: teamCacheEnabled,
+            teamCacheConfig: teamCacheEnabled ? config : nil
+        )
+        
+        // Update AWSManager's settings
+        awsManager.updateTeamCacheSettings(for: profile.name, settings: profileSettings)
+        
+        // Save to UserDefaults for persistence
         let key = "TeamCacheConfig_\(profile.name)"
         if let data = try? JSONEncoder().encode(config) {
             UserDefaults.standard.set(data, forKey: key)
-            awsManager.log(.info, category: "TeamCache", "Team cache settings saved for profile: \(profile.name)")
+            awsManager.log(.info, category: "TeamCache", "Team cache settings saved for profile: \(profile.name) - Enabled: \(teamCacheEnabled), Bucket: \(s3BucketName), Prefix: \(cachePrefix)")
+            
+            // Re-initialize team cache services after settings change
+            awsManager.initializeTeamCacheServices()
         } else {
             awsManager.log(.error, category: "TeamCache", "Failed to save team cache settings for profile: \(profile.name)")
         }
     }
     
     private func testConnection() {
-        guard let profile = selectedProfile, !s3BucketName.isEmpty else { return }
+        guard let profile = selectedProfile, !s3BucketName.isEmpty else { 
+            connectionTestResult = "Please enter a bucket name"
+            connectionTestIcon = "exclamationmark.circle.fill"
+            connectionTestColor = .orange
+            return 
+        }
         
         isTestingConnection = true
         connectionTestResult = nil
         connectionTestIcon = nil
         
         Task {
+            // First ensure settings are saved
+            saveTeamCacheSettings()
+            
+            // Test the actual connection
+            let success = await awsManager.testTeamCacheConnection(for: profile.name)
+            
             await MainActor.run {
-                // Simulate connection test - this should use actual S3CacheService
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    // TODO: Implement real connection test using S3CacheService
-                    let success = !s3BucketName.isEmpty && s3BucketName.count > 3
-                    
-                    if success {
-                        connectionTestResult = "Connection successful!"
-                        connectionTestIcon = "checkmark.circle.fill"
-                        connectionTestColor = .green
-                    } else {
-                        connectionTestResult = "Connection failed. Check bucket name and permissions."
-                        connectionTestIcon = "xmark.circle.fill"
-                        connectionTestColor = .red
-                    }
-                    
-                    isTestingConnection = false
+                if success {
+                    connectionTestResult = "Connection successful!"
+                    connectionTestIcon = "checkmark.circle.fill"
+                    connectionTestColor = .green
+                } else {
+                    connectionTestResult = "Connection failed. Check bucket name and permissions."
+                    connectionTestIcon = "xmark.circle.fill"
+                    connectionTestColor = .red
                 }
+                
+                isTestingConnection = false
             }
         }
     }
     
     private func loadCacheStatistics() {
-        // TODO: Load actual cache statistics from S3CacheService
-        cacheStatistics = CacheStatistics(
-            totalEntries: 12,
-            totalSizeBytes: 1024 * 150, // 150 KB
-            lastAccessTime: Date().addingTimeInterval(-300), // 5 minutes ago
-            cacheHits: 45,
-            cacheMisses: 8,
-            errors: 1
-        )
+        guard let profile = selectedProfile else { return }
+        
+        // Get real statistics from the team cache service if it exists
+        if let cacheService = awsManager.teamCacheServices[profile.name] {
+            let status = cacheService.getStatus()
+            cacheStatistics = status.statistics
+            
+            // Get last sync time from the cache status
+            if let cacheEntry = awsManager.costCache[profile.name] {
+                lastSyncTime = cacheEntry.fetchDate
+            }
+            
+            awsManager.log(.debug, category: "TeamCache", "Loaded cache statistics for profile \(profile.name): Hits=\(status.statistics.cacheHits), Misses=\(status.statistics.cacheMisses)")
+        } else {
+            // No cache service for this profile, show empty stats
+            cacheStatistics = CacheStatistics()
+            lastSyncTime = nil
+            awsManager.log(.debug, category: "TeamCache", "No cache service found for profile \(profile.name)")
+        }
     }
     
     private func forceRefreshCache() {
