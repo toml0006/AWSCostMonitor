@@ -163,7 +163,7 @@ class StoreManager: ObservableObject {
     private func updatePurchasedProducts() async {
         var purchased: Set<String> = []
         var hasActiveSubscription = false
-        var latestExpirationDate: Date?
+        let latestExpirationDate: Date? = nil
         
         // Check all current entitlements
         for await result in Transaction.currentEntitlements {

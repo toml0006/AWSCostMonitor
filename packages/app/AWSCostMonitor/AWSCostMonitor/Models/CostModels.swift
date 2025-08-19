@@ -36,7 +36,7 @@ struct HistoricalCostData: Codable, Identifiable {
 
 // Service-level cost breakdown
 struct ServiceCost: Identifiable, Comparable, Codable {
-    let id = UUID()
+    var id = UUID()
     let serviceName: String
     let amount: Decimal
     let currency: String
@@ -48,7 +48,7 @@ struct ServiceCost: Identifiable, Comparable, Codable {
 
 // Daily cost data point
 struct DailyCost: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let date: Date
     let amount: Decimal
     let currency: String
@@ -56,7 +56,7 @@ struct DailyCost: Identifiable, Codable {
 
 // Daily service cost data point for histograms
 struct DailyServiceCost: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let date: Date
     let serviceName: String
     let amount: Decimal

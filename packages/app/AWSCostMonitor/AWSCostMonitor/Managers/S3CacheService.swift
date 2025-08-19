@@ -321,11 +321,6 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
             let mappedError = try mapS3Error(error, operation: "testConnection", key: config.s3BucketName)
             lastError = mappedError
             throw mappedError
-        } catch {
-            isConnected = false
-            let networkError = CacheError.networkError(error)
-            lastError = networkError
-            throw networkError
         }
     }
     

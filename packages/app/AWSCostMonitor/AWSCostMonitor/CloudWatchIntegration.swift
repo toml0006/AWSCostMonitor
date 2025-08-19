@@ -5,7 +5,7 @@ import Foundation
 
 // MARK: - CloudWatch Metric Configuration
 struct CloudWatchMetric: Codable, Identifiable, Hashable {
-    let id = UUID()
+    var id = UUID()
     let namespace: String
     let metricName: String
     let dimensions: [MetricDimension]

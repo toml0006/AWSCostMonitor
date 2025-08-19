@@ -1812,7 +1812,7 @@ struct TeamCacheSettingsTab: View {
                     }
                 }
                 
-                if let profile = selectedProfile {
+                if selectedProfile != nil {
                     Divider()
                     
                     VStack(alignment: .leading, spacing: 16) {

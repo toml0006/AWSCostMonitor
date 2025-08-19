@@ -117,7 +117,7 @@ struct PopoverContentView: View {
                     .pickerStyle(MenuPickerStyle())
                     .labelsHidden()
                     .frame(maxWidth: 150)
-                    .onChange(of: awsManager.selectedProfile) { newProfile in
+                    .onChange(of: awsManager.selectedProfile) { oldProfile, newProfile in
                         if let profile = newProfile {
                             // Save the selected profile, which will handle everything:
                             // - Clear previous data

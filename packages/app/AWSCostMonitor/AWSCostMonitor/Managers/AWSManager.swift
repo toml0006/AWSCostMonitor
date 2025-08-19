@@ -2100,7 +2100,7 @@ class AWSManager: ObservableObject {
                     endDate: endOfToday
                 )
                 
-                await MainActor.run {
+                await MainActor.run { [cacheEntry, dailyCosts, dailyServiceCosts] in
                     // Store in cache
                     self.costCache[profile.name] = cacheEntry
                     self.dailyCostsByProfile[profile.name] = dailyCosts
@@ -2111,7 +2111,7 @@ class AWSManager: ObservableObject {
                 // Update team cache after successful API call
                 await updateTeamCacheAfterAPICall()
                 
-                await MainActor.run {
+                await MainActor.run { [totalAmount, currency, services, dailyCosts] in
                     // Update UI data
                     self.costData.removeAll()
                     self.costData.append(CostData(
@@ -2182,7 +2182,7 @@ class AWSManager: ObservableObject {
             log(.error, category: "API", "Error description: \(errorMessage)")
             
             // Check for specific error types
-            if let awsError = error as? AWSSDKIdentity.AWSCredentialIdentityResolverError {
+            if error is AWSSDKIdentity.AWSCredentialIdentityResolverError {
                 log(.error, category: "API", "AWS Credential Identity Resolver Error detected")
                 log(.error, category: "API", "This usually means:")
                 log(.error, category: "API", "  1. Profile doesn't exist in AWS config")
@@ -2413,8 +2413,8 @@ class AWSManager: ObservableObject {
         
         let calendar = Calendar.current
         let now = Date()
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-        let dayOfMonth = calendar.component(.day, from: now)
+        _ = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+        _ = calendar.component(.day, from: now)
         
         // Generate impressive but realistic cost data - current month performing better
         let mtdTotal = Decimal(67834.12) // Month-to-date total (14 days worth)
@@ -2563,7 +2563,7 @@ class AWSManager: ObservableObject {
             endDate: Date()
         )
         
-        await MainActor.run {
+        await MainActor.run { [cacheEntry, dailyCosts, dailyServiceCosts] in
             // Store in cache
             self.costCache["acme"] = cacheEntry
             self.dailyCostsByProfile["acme"] = dailyCosts
@@ -2769,7 +2769,7 @@ class AWSManager: ObservableObject {
                 // Sort by cost descending
                 services.sort { $0.amount > $1.amount }
                 
-                await MainActor.run {
+                await MainActor.run { [services] in
                     self.lastMonthServiceCosts[profileName] = services
                     self.saveLastMonthData()
                 }
@@ -3024,11 +3024,6 @@ class AWSManager: ObservableObject {
             return false
         }
         
-        guard let cacheService = teamCacheServices[profile.name] else {
-            log(.warning, category: "TeamCache", "Team cache service not initialized for profile: \(profile.name)")
-            return false
-        }
-        
         log(.info, category: "TeamCache", "📥 Team cache service found for profile: \(profile.name)")
         
         // Resolve account ID and generate cache key
@@ -3065,7 +3060,7 @@ class AWSManager: ObservableObject {
                     log(.debug, category: "TeamCache", "Team cache data for \(profile.name) is stale")
                 }
                 
-            case .expired(let expiredEntry):
+            case .expired(_):
                 log(.debug, category: "TeamCache", "Team cache data for \(profile.name) has expired")
                 
             case .notFound:
@@ -3226,8 +3221,8 @@ class AWSManager: ObservableObject {
             
             let calendar = Calendar.current
             let now = Date()
-            let currentMonth = calendar.component(.month, from: now)
-            let currentYear = calendar.component(.year, from: now)
+            _ = calendar.component(.month, from: now)
+            _ = calendar.component(.year, from: now)
             
             // Delete entries older than 3 months
             for key in keys {

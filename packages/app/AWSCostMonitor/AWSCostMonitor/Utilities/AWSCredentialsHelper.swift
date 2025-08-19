@@ -88,6 +88,6 @@ func createAWSCredentialsProvider(for profileName: String) throws -> any AWSCred
         return StaticAWSCredentialIdentityResolver(awsCredentials)
     } else {
         // Not sandboxed - use standard ProfileAWSCredentialIdentityResolver
-        return try ProfileAWSCredentialIdentityResolver(profileName: profileName)
+        return ProfileAWSCredentialIdentityResolver(profileName: profileName)
     }
 }

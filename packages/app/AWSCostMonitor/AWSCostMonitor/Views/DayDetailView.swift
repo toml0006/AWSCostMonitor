@@ -125,7 +125,7 @@ struct DayDetailView: View {
                     
                     var currentAngle: Double = -90 // Start at top
                     
-                    for (index, service) in processedServices.enumerated() {
+                    for (_, service) in processedServices.enumerated() {
                         let percentage = totalAmount > 0 ? Double(truncating: NSDecimalNumber(decimal: service.amount / totalAmount)) : 0
                         let angleSpan = percentage * 360
                         

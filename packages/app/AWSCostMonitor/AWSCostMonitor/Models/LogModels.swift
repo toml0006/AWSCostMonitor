@@ -10,7 +10,7 @@ import SwiftUI
 
 // Log entry for tracking
 struct LogEntry: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let timestamp: Date
     let level: LogLevel
     let category: String
@@ -45,7 +45,7 @@ struct LogEntry: Identifiable, Codable {
 
 // API request tracking
 struct APIRequestRecord: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let timestamp: Date
     let profileName: String
     let endpoint: String
