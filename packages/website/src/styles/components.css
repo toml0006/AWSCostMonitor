@@ -452,15 +452,22 @@
 }
 
 .feature-highlight {
-  background: linear-gradient(135deg, rgba(255, 248, 231, 0.95) 0%, rgba(255, 241, 224, 0.95) 100%);
+  background: white;
   border: 3px solid var(--color-black);
   border-radius: var(--radius-xl);
-  padding: 3rem;
-  margin: 3rem 0;
+  padding: 4rem;
+  margin: 4rem auto;
+  max-width: 1200px;
   color: var(--color-dark);
   box-shadow: 12px 12px 0 var(--color-black);
   position: relative;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.feature-highlight:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 14px 14px 0 var(--color-black);
 }
 
 .feature-highlight::before {
@@ -470,8 +477,8 @@
   right: -10%;
   width: 60%;
   height: 200%;
-  background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%);
-  opacity: 0.05;
+  background: radial-gradient(circle, var(--color-tertiary) 0%, transparent 70%);
+  opacity: 0.1;
   pointer-events: none;
 }
 
