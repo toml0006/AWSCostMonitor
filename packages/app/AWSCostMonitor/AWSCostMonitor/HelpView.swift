@@ -327,7 +327,7 @@ struct HelpView: View {
                             Text("AWSCostMonitor")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                            Text("Version 1.0.0")
+                            Text("Version 1.3.2")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }

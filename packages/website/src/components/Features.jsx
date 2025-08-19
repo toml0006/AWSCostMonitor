@@ -16,12 +16,22 @@ import {
 } from 'lucide-react'
 
 const features = [
-  // v1.3.0 - Latest (secondary color from changelog)
+  // v1.3.2 - Latest (new release!)
   {
     icon: Users,
+    title: 'Team Remote Caching',
+    description: 'Share cost data across your team using S3 to dramatically reduce API calls and costs for organizations',
+    color: 'primary',
+    badge: 'v1.3.2',
+    version: '1.3.2',
+    badgeColor: 'primary' // new release color
+  },
+  // v1.3.0 - (secondary color from changelog)
+  {
+    icon: RefreshCw,
     title: 'Smart Profile Management',
     description: 'Choose which AWS profiles appear in dropdowns. Automatic detection of new and removed profiles with intelligent handling',
-    color: 'primary',
+    color: 'secondary',
     badge: 'v1.3.0',
     version: '1.3.0',
     badgeColor: 'secondary' // matches changelog

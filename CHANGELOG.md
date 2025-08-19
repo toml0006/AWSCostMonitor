@@ -2,6 +2,39 @@
 
 All notable changes to AWS Cost Monitor will be documented in this file.
 
+## [1.3.2] - 2025-08-19
+
+### 🎉 What's New
+
+**Major visual refresh and team collaboration features!**
+
+We've redesigned the app with professional new icons and added comprehensive team caching support to reduce API costs for organizations.
+
+### ✨ Features Added
+
+- **New Professional App Icons** - Complete redesign with modern, polished look
+- **Team Remote Caching** - Share cost data across team using S3 to reduce API calls
+- **Comprehensive Setup Guide** - Step-by-step instructions for team cache configuration
+- **Enhanced Timer Reliability** - Fixed refresh timer using Timer.scheduledTimer
+
+### 🐛 Bug Fixes
+
+- Fixed refresh timer not firing properly
+- Improved timer scheduling for consistent updates
+
+### 🔧 Technical Improvements
+
+- Updated to proper timer implementation with scheduledTimer
+- Added comprehensive team cache documentation
+- Improved S3 integration for team data sharing
+- Enhanced error handling for cache operations
+
+### 📝 Notes
+
+The team cache feature is optional and maintains our privacy-first approach - it uses your existing AWS infrastructure with no third-party services involved.
+
+---
+
 ## [1.1.0] - 2025-08-10
 
 ### 🎉 What's New

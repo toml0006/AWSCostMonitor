@@ -21,10 +21,46 @@ import {
 
 const releases = [
   {
+    version: '1.3.2',
+    date: 'August 19, 2025',
+    title: 'Team Collaboration & Visual Refresh',
+    icon: Users,
+    color: 'primary',
+    highlights: [
+      'Team Remote Caching with S3 for shared cost data',
+      'New professional app icons with modern design',
+      'Comprehensive team cache setup documentation',
+      'Enhanced timer reliability for consistent updates'
+    ],
+    features: [
+      {
+        icon: Users,
+        title: 'Team Remote Caching',
+        description: 'Share cost data across your team using S3 to dramatically reduce API calls and costs'
+      },
+      {
+        icon: Sparkles,
+        title: 'Professional New Icons',
+        description: 'Complete visual redesign with modern, polished app icons'
+      },
+      {
+        icon: RefreshCw,
+        title: 'Improved Timer System',
+        description: 'Fixed refresh timer using Timer.scheduledTimer for reliable updates'
+      }
+    ],
+    improvements: [
+      'Comprehensive team cache setup guide with step-by-step instructions',
+      'Enhanced S3 integration for team data sharing',
+      'Improved error handling for cache operations',
+      'Privacy-first approach maintained with no third-party services'
+    ]
+  },
+  {
     version: '1.3.0',
     date: 'August 14, 2025',
     title: 'Smart Profile Management & Intelligent Filtering',
-    icon: Users,
+    icon: RefreshCw,
     color: 'secondary',
     highlights: [
       'Choose which AWS profiles appear in dropdowns',
