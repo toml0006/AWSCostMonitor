@@ -146,8 +146,8 @@ const Features = () => {
           viewport={{ once: true }}
           className="section-header"
         >
-          <h2>Features That <span className="text-gradient">Matter</span></h2>
-          <p>Everything you need to keep AWS costs under control, nothing you don't</p>
+          <h2>Features That <span className="text-gradient">...Feature</span></h2>
+          <p>Everything you need to keep AWS costs under control and probably some stuff you don't</p>
         </motion.div>
         
         <div className="features-grid">

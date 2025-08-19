@@ -1260,21 +1260,50 @@
   backdrop-filter: blur(12px);
 }
 
-.pricing-card {
-  max-width: 600px;
+.pricing-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  max-width: 1000px;
   margin: 3rem auto;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+}
+
+@media (max-width: 768px) {
+  .pricing-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 0 1rem;
+  }
+  
+  .pricing-card {
+    padding: 2rem;
+  }
+}
+
+.pricing-card {
+  background: white;
+  color: var(--color-dark);
   border-radius: var(--radius-xl);
   padding: 3rem;
   text-align: center;
-  box-shadow: 12px 12px 0 var(--color-black);
+  box-shadow: 8px 8px 0 var(--color-black);
   transition: all 0.3s ease;
   position: relative;
+  border: 3px solid var(--color-black);
 }
 
 .pricing-card:hover {
   transform: translate(-4px, -4px);
+  box-shadow: 12px 12px 0 var(--color-black);
+}
+
+.pricing-card-featured {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 12px 12px 0 var(--color-black);
+}
+
+.pricing-card-featured:hover {
   box-shadow: 16px 16px 0 var(--color-black);
 }
 
@@ -1282,7 +1311,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.1);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-full);
   margin-bottom: 1.5rem;
@@ -1290,6 +1319,11 @@
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+
+.pricing-card-featured .price-badge,
+.price-badge-featured {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .price-amount {
@@ -1342,15 +1376,53 @@
 
 .price-cta {
   margin-top: 2rem;
-  background: white !important;
-  color: var(--color-primary) !important;
   padding: 1rem 2rem;
   font-weight: 600;
+  width: 100%;
+  justify-content: center;
 }
 
-.price-cta:hover {
+.pricing-card .price-cta.btn-outline {
+  background: white !important;
+  color: var(--color-dark) !important;
+  border-color: var(--color-dark);
+}
+
+.pricing-card .price-cta.btn-outline:hover {
+  background: var(--color-dark) !important;
+  color: white !important;
+}
+
+.pricing-card-featured .price-cta {
+  background: white !important;
+  color: var(--color-primary) !important;
+}
+
+.pricing-card-featured .price-cta:hover {
   transform: scale(1.05);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.no-pressure {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+  opacity: 0.95;
+}
+
+.support-note {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  opacity: 0.9;
+  font-style: italic;
+}
+
+.feature-highlight {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  margin: 0.25rem 0;
 }
 
 .philosophy {
