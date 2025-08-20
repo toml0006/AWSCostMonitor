@@ -46,9 +46,9 @@ class StoreManager: ObservableObject {
         // Start listening for transactions
         updateListenerTask = listenForTransactions()
         
-        // Load products on init
+        // Load products on init with retry logic
         Task {
-            await loadProducts()
+            await loadProductsWithRetry()
             await updatePurchasedProducts()
         }
         #else
@@ -69,11 +69,61 @@ class StoreManager: ObservableObject {
         
         do {
             let productIDs = ProductID.allCases.map { $0.rawValue }
+            print("🛍️ StoreManager: Loading products with IDs: \(productIDs)")
+            
+            // Request products from StoreKit
             products = try await Product.products(for: productIDs)
+            
+            if products.isEmpty {
+                print("⚠️ StoreManager: No products returned from StoreKit")
+                print("⚠️ StoreManager: Requested product IDs: \(productIDs)")
+                print("⚠️ StoreManager: Make sure these products are configured in App Store Connect")
+                purchaseError = "Products not available. Please ensure you're signed into the App Store and try again."
+            } else {
+                print("✅ StoreManager: Successfully loaded \(products.count) products")
+                for product in products {
+                    print("  - \(product.id): \(product.displayName) - \(product.displayPrice)")
+                }
+                purchaseError = nil
+            }
+            
             isLoadingProducts = false
         } catch {
-            purchaseError = "Failed to load products: \(error.localizedDescription)"
+            print("❌ StoreManager: Failed to load products: \(error)")
+            purchaseError = "Unable to connect to the App Store. Please check your internet connection and try again."
             isLoadingProducts = false
+        }
+    }
+    
+    // MARK: - Product Loading with Retry
+    
+    func loadProductsWithRetry(maxAttempts: Int = 3) async {
+        var attempts = 0
+        var lastError: Error?
+        
+        while attempts < maxAttempts {
+            attempts += 1
+            print("🔄 StoreManager: Loading products (attempt \(attempts)/\(maxAttempts))")
+            
+            await loadProducts()
+            
+            // If products loaded successfully, break
+            if !products.isEmpty {
+                print("✅ StoreManager: Products loaded successfully on attempt \(attempts)")
+                return
+            }
+            
+            // If this isn't the last attempt, wait before retrying
+            if attempts < maxAttempts {
+                print("⏳ StoreManager: Waiting 2 seconds before retry...")
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            }
+        }
+        
+        // If we get here, all attempts failed
+        if products.isEmpty {
+            print("❌ StoreManager: Failed to load products after \(maxAttempts) attempts")
+            purchaseError = "Unable to load products from the App Store. Please try again later."
         }
     }
     

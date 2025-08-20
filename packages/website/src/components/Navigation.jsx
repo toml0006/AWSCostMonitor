@@ -51,6 +51,7 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
                 <a href="#" onClick={(e) => { e.preventDefault(); handleNavClick('pricing'); }}>Pricing</a>
               </>
             )}
+            <Link to="/support" onClick={() => setIsMenuOpen(false)}>Support</Link>
             <Link to="/changelog" onClick={() => setIsMenuOpen(false)}>Changelog</Link>
             <a href="https://github.com/toml0006/AWSCostMonitor" className="nav-github">
               GitHub

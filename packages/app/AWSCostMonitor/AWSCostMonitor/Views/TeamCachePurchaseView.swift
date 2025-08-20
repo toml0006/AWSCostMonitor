@@ -226,6 +226,14 @@ struct TeamCachePurchaseView: View {
             }
             .padding(.bottom, 20)
         }
+        .onAppear {
+            // Ensure products are loaded when view appears
+            if storeManager.products.isEmpty && !storeManager.isLoadingProducts {
+                Task {
+                    await storeManager.loadProductsWithRetry()
+                }
+            }
+        }
         .alert("Restore Complete", isPresented: $showingRestoreAlert) {
             Button("OK") { }
         } message: {

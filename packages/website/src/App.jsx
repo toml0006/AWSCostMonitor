@@ -46,6 +46,7 @@ import ThemeToggle from './components/ThemeToggle'
 import Changelog from './components/Changelog'
 import Privacy from './components/Privacy'
 import TeamCacheSetup from './components/TeamCacheSetup'
+import Support from './components/Support'
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -99,6 +100,7 @@ function App() {
           <Route path="/unsigned-app-guide" element={<UnsignedAppGuide />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/team-cache-setup" element={<TeamCacheSetup />} />
+          <Route path="/support" element={<Support />} />
         </Routes>
       </Router>
     </ThemeProvider>
