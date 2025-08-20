@@ -46,6 +46,7 @@ class AWSManager: ObservableObject {
         }
     }
     private var refreshTimer: Timer?
+    private var timerValidationTimer: Timer? // Periodic timer to validate main refresh timer
     
     // Computed property to check if auto-refresh is active
     var isAutoRefreshActive: Bool {
@@ -417,13 +418,9 @@ class AWSManager: ObservableObject {
                 startAutomaticRefresh()
             }
         } else {
-            // Screen is off or locked - pause refresh
-            if refreshTimer != nil {
-                log(.info, category: "Refresh", "Pausing automatic refresh - screen is off or locked")
-                stopAutomaticRefresh()
-                // Remember to resume when screen comes back
-                autoRefreshEnabled = true
-            }
+            // Screen is off or locked - don't stop the timer, just skip refreshes
+            // The timer will continue running but fetchCostForSelectedProfile will be skipped
+            log(.info, category: "Refresh", "Screen is off or locked - refreshes will be skipped but timer continues")
         }
     }
     
@@ -437,13 +434,16 @@ class AWSManager: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 guard let self = self else { return }
                 
-                // Check if refresh is needed and restart the timer
-                if self.refreshTimer == nil {
-                    self.log(.info, category: "Refresh", "Restarting automatic refresh after system wake")
-                    self.startAutomaticRefresh()
+                // Check if the timer is still valid
+                if let timer = self.refreshTimer, timer.isValid {
+                    self.log(.info, category: "Refresh", "Timer is still valid after system wake")
+                    // Timer is still running, just trigger an immediate refresh
+                    Task {
+                        await self.fetchCostForSelectedProfile()
+                    }
                 } else {
-                    // Timer exists but might be stale, restart it
-                    self.log(.info, category: "Refresh", "Resetting refresh timer after system wake")
+                    // Timer is invalid or nil, restart it
+                    self.log(.info, category: "Refresh", "Restarting automatic refresh after system wake (timer was invalid)")
                     self.startAutomaticRefresh()
                 }
             }
@@ -1604,15 +1604,21 @@ class AWSManager: ObservableObject {
         // Calculate and store next refresh time
         nextRefreshTime = Date().addingTimeInterval(interval)
         
-        // Create a scheduled timer (same pattern as debug timer which works reliably)
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
-            guard let self = self else { return }
+        // Create a scheduled timer with repeats:true for better reliability
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
+            guard let self = self else { 
+                timer.invalidate()
+                return 
+            }
             
             self.log(.warning, category: "RefreshTimer", "🔄 Refresh timer FIRED at \(Date())")
             
             #if DEBUG
             self.log(.debug, category: "RefreshTimer", "Refresh timer fired at \(Date())")
             #endif
+            
+            // Update next refresh time for display
+            self.nextRefreshTime = Date().addingTimeInterval(interval)
             
             Task { @MainActor in
                 // Check screen state before refreshing
@@ -1622,17 +1628,33 @@ class AWSManager: ObservableObject {
                 } else {
                     self.log(.info, category: "Refresh", "Skipped scheduled refresh: screen off or locked")
                 }
-                // After fetch attempt, restart the automatic refresh
-                self.startAutomaticRefresh()
             }
         }
         
         // Validate timer was created successfully
         if let timer = refreshTimer {
             log(.info, category: "Refresh", "Timer scheduled successfully (valid: \(timer.isValid)). Next refresh at: \(nextRefreshTime!)")
+            
+            // Start validation timer if not already running
+            if timerValidationTimer == nil {
+                startTimerValidation()
+            }
         } else {
             log(.error, category: "Refresh", "⚠️ Failed to create refresh timer!")
         }
+    }
+    
+    // Start a periodic timer to validate the main refresh timer (failsafe)
+    private func startTimerValidation() {
+        // Stop any existing validation timer
+        timerValidationTimer?.invalidate()
+        
+        // Create a timer that runs every 30 seconds to check the main timer
+        timerValidationTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+            self?.validateRefreshTimer()
+        }
+        
+        log(.debug, category: "Refresh", "Started timer validation checker (runs every 30 seconds)")
     }
     
     // Stops automatic refresh
@@ -1641,8 +1663,32 @@ class AWSManager: ObservableObject {
             refreshTimer?.invalidate()
             refreshTimer = nil
         }
+        if timerValidationTimer != nil {
+            timerValidationTimer?.invalidate()
+            timerValidationTimer = nil
+        }
         nextRefreshTime = nil
         autoRefreshEnabled = false // Persist the state
+    }
+    
+    // Validates that the timer is still running (failsafe)
+    func validateRefreshTimer() {
+        guard autoRefreshEnabled else { return }
+        
+        if let timer = refreshTimer, timer.isValid {
+            // Timer is valid, check if next refresh time makes sense
+            if let nextTime = nextRefreshTime {
+                let timeUntilNext = nextTime.timeIntervalSinceNow
+                if timeUntilNext < -60 { // More than 1 minute overdue
+                    log(.warning, category: "Refresh", "Timer is overdue by \(Int(-timeUntilNext)) seconds, restarting")
+                    startAutomaticRefresh()
+                }
+            }
+        } else {
+            // Timer is invalid or nil but should be running
+            log(.warning, category: "Refresh", "Timer validation failed - restarting automatic refresh")
+            startAutomaticRefresh()
+        }
     }
     
     // Updates refresh interval and recreates timer if running
