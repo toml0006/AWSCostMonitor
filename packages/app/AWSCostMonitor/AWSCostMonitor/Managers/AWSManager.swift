@@ -45,8 +45,9 @@ class AWSManager: ObservableObject {
             }
         }
     }
-    private var refreshTimer: Timer?
-    private var timerValidationTimer: Timer? // Periodic timer to validate main refresh timer
+    private var refreshTimer: DispatchSourceTimer?
+    private var timerValidationTimer: DispatchSourceTimer? // Periodic timer to validate main refresh timer
+    private let timerQueue = DispatchQueue(label: "com.awscostmonitor.refresh", qos: .utility)
     
     // Computed property to check if auto-refresh is active
     var isAutoRefreshActive: Bool {
@@ -88,7 +89,7 @@ class AWSManager: ObservableObject {
     @Published var profileTeamCacheSettings: [String: ProfileTeamCacheSettings] = [:]
     @Published var teamCacheServices: [String: S3CacheService] = [:]
     private let teamCacheSettingsKey = "ProfileTeamCacheSettings"
-    private var backgroundSyncTimer: Timer?
+    private var backgroundSyncTimer: DispatchSourceTimer?
     
     // Circuit breaker for API protection
     @Published var circuitBreakerTripped = false
@@ -109,7 +110,7 @@ class AWSManager: ObservableObject {
     #if DEBUG
     @Published var debugTimerMessage: String = "Debug timer not started"
     @Published var debugTimerCount: Int = 0
-    @Published var debugTimer: Timer?
+    @Published var debugTimer: DispatchSourceTimer?
     @Published var debugLastUpdate: Date?
     #endif
     
@@ -435,7 +436,7 @@ class AWSManager: ObservableObject {
                 guard let self = self else { return }
                 
                 // Check if the timer is still valid
-                if let timer = self.refreshTimer, timer.isValid {
+                if self.refreshTimer != nil {
                     self.log(.info, category: "Refresh", "Timer is still valid after system wake")
                     // Timer is still running, just trigger an immediate refresh
                     Task {
@@ -1517,9 +1518,9 @@ class AWSManager: ObservableObject {
         log(.debug, category: "RefreshTimer", "startAutomaticRefresh() called")
         #endif
         
-        // Invalidate existing timer if present
+        // Cancel existing timer if present
         if refreshTimer != nil {
-            refreshTimer?.invalidate()
+            refreshTimer?.cancel()
             refreshTimer = nil
             nextRefreshTime = nil
         }
@@ -1604,12 +1605,16 @@ class AWSManager: ObservableObject {
         // Calculate and store next refresh time
         nextRefreshTime = Date().addingTimeInterval(interval)
         
-        // Create a scheduled timer with repeats:true for better reliability
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
-            guard let self = self else { 
-                timer.invalidate()
-                return 
-            }
+        // Create a DispatchSourceTimer for more precise timing
+        let timer = DispatchSource.makeTimerSource(queue: timerQueue)
+        refreshTimer = timer
+        
+        // Configure the timer to fire at the specified interval
+        timer.schedule(deadline: .now() + interval, repeating: interval)
+        
+        // Set the event handler for when the timer fires
+        timer.setEventHandler { [weak self] in
+            guard let self = self else { return }
             
             self.log(.warning, category: "RefreshTimer", "🔄 Refresh timer FIRED at \(Date())")
             
@@ -1617,8 +1622,10 @@ class AWSManager: ObservableObject {
             self.log(.debug, category: "RefreshTimer", "Refresh timer fired at \(Date())")
             #endif
             
-            // Update next refresh time for display
-            self.nextRefreshTime = Date().addingTimeInterval(interval)
+            // Update next refresh time for display on main queue
+            DispatchQueue.main.async {
+                self.nextRefreshTime = Date().addingTimeInterval(interval)
+            }
             
             Task { @MainActor in
                 // Check screen state before refreshing
@@ -1631,9 +1638,17 @@ class AWSManager: ObservableObject {
             }
         }
         
+        // Set cancellation handler for cleanup
+        timer.setCancelHandler { [weak self] in
+            self?.log(.info, category: "Refresh", "Refresh timer cancelled")
+        }
+        
+        // Start the timer
+        timer.resume()
+        
         // Validate timer was created successfully
-        if let timer = refreshTimer {
-            log(.info, category: "Refresh", "Timer scheduled successfully (valid: \(timer.isValid)). Next refresh at: \(nextRefreshTime!)")
+        if refreshTimer != nil {
+            log(.info, category: "Refresh", "DispatchSourceTimer scheduled successfully. Next refresh at: \(nextRefreshTime!)")
             
             // Start validation timer if not already running
             if timerValidationTimer == nil {
@@ -1646,13 +1661,26 @@ class AWSManager: ObservableObject {
     
     // Start a periodic timer to validate the main refresh timer (failsafe)
     private func startTimerValidation() {
-        // Stop any existing validation timer
-        timerValidationTimer?.invalidate()
+        // Cancel any existing validation timer
+        if let existingTimer = timerValidationTimer {
+            existingTimer.cancel()
+            timerValidationTimer = nil
+        }
         
-        // Create a timer that runs every 30 seconds to check the main timer
-        timerValidationTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+        // Create a DispatchSourceTimer for validation
+        let validationTimer = DispatchSource.makeTimerSource(queue: timerQueue)
+        timerValidationTimer = validationTimer
+        
+        // Configure to run every 30 seconds
+        validationTimer.schedule(deadline: .now() + 30, repeating: 30.0)
+        
+        // Set the event handler
+        validationTimer.setEventHandler { [weak self] in
             self?.validateRefreshTimer()
         }
+        
+        // Start the validation timer
+        validationTimer.resume()
         
         log(.debug, category: "Refresh", "Started timer validation checker (runs every 30 seconds)")
     }
@@ -1660,11 +1688,11 @@ class AWSManager: ObservableObject {
     // Stops automatic refresh
     func stopAutomaticRefresh() {
         if refreshTimer != nil {
-            refreshTimer?.invalidate()
+            refreshTimer?.cancel()
             refreshTimer = nil
         }
-        if timerValidationTimer != nil {
-            timerValidationTimer?.invalidate()
+        if let validationTimer = timerValidationTimer {
+            validationTimer.cancel()
             timerValidationTimer = nil
         }
         nextRefreshTime = nil
@@ -1675,7 +1703,7 @@ class AWSManager: ObservableObject {
     func validateRefreshTimer() {
         guard autoRefreshEnabled else { return }
         
-        if let timer = refreshTimer, timer.isValid {
+        if refreshTimer != nil {
             // Timer is valid, check if next refresh time makes sense
             if let nextTime = nextRefreshTime {
                 let timeUntilNext = nextTime.timeIntervalSinceNow
@@ -1717,12 +1745,22 @@ class AWSManager: ObservableObject {
         
         log(.info, category: "Debug", "Starting debug timer with 1-minute intervals")
         
-        // Create a 1-minute repeating timer
-        debugTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+        // Create a DispatchSourceTimer for debug
+        let timer = DispatchSource.makeTimerSource(queue: timerQueue)
+        debugTimer = timer
+        
+        // Configure for 1-minute intervals
+        timer.schedule(deadline: .now(), repeating: 60.0)
+        
+        // Set the event handler
+        timer.setEventHandler { [weak self] in
             DispatchQueue.main.async {
                 self?.handleDebugTimerTick()
             }
         }
+        
+        // Start the timer
+        timer.resume()
         
         // Also fire immediately for testing
         handleDebugTimerTick()
@@ -1745,10 +1783,8 @@ class AWSManager: ObservableObject {
         }
         
         // Also log the state of the refresh timer
-        if let refreshTimer = refreshTimer {
-            let isValid = refreshTimer.isValid
-            let nextFire = refreshTimer.fireDate
-            log(.info, category: "Debug", "Refresh timer is \(isValid ? "valid" : "invalid"), next fire: \(nextFire)")
+        if refreshTimer != nil {
+            log(.info, category: "Debug", "Refresh timer is active")
         } else {
             log(.warning, category: "Debug", "⚠️ Refresh timer is nil - auto-refresh not running!")
         }
@@ -1763,8 +1799,10 @@ class AWSManager: ObservableObject {
     
     // Stop debug timer
     func stopDebugTimer() {
-        debugTimer?.invalidate()
-        debugTimer = nil
+        if let timer = debugTimer {
+            timer.cancel()
+            debugTimer = nil
+        }
         debugTimerMessage = "Debug timer stopped"
         log(.info, category: "Debug", "Debug timer stopped")
     }
@@ -3017,22 +3055,38 @@ class AWSManager: ObservableObject {
     
     // Start background synchronization timer
     private func startBackgroundSyncTimer() {
-        backgroundSyncTimer?.invalidate()
+        // Cancel any existing timer
+        if let existingTimer = backgroundSyncTimer {
+            existingTimer.cancel()
+            backgroundSyncTimer = nil
+        }
         
-        // Run background sync every 5 minutes
-        backgroundSyncTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+        // Create a DispatchSourceTimer for background sync
+        let timer = DispatchSource.makeTimerSource(queue: timerQueue)
+        backgroundSyncTimer = timer
+        
+        // Configure for 5-minute intervals
+        timer.schedule(deadline: .now() + 300, repeating: 300.0)
+        
+        // Set the event handler
+        timer.setEventHandler { [weak self] in
             Task {
                 await self?.performBackgroundCacheSync()
             }
         }
+        
+        // Start the timer
+        timer.resume()
         
         log(.debug, category: "TeamCache", "Started background sync timer")
     }
     
     // Stop background synchronization timer
     private func stopBackgroundSyncTimer() {
-        backgroundSyncTimer?.invalidate()
-        backgroundSyncTimer = nil
+        if let timer = backgroundSyncTimer {
+            timer.cancel()
+            backgroundSyncTimer = nil
+        }
         log(.debug, category: "TeamCache", "Stopped background sync timer")
     }
     
