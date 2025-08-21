@@ -10,14 +10,13 @@
     <false/>
     <key>uploadSymbols</key>
     <true/>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>middleout.AWSCostMonitor</key>
-        <string>Automatic</string>
-    </dict>
-    <key>signingStyle</key>
-    <string>automatic</string>
-    <key>signingCertificate</key>
-    <string>Apple Distribution</string>
+    <key>generateAppStoreInformation</key>
+    <true/>
+    <key>stripSwiftSymbols</key>
+    <true/>
+    <key>compileBitcode</key>
+    <false/>
+    <key>manageAppVersionAndBuildNumber</key>
+    <false/>
 </dict>
 </plist>
