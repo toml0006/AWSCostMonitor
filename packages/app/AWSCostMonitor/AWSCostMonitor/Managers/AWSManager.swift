@@ -18,20 +18,6 @@ import AWSClientRuntime
 class AWSManager: ObservableObject {
     static let shared = AWSManager()
     
-    // MARK: - Telemetry Opt-Out Configuration
-    // Disable AWS SDK telemetry collection for privacy
-    init() {
-        // Set environment variables to disable telemetry collection
-        setenv("AWS_SDK_TELEMETRY_ENABLED", "false", 1)
-        setenv("AWS_SDK_METRICS_ENABLED", "false", 1)
-        setenv("AWS_SDK_TRACING_ENABLED", "false", 1)
-        setenv("AWS_TELEMETRY_ENABLED", "false", 1)
-        
-        // Log telemetry opt-out for transparency
-        let logger = Logger(subsystem: "com.middleout.AWSCostMonitor", category: "AWSManager")
-        logger.info("AWS SDK telemetry collection disabled for privacy")
-    }
-    
     @Published var profiles: [AWSProfile] = []
     @Published var realProfiles: [AWSProfile] = []
     @Published var demoProfiles: [AWSProfile] = []
@@ -224,7 +210,13 @@ class AWSManager: ObservableObject {
     
 
     init() {
-        log(.info, category: "Config", "AWSManager initialized")
+        // Disable AWS SDK telemetry collection for privacy
+        setenv("AWS_SDK_TELEMETRY_ENABLED", "false", 1)
+        setenv("AWS_SDK_METRICS_ENABLED", "false", 1)
+        setenv("AWS_SDK_TRACING_ENABLED", "false", 1)
+        setenv("AWS_TELEMETRY_ENABLED", "false", 1)
+        
+        log(.info, category: "Config", "AWSManager initialized - telemetry disabled")
         print("DEBUG: AWSManager init() called at \(Date())")
         
         // Initialize team cache services for all profiles

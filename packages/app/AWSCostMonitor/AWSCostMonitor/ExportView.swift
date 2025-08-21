@@ -231,8 +231,3 @@ struct ExportView: View {
     }
 }
 
-
-#Preview {
-    ExportView(awsManager: AWSManager())
-        .environmentObject(AWSManager())
-}

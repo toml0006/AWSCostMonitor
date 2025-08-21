@@ -14,14 +14,14 @@ echo "Development team: ${CI_TEAM_ID:-Not set}"
 echo "Bundle ID: ${CI_BUNDLE_ID:-Not set}"
 echo "Product: ${CI_PRODUCT:-Not set}"
 
-# Check if we're in the packages structure
-if [ -d "packages/app/AWSCostMonitor" ]; then
-    echo "Found packages/app/AWSCostMonitor directory"
-    cd packages/app/AWSCostMonitor
-elif [ -f "AWSCostMonitor.xcodeproj/project.pbxproj" ]; then
-    echo "Already in correct directory"
+# Navigate to the project directory
+# We're starting in /Volumes/workspace/repository/packages/app/AWSCostMonitor/ci_scripts
+cd ..
+if [ -f "AWSCostMonitor.xcodeproj/project.pbxproj" ]; then
+    echo "Found AWSCostMonitor.xcodeproj in $(pwd)"
 else
-    echo "Warning: Could not find AWSCostMonitor.xcodeproj"
+    echo "Warning: Could not find AWSCostMonitor.xcodeproj in $(pwd)"
+    ls -la
 fi
 
 # Resolve Swift Package dependencies

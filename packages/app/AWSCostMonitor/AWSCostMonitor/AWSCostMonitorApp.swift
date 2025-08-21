@@ -149,16 +149,12 @@ struct AWSCostMonitorApp: App {
             return "clock.badge.exclamationmark.fill"
         } else if awsManager.displayFormat == .iconOnly {
             // In icon-only mode, show dollar sign or trend
-            if awsManager.costTrend != .stable {
-                switch awsManager.costTrend {
-                case .up:
-                    return "arrow.up.circle.fill"
-                case .down:
-                    return "arrow.down.circle.fill"
-                case .stable:
-                    return "dollarsign.circle.fill"
-                }
-            } else {
+            switch awsManager.costTrend {
+            case .up:
+                return "arrow.up.circle.fill"
+            case .down:
+                return "arrow.down.circle.fill"
+            case .stable:
                 return "dollarsign.circle.fill"
             }
         } else if awsManager.costData.isEmpty {
