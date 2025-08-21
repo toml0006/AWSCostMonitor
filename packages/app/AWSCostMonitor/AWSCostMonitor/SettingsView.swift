@@ -17,25 +17,16 @@ struct SettingsView: View {
     }
     
     var settingsCategories: [String] {
-        var categories = [
+        return [
             "Profiles",
-        ]
-        
-        // Only include Team Cache in non-open source builds
-        #if !OPENSOURCE
-        categories.append("Team Cache")
-        #endif
-        
-        categories.append(contentsOf: [
+            "Team Cache",
             "Refresh Rate",
             "Display",
             "Alerts",
             "Notifications",
             "CloudWatch",
             "Debug"
-        ])
-        
-        return categories
+        ]
     }
     
     var body: some View {
@@ -58,19 +49,6 @@ struct SettingsView: View {
                                 .foregroundColor(selectedCategory == category ? .white : .primary)
                                 .lineLimit(1)
                                 .fixedSize(horizontal: false, vertical: true)
-                            
-                            // Add Pro badge for Team Cache (non-open source only)
-                            #if !OPENSOURCE
-                            if category == "Team Cache" {
-                                Text("Pro")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
-                            }
-                            #endif
                             
                             Spacer(minLength: 0)
                         }
@@ -175,10 +153,8 @@ struct SettingsView: View {
             )
         case "Profiles":
             AWSSettingsTab()
-        #if !OPENSOURCE
         case "Team Cache":
             TeamCacheSettingsTab()
-        #endif
         case "Alerts":
             AnomalySettingsTab()
         case "Notifications":
@@ -1756,48 +1732,11 @@ struct TeamCacheSettingsTab: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            #if !OPENSOURCE
-            // Debug toggle for testing purchase state
-            #if DEBUG
-            HStack {
-                Text("DEBUG: Simulate Purchase")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { storeManager.hasTeamCache },
-                    set: { newValue in
-                        if newValue {
-                            storeManager.simulateSuccessfulPurchase()
-                        } else {
-                            storeManager.clearPurchase()
-                        }
-                    }
-                ))
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.yellow.opacity(0.1))
-            .cornerRadius(4)
+            // Team Cache configuration
+            Text("Team Cache Configuration")
+                .font(.headline)
             
-            Divider()
-            #endif
-            
-            // Check if user has Team Cache access
-            if !storeManager.hasTeamCache {
-                // Show purchase UI
-                TeamCachePurchaseView()
-                    .environmentObject(storeManager)
-            } else {
-                // Show Team Cache settings for users who purchased - fall through to show config
-            }
-            #endif  // !OPENSOURCE
-            
-            // Team Cache configuration (available in both versions)
-                Text("Team Cache Configuration")
-                    .font(.headline)
-            
-                if !awsManager.profiles.isEmpty {
+            if !awsManager.profiles.isEmpty {
                 // Profile selector
                 Picker("Select Profile:", selection: $selectedProfile) {
                     Text("Choose a profile").tag(nil as AWSProfile?)
@@ -2100,13 +2039,10 @@ struct TeamCacheSettingsTab: View {
                         }
                     }
                 }
-                } else {
-                    Text("No AWS profiles available")
-                        .foregroundColor(.secondary)
-                }
-            #if !OPENSOURCE
-                // Pro access check was here
-            #endif
+            } else {
+                Text("No AWS profiles available")
+                    .foregroundColor(.secondary)
+            }
             
             Spacer()
         }
