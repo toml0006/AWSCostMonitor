@@ -187,6 +187,7 @@
 				TargetAttributes = {
 					7A8F6BCF2E3D700F00A26D48 = {
 						CreatedOnToolsVersion = 16.4;
+						ProvisioningStyle = Automatic;
 						SystemCapabilities = {
 							com.apple.InAppPurchase = {
 								enabled = 1;
