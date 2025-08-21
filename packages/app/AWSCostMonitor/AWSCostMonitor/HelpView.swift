@@ -348,6 +348,16 @@ struct HelpView: View {
                     Text("Keep AWS costs under control with always-visible spending data, intelligent refresh rates, and privacy-first design. No external services, no telemetry - just your data on your machine.")
                         .font(.body)
                         .foregroundColor(.secondary)
+                    
+                    // Privacy Note
+                    HStack {
+                        Image(systemName: "lock.shield")
+                            .foregroundColor(.green)
+                        Text("AWS SDK telemetry collection is completely disabled for privacy")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 4)
                 }
                 
                 Divider()

@@ -25,6 +25,17 @@ struct AWSCostMonitorApp: App {
     @AppStorage("ShowMenuBarColors") private var showMenuBarColors: Bool = true
     
     init() {
+        // MARK: - Telemetry Opt-Out Configuration
+        // Disable AWS SDK telemetry collection for privacy - set this VERY early
+        setenv("AWS_SDK_TELEMETRY_ENABLED", "false", 1)
+        setenv("AWS_SDK_METRICS_ENABLED", "false", 1)
+        setenv("AWS_SDK_TRACING_ENABLED", "false", 1)
+        setenv("AWS_TELEMETRY_ENABLED", "false", 1)
+        
+        // Log telemetry opt-out for transparency
+        let logger = Logger(subsystem: "com.middleout.AWSCostMonitor", category: "App")
+        logger.info("AWS SDK telemetry collection disabled for privacy")
+        
         // Set up AWS SDK environment variables VERY early if we're sandboxed
         if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
             // Get the real home directory by looking up the user record

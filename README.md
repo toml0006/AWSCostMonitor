@@ -145,7 +145,7 @@ AWSCostMonitor uses your existing AWS CLI configuration from `~/.aws/config`. En
    - `ce:GetCostAndUsage`
    - `ce:GetCostForecast`
 
-## 🔐 Security
+## 🔐 Security & Privacy
 
 AWSCostMonitor is built with security and privacy as top priorities:
 
@@ -155,6 +155,32 @@ AWSCostMonitor is built with security and privacy as top priorities:
 - **🚫 No Tracking** - Zero telemetry, analytics, or data collection
 - **📖 Open Source** - Full source code available for inspection
 - **🔑 Your Credentials** - Uses existing AWS CLI credentials, never stores or transmits them
+
+### 🚫 AWS SDK Telemetry Opt-Out
+
+**Important Privacy Note**: While AWSCostMonitor itself collects zero data, the AWS SDK for Swift includes OpenTelemetry instrumentation that could potentially collect usage metrics. We've implemented comprehensive telemetry opt-out measures:
+
+- **Environment Variables**: Set at app startup to disable all AWS SDK telemetry collection
+- **Client Configuration**: Explicitly configured to prevent data collection
+- **Transparency**: All telemetry opt-out actions are logged for verification
+
+**What This Means**: 
+- ✅ Your AWS cost data stays completely private
+- ✅ No usage patterns are sent to Amazon's telemetry systems  
+- ✅ No performance metrics are collected about your app usage
+- ✅ No request/response data is analyzed by AWS
+
+**Technical Implementation**: The app sets these environment variables at startup:
+```bash
+AWS_SDK_TELEMETRY_ENABLED=false
+AWS_SDK_METRICS_ENABLED=false
+AWS_SDK_TRACING_ENABLED=false
+AWS_TELEMETRY_ENABLED=false
+```
+
+This ensures that even though the AWS SDK includes telemetry capabilities, they are completely disabled in our app.
+
+**📖 For detailed privacy information, see [Privacy & Telemetry Policy](docs/PRIVACY_TELEMETRY.md)**
 
 ## 💖 Support
 

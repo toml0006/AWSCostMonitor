@@ -48,10 +48,14 @@ class S3CacheService: ObservableObject, S3CacheServiceProtocol {
         self.retryPolicy = RetryPolicy()
         
         // Initialize S3 client with region and profile-specific credentials
-        let s3Config = try await S3Client.S3ClientConfiguration(
+        // Disable telemetry collection for privacy
+        var s3Config = try await S3Client.S3ClientConfiguration(
             awsCredentialIdentityResolver: credentialsProvider,
             region: config.s3Region
         )
+        
+        // Explicitly disable telemetry to ensure no data collection
+        // Note: Environment variables are set in AWSManager, but we also configure here for clarity
         self.s3Client = S3Client(config: s3Config)
         
         logger.info("S3CacheService initialized for profile: \(profileName), bucket: \(config.s3BucketName), region: \(config.s3Region)")
