@@ -10,7 +10,7 @@ import SwiftUI
 
 // Product IDs for App Store
 enum ProductID: String, CaseIterable {
-    case teamCache = "middleout.AWSCostMonitor.teamcache"
+    case teamCache = "middleout.AWSCostMonitor.teamcachepro"
     
     var displayName: String {
         switch self {

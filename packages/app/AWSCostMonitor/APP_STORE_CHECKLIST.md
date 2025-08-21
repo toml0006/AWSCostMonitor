@@ -5,14 +5,14 @@
 ### Code Preparation
 - [x] Removed automatic purchase simulation from release builds
 - [x] Updated StoreKit configuration with correct Team ID (TJSYWP4C3D)
-- [x] Fixed product ID to match bundle identifier pattern (middleout.AWSCostMonitor.teamcache)
+- [x] Fixed product ID to match bundle identifier pattern (middleout.AWSCostMonitor.teamcachepro)
 - [x] All debug code is properly wrapped in `#if DEBUG` blocks
 - [x] Team Cache purchase flow implemented with StoreKit 2
 
 ### Configuration
 - [x] Bundle Identifier: `middleout.AWSCostMonitor`
 - [x] Development Team: `TJSYWP4C3D`
-- [x] Product ID: `middleout.AWSCostMonitor.teamcache`
+- [x] Product ID: `middleout.AWSCostMonitor.teamcachepro`
 - [x] Price: $3.99 (Non-consumable)
 
 ## 📋 Required Actions Before Submission
@@ -85,7 +85,7 @@ No account creation required. All data stays local.
 ## 📱 In-App Purchase Details
 
 **Product Name**: Team Cache
-**Product ID**: `middleout.AWSCostMonitor.teamcache`
+**Product ID**: `middleout.AWSCostMonitor.teamcachepro`
 **Type**: Non-Consumable
 **Price**: $3.99 USD
 **Description**: Enable S3 caching to share cost data with your team and reduce API calls by 90%

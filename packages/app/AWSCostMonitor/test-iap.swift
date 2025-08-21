@@ -9,7 +9,7 @@ import StoreKit
 import Foundation
 
 // Product ID to test
-let productID = "middleout.AWSCostMonitor.teamcache"
+let productID = "middleout.AWSCostMonitor.teamcachepro"
 
 print("🧪 Testing StoreKit IAP functionality")
 print("=====================================")
