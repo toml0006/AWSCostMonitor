@@ -14,6 +14,7 @@ struct DayDetailView: View {
     let currencyFormatter: NumberFormatter
     let apiCalls: [APIRequestRecord]
     let highlightedService: String?
+    let onNavigateToDate: ((Date) -> Void)?
     @Environment(\.dismiss) var dismiss
     @State private var hoveredService: String? = nil
     @State private var showAllServices = false
@@ -83,6 +84,36 @@ struct DayDetailView: View {
     
     private var headerView: some View {
         HStack {
+            // Navigation buttons
+            HStack(spacing: 0) {
+                Button(action: navigateToPreviousDay) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.borderless)
+                .keyboardShortcut(.leftArrow, modifiers: [])
+                .help("Previous day")
+                
+                Divider()
+                    .frame(height: 16)
+                
+                Button(action: navigateToNextDay) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.borderless)
+                .keyboardShortcut(.rightArrow, modifiers: [])
+                .help("Next day")
+            }
+            .background(Color(NSColor.controlBackgroundColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(dateFormatter.string(from: date))
                     .font(.title2)
@@ -98,6 +129,7 @@ struct DayDetailView: View {
                         .foregroundColor(.secondary)
                 }
             }
+            .padding(.leading, 8)
             
             Spacer()
             
@@ -473,5 +505,17 @@ struct DayDetailView: View {
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color(.systemBlue).opacity(0.03))
         )
+    }
+    
+    // MARK: - Navigation
+    
+    private func navigateToPreviousDay() {
+        let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: date) ?? date
+        onNavigateToDate?(previousDay)
+    }
+    
+    private func navigateToNextDay() {
+        let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+        onNavigateToDate?(nextDay)
     }
 }

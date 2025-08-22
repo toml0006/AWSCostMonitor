@@ -214,7 +214,10 @@ struct CalendarView: View {
                 services: selectedDayServices,
                 currencyFormatter: currencyFormatter,
                 apiCalls: getAPICallsForDay(selectedDate),
-                highlightedService: highlightedService
+                highlightedService: highlightedService,
+                onNavigateToDate: { newDate in
+                    selectDay(newDate)
+                }
             )
         }
         .onAppear {

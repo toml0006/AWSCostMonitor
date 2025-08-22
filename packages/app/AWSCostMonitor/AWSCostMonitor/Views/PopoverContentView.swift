@@ -657,7 +657,8 @@ struct PopoverContentView: View {
                 services: detail.services,
                 currencyFormatter: detail.currencyFormatter,
                 apiCalls: detail.apiCalls,
-                highlightedService: detail.highlightedService
+                highlightedService: detail.highlightedService,
+                onNavigateToDate: nil  // No navigation in popover
             )
         }
         .onAppear {
