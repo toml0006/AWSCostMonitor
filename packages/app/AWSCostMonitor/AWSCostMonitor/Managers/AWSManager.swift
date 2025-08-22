@@ -90,6 +90,7 @@ class AWSManager: ObservableObject {
     @Published var teamCacheServices: [String: S3CacheService] = [:]
     private let teamCacheSettingsKey = "ProfileTeamCacheSettings"
     private var backgroundSyncTimer: DispatchSourceTimer?
+    @Published var teamCacheController: TeamCacheController?
     
     // Circuit breaker for API protection
     @Published var circuitBreakerTripped = false
@@ -218,6 +219,9 @@ class AWSManager: ObservableObject {
         
         log(.info, category: "Config", "AWSManager initialized - telemetry disabled")
         print("DEBUG: AWSManager init() called at \(Date())")
+        
+        // Initialize team cache controller
+        self.teamCacheController = TeamCacheController(awsManager: self)
         
         // Initialize team cache services for all profiles
         initializeTeamCacheServices()
@@ -930,7 +934,7 @@ class AWSManager: ObservableObject {
     }
     
     // Update budget for a profile
-    func updateBudget(for profileName: String, monthlyBudget: Decimal, alertThreshold: Double) {
+    func updateBudget(for profileName: String, monthlyBudget: Decimal?, alertThreshold: Double) {
         var budget = getBudget(for: profileName)
         budget.monthlyBudget = monthlyBudget
         budget.alertThreshold = alertThreshold
@@ -980,7 +984,16 @@ class AWSManager: ObservableObject {
     
     // Calculate budget status for current cost
     func calculateBudgetStatus(cost: Decimal, budget: ProfileBudget) -> BudgetStatus {
-        let percentage = NSDecimalNumber(decimal: cost).dividing(by: NSDecimalNumber(decimal: budget.monthlyBudget)).doubleValue
+        // If no monthly budget is set, return default status
+        guard let monthlyBudget = budget.monthlyBudget else {
+            return BudgetStatus(
+                percentage: 0.0,
+                isOverBudget: false,
+                isNearThreshold: false
+            )
+        }
+
+        let percentage = NSDecimalNumber(decimal: cost).dividing(by: NSDecimalNumber(decimal: monthlyBudget)).doubleValue
         return BudgetStatus(
             percentage: percentage,
             isOverBudget: percentage >= 1.0,
@@ -1425,19 +1438,25 @@ class AWSManager: ObservableObject {
         let calendar = Calendar.current
         let now = Date()
         let currentDay = calendar.component(.day, from: now)
-        
+
         guard let daysInMonth = calendar.range(of: .day, in: .month, for: now)?.count else {
             return nil
         }
-        
+
         let budget = getBudget(for: profile)
+
+        // Skip budget velocity check if no monthly budget is set
+        guard let monthlyBudget = budget.monthlyBudget else {
+            return nil
+        }
+
         let monthProgress = Double(currentDay) / Double(daysInMonth)
-        let spendingProgress = NSDecimalNumber(decimal: currentAmount).dividing(by: NSDecimalNumber(decimal: budget.monthlyBudget)).doubleValue
-        
+        let spendingProgress = NSDecimalNumber(decimal: currentAmount).dividing(by: NSDecimalNumber(decimal: monthlyBudget)).doubleValue
+
         // If spending progress is significantly ahead of month progress
         if spendingProgress > monthProgress * 1.5 && spendingProgress > 0.5 {
             let daysRemaining = daysInMonth - currentDay
-            let remainingBudget = NSDecimalNumber(decimal: budget.monthlyBudget).subtracting(NSDecimalNumber(decimal: currentAmount))
+            let remainingBudget = NSDecimalNumber(decimal: monthlyBudget).subtracting(NSDecimalNumber(decimal: currentAmount))
             
             let message: String
             let severity: SpendingAnomaly.AnomalySeverity

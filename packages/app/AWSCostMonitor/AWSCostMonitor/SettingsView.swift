@@ -256,49 +256,279 @@ struct DisplaySettingsTab: View {
 struct RefreshSettingsTab: View {
     @Binding var refreshInterval: Int
     @EnvironmentObject var awsManager: AWSManager
+    @State private var selectedProfile: AWSProfile?
+    @State private var teamCacheEnabled: Bool = false
+    @State private var s3BucketName: String = ""
+    @State private var s3Region: String = "us-east-1"
+    @State private var teamId: String = ""
+    @State private var isTestingConnection: Bool = false
+    @State private var connectionTestResult: String?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Automatic Refresh")
-                .font(.headline)
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Refresh cost data automatically every:")
-                
-                HStack {
-                    Slider(value: Binding(
-                        get: { Double(refreshInterval) },
-                        set: { refreshInterval = Int($0) }
-                    ), in: 1...60, step: 1) {
-                        Text("Refresh Interval")
-                    }
-                    .frame(maxWidth: 200)
-                    
-                    Text("\(refreshInterval) minute\(refreshInterval == 1 ? "" : "s")")
-                        .frame(minWidth: 80, alignment: .leading)
-                }
-                
-                Divider()
-                
-                HStack {
-                    Text("Auto-refresh is currently:")
-                    Text(awsManager.isAutoRefreshActive ? "On" : "Off")
-                        .fontWeight(.semibold)
-                        .foregroundColor(awsManager.isAutoRefreshActive ? .green : .secondary)
-                    
-                    Spacer()
-                    
-                    Button(awsManager.isAutoRefreshActive ? "Stop" : "Start") {
-                        if awsManager.isAutoRefreshActive {
-                            awsManager.stopAutomaticRefresh()
-                        } else {
-                            awsManager.startAutomaticRefresh()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Local Refresh Settings
+                GroupBox(label: Text("Local Refresh Settings").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Refresh cost data automatically every:")
+                        
+                        HStack {
+                            Slider(value: Binding(
+                                get: { Double(refreshInterval) },
+                                set: { refreshInterval = Int($0) }
+                            ), in: 1...60, step: 1) {
+                                Text("Refresh Interval")
+                            }
+                            .frame(maxWidth: 200)
+                            
+                            Text("\(refreshInterval) minute\(refreshInterval == 1 ? "" : "s")")
+                                .frame(minWidth: 80, alignment: .leading)
+                        }
+                        
+                        Divider()
+                        
+                        HStack {
+                            Text("Auto-refresh is currently:")
+                            Text(awsManager.isAutoRefreshActive ? "On" : "Off")
+                                .fontWeight(.semibold)
+                                .foregroundColor(awsManager.isAutoRefreshActive ? .green : .secondary)
+                            
+                            Spacer()
+                            
+                            Button(awsManager.isAutoRefreshActive ? "Stop" : "Start") {
+                                if awsManager.isAutoRefreshActive {
+                                    awsManager.stopAutomaticRefresh()
+                                } else {
+                                    awsManager.startAutomaticRefresh()
+                                }
+                            }
                         }
                     }
+                    .padding(.vertical, 8)
+                }
+                
+                #if !OPENSOURCE
+                // Team Cache Settings (App Store builds only)
+                GroupBox(label: 
+                    HStack {
+                        Text("Team Cache Settings")
+                            .font(.headline)
+                        Spacer()
+                        Image(systemName: "externaldrive.connected.to.line.below")
+                            .foregroundColor(.blue)
+                    }
+                ) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Share cost data with your team to reduce API calls and costs")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        if !awsManager.profiles.isEmpty {
+                            // Profile selector
+                            Picker("Profile:", selection: $selectedProfile) {
+                                Text("Choose a profile").tag(nil as AWSProfile?)
+                                ForEach(awsManager.profiles, id: \.self) { profile in
+                                    Text(profile.name).tag(Optional(profile))
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .onChange(of: selectedProfile) { _, newProfile in
+                                if let profile = newProfile {
+                                    loadTeamCacheSettings(for: profile)
+                                }
+                            }
+                            
+                            if let profile = selectedProfile {
+                                Divider()
+                                
+                                // Enable/Disable toggle
+                                Toggle("Enable team cache for \(profile.name)", isOn: $teamCacheEnabled)
+                                    .onChange(of: teamCacheEnabled) { _, _ in
+                                        saveTeamCacheSettings()
+                                    }
+                                
+                                if teamCacheEnabled {
+                                    // S3 Configuration
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("S3 Bucket Name")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                MacTextField(
+                                                    placeholder: "my-team-cost-cache",
+                                                    text: $s3BucketName,
+                                                    onCommit: saveTeamCacheSettings
+                                                )
+                                                .frame(height: 22)
+                                            }
+                                            
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("Team ID")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                MacTextField(
+                                                    placeholder: "my-team",
+                                                    text: $teamId,
+                                                    onCommit: saveTeamCacheSettings
+                                                )
+                                                .frame(height: 22)
+                                            }
+                                        }
+                                        
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("AWS Region")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Picker("", selection: $s3Region) {
+                                                Text("US East (N. Virginia)").tag("us-east-1")
+                                                Text("US West (Oregon)").tag("us-west-2")
+                                                Text("EU (Ireland)").tag("eu-west-1")
+                                                Text("AP (Sydney)").tag("ap-southeast-2")
+                                            }
+                                            .pickerStyle(.menu)
+                                            .labelsHidden()
+                                        }
+                                        
+                                        // Test Connection Button
+                                        HStack {
+                                            Button("Test Connection") {
+                                                testS3Connection()
+                                            }
+                                            .disabled(s3BucketName.isEmpty || teamId.isEmpty || isTestingConnection)
+                                            
+                                            if isTestingConnection {
+                                                ProgressView()
+                                                    .scaleEffect(0.7)
+                                            }
+                                            
+                                            if let result = connectionTestResult {
+                                                Text(result)
+                                                    .font(.caption)
+                                                    .foregroundColor(result.contains("Success") ? .green : .red)
+                                            }
+                                        }
+                                        
+                                        // Info box
+                                        HStack(alignment: .top, spacing: 8) {
+                                            Image(systemName: "info.circle")
+                                                .foregroundColor(.blue)
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("Team Cache Benefits:")
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                Text("• Reduces API costs by 5-10x for teams")
+                                                    .font(.caption)
+                                                Text("• Automatic 6-hour refresh intervals")
+                                                    .font(.caption)
+                                                Text("• 30-minute manual refresh cooldown")
+                                                    .font(.caption)
+                                                Text("• Shows who updated and when")
+                                                    .font(.caption)
+                                            }
+                                            .foregroundColor(.secondary)
+                                        }
+                                        .padding(8)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(6)
+                                    }
+                                }
+                            }
+                        } else {
+                            Text("No AWS profiles configured")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                #endif
+                
+                Spacer()
+            }
+            .padding()
+        }
+        .onAppear {
+            // Load settings for selected profile on appear
+            if selectedProfile == nil && !awsManager.profiles.isEmpty {
+                selectedProfile = awsManager.selectedProfile ?? awsManager.profiles.first
+            }
+            if let profile = selectedProfile {
+                loadTeamCacheSettings(for: profile)
+            }
+        }
+    }
+    
+    // MARK: - Team Cache Methods
+    
+    private func loadTeamCacheSettings(for profile: AWSProfile) {
+        let settings = awsManager.getTeamCacheSettings(for: profile.name)
+        teamCacheEnabled = settings.teamCacheEnabled
+        
+        if let config = settings.teamCacheConfig {
+            s3BucketName = config.s3BucketName
+            s3Region = config.s3Region
+            teamId = profile.name  // Use profile name as team ID
+        } else {
+            // Set defaults
+            s3BucketName = ""
+            s3Region = "us-east-1"
+            teamId = profile.name
+        }
+    }
+    
+    private func saveTeamCacheSettings() {
+        guard let profile = selectedProfile else { return }
+        
+        let config = teamCacheEnabled ? TeamCacheConfig(
+            enabled: true,
+            s3BucketName: s3BucketName,
+            s3Region: s3Region,
+            cachePrefix: "teams/\(teamId)",
+            ttlOverride: nil,
+            encryptionType: .sseS3,
+            kmsKeyId: nil,
+            enableAuditLogging: true
+        ) : nil
+        
+        let settings = ProfileTeamCacheSettings(
+            teamCacheEnabled: teamCacheEnabled,
+            teamCacheConfig: config
+        )
+        
+        // Save settings through AWSManager
+        awsManager.updateTeamCacheSettings(for: profile.name, settings: settings)
+    }
+    
+    private func testS3Connection() {
+        guard let profile = selectedProfile else { return }
+        
+        isTestingConnection = true
+        connectionTestResult = nil
+        
+        Task {
+            do {
+                // Test S3 connection
+                if let service = awsManager.teamCacheServices[profile.name] {
+                    let testKey = "teams/\(teamId)/test-\(UUID().uuidString).json"
+                    let testWorked = try await service.headObject(key: testKey)
+                    
+                    await MainActor.run {
+                        connectionTestResult = testWorked ? "⚠️ Bucket exists but no cache yet" : "✓ Success - Ready to use"
+                        isTestingConnection = false
+                    }
+                } else {
+                    await MainActor.run {
+                        connectionTestResult = "✗ Failed - Check permissions"
+                        isTestingConnection = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    connectionTestResult = "✗ Error: \(error.localizedDescription)"
+                    isTestingConnection = false
                 }
             }
-            
-            Spacer()
         }
     }
 }
@@ -430,15 +660,20 @@ struct RefreshProfileRow: View {
     let profile: AWSProfile
     @EnvironmentObject var awsManager: AWSManager
     @State private var refreshInterval: Double = 480  // 8 hours default
-    
+
     // Computed properties for display
     var estimatedCallsPerMonth: Int {
         let minutesPerMonth = 30 * 24 * 60
         return minutesPerMonth / Int(refreshInterval)
     }
-    
+
     var estimatedMonthlyCost: Double {
         return Double(estimatedCallsPerMonth) * 0.01
+    }
+
+    // Check if current interval is below recommended 8 hours
+    var isBelowRecommendedInterval: Bool {
+        return refreshInterval < 480  // Less than 8 hours
     }
     
     var body: some View {
@@ -502,13 +737,13 @@ struct RefreshProfileRow: View {
                         .monospacedDigit()
                 }
                 
-                Slider(value: $refreshInterval, in: 480...1440, step: 60)
+                Slider(value: $refreshInterval, in: 60...1440, step: 60)
                     .onChange(of: refreshInterval) { _, newValue in
                         saveRefreshInterval(Int(newValue))
                     }
-                
+
                 HStack {
-                    Text("8 hours")
+                    Text("1 hour")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -516,34 +751,75 @@ struct RefreshProfileRow: View {
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
+
+                // Warning message for intervals below 8 hours
+                if isBelowRecommendedInterval {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 12))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Cost Explorer Data Freshness")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.orange)
+
+                            Text("AWS Cost Explorer data typically updates every 8-12 hours. More frequent refreshes may not show new data and will consume API calls unnecessarily.")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(8)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+                }
                 
                 // Quick preset buttons
                 HStack(spacing: 8) {
                     Text("Quick Set:")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                    
+
+                    Button("1h") {
+                        refreshInterval = 60
+                        saveRefreshInterval(60)
+                    }
+                    .buttonStyle(.accessoryBar)
+                    .help("Refresh every hour (may not show new data)")
+
+                    Button("2h") {
+                        refreshInterval = 120
+                        saveRefreshInterval(120)
+                    }
+                    .buttonStyle(.accessoryBar)
+                    .help("Refresh every 2 hours (may not show new data)")
+
                     Button("8h") {
                         refreshInterval = 480
                         saveRefreshInterval(480)
                     }
                     .buttonStyle(.accessoryBar)
-                    .help("Refresh 3x daily (matches AWS update frequency)")
-                    
+                    .help("Refresh 3x daily (recommended - matches AWS update frequency)")
+
                     Button("12h") {
                         refreshInterval = 720
                         saveRefreshInterval(720)
                     }
                     .buttonStyle(.accessoryBar)
                     .help("Refresh 2x daily")
-                    
+
                     Button("24h") {
                         refreshInterval = 1440
                         saveRefreshInterval(1440)
                     }
                     .buttonStyle(.accessoryBar)
                     .help("Refresh once daily")
-                    
+
                     Spacer()
                 }
                 
@@ -564,11 +840,13 @@ struct RefreshProfileRow: View {
     private func formatRefreshInterval(_ minutes: Double) -> String {
         let hours = Int(minutes) / 60
         let mins = Int(minutes) % 60
-        
+
         if hours >= 24 {
             return "24 hours"
+        } else if hours == 1 && mins == 0 {
+            return "1 hour"
         } else if hours > 0 && mins == 0 {
-            return "\(hours) hour\(hours > 1 ? "s" : "")"
+            return "\(hours) hours"
         } else if hours > 0 {
             return "\(hours)h \(mins)m"
         } else {

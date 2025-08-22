@@ -234,9 +234,9 @@ class StatusBarController: NSObject {
         
         // Fallback to budget-based coloring if no last month data
         let budget = awsManager.getBudget(for: cost.profileName)
-        if budget.monthlyBudget > 0 {
+        if let monthlyBudget = budget.monthlyBudget {
             let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let percentUsed = (amount / NSDecimalNumber(decimal: budget.monthlyBudget).doubleValue) * 100
+            let percentUsed = (amount / NSDecimalNumber(decimal: monthlyBudget).doubleValue) * 100
             if percentUsed >= 100 {
                 return NSColor.systemRed
             } else if percentUsed >= 80 {

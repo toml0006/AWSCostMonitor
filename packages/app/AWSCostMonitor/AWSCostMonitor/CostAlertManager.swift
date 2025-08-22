@@ -115,9 +115,9 @@ class CostAlertManager: ObservableObject {
         guard notificationPermissionStatus == .authorized else { return }
         
         // Check budget exceeded
-        if config.enableBudgetExceededAlerts && status.isOverBudget {
+        if config.enableBudgetExceededAlerts && status.isOverBudget, let monthlyBudget = budget.monthlyBudget {
             if shouldSendAlert(profileName: profileName, type: .budgetExceeded, cooldown: config.cooldownMinutes) {
-                sendBudgetExceededAlert(profileName: profileName, amount: cost, budget: budget.monthlyBudget)
+                sendBudgetExceededAlert(profileName: profileName, amount: cost, budget: monthlyBudget)
             }
         }
         

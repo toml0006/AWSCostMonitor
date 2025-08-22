@@ -108,9 +108,10 @@ struct CalendarView: View {
                     Spacer()
                     
                     if let profile = awsManager.selectedProfile {
+                        let budget = awsManager.getBudget(for: profile.name)
                         Text("Total: \(formatCurrency(monthTotal))")
                             .font(.headline)
-                            .foregroundColor(monthTotal > awsManager.getBudget(for: profile.name).monthlyBudget ? .red : .primary)
+                            .foregroundColor(budget.monthlyBudget.map { monthTotal > $0 } ?? false ? .red : .primary)
                     }
                 }
                 .padding(.horizontal)

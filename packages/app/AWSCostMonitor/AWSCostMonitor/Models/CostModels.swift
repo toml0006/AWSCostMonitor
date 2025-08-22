@@ -84,7 +84,14 @@ struct CostCacheEntry: Codable {
     func isValidForBudget(_ budget: ProfileBudget) -> Bool {
         // Intelligent cache validity based on budget proximity
         let age = Date().timeIntervalSince(fetchDate)
-        let budgetPercentage = NSDecimalNumber(decimal: mtdTotal).dividing(by: NSDecimalNumber(decimal: budget.monthlyBudget)).doubleValue
+
+        // Calculate budget percentage only if budget is set
+        let budgetPercentage: Double
+        if let monthlyBudget = budget.monthlyBudget {
+            budgetPercentage = NSDecimalNumber(decimal: mtdTotal).dividing(by: NSDecimalNumber(decimal: monthlyBudget)).doubleValue
+        } else {
+            budgetPercentage = 0.0 // No budget tracking
+        }
         
         // Adjust cache duration based on budget usage
         let maxAge: TimeInterval

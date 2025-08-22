@@ -35,6 +35,7 @@ Monitor your AWS costs in real-time directly from your macOS menu bar. No subscr
 - 🔔 **Budget Alerts** - Get notified before exceeding limits
 - ⚡ **Intelligent Refresh** - Adjusts polling based on spending patterns
 - ⌨️ **Keyboard Shortcuts** - Quick access with customizable hotkeys (v1.2.0)
+- 👫 **Team Cache** - Share cost data with your team via S3 (Pro feature)
 - 🔒 **100% Private** - All data stays local, no telemetry
 - ✅ **Signed & Sandboxed** - Developer ID signed and fully sandboxed for security
 
@@ -141,9 +142,11 @@ AWSCostMonitor uses your existing AWS CLI configuration from `~/.aws/config`. En
 
 1. AWS CLI installed and configured
 2. At least one profile with Cost Explorer read permissions
-3. The following IAM permissions:
+3. The following minimum IAM permissions:
    - `ce:GetCostAndUsage`
    - `ce:GetCostForecast`
+
+📖 **For detailed IAM setup, including Team Cache permissions, see [IAM Permissions Guide](docs/IAM_PERMISSIONS.md)**
 
 ## 🔐 Security & Privacy
 
@@ -181,6 +184,55 @@ AWS_TELEMETRY_ENABLED=false
 This ensures that even though the AWS SDK includes telemetry capabilities, they are completely disabled in our app.
 
 **📖 For detailed privacy information, see [Privacy & Telemetry Policy](docs/PRIVACY_TELEMETRY.md)**
+
+## 👫 Team Cache (Pro Feature)
+
+**Available in the App Store version only**
+
+Team Cache enables teams to share AWS cost data efficiently, reducing redundant API calls and costs. Instead of each team member making separate AWS Cost Explorer API calls, the team can share a cached snapshot stored in S3.
+
+### How It Works
+
+1. **Cooperative Policy Enforcement**: Team members automatically refresh the cache every 6 hours with smart jitter to prevent collisions
+2. **Manual Refresh Cooldown**: 30-minute cooldown between manual refreshes to prevent abuse
+3. **S3-Based Storage**: Uses your existing AWS infrastructure - data never leaves your AWS account
+4. **Optimistic Concurrency**: Uses ETags and soft locks to prevent race conditions
+5. **Full Transparency**: Shows who updated the cache and when, with staleness indicators
+
+### Setup Requirements
+
+1. **S3 Bucket**: Create a dedicated S3 bucket for team cache storage
+2. **IAM Permissions**: Each team member needs:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "s3:GetObject",
+           "s3:PutObject",
+           "s3:HeadObject",
+           "s3:ListBucket"
+         ],
+         "Resource": [
+           "arn:aws:s3:::your-team-cache-bucket/*",
+           "arn:aws:s3:::your-team-cache-bucket"
+         ]
+       }
+     ]
+   }
+   ```
+3. **Configuration**: Enable in Settings > Refresh Settings for each AWS profile
+
+### Benefits
+
+- **Cost Reduction**: Reduce API calls by 5-10x for teams
+- **Faster Updates**: Instant data from cache vs waiting for API calls
+- **Privacy Preserved**: Data stays in your AWS account, uses existing credentials
+- **Graceful Fallback**: Automatically falls back to direct API calls if cache is unavailable
+
+For detailed setup instructions, visit our [Team Cache Documentation](https://toml0006.github.io/AWSCostMonitor/team-cache)
 
 ## 💖 Support
 

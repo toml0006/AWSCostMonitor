@@ -256,7 +256,7 @@ class DataExporter: ObservableObject {
             )
             
             exportData["budgetInfo"] = [
-                "monthlyBudget": NSDecimalNumber(decimal: budget.monthlyBudget).doubleValue,
+                "monthlyBudget": budget.monthlyBudget.map { NSDecimalNumber(decimal: $0).doubleValue } ?? 0.0,
                 "alertThreshold": budget.alertThreshold,
                 "currentPercentage": status.percentage,
                 "isOverBudget": status.isOverBudget,

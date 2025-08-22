@@ -89,10 +89,9 @@ struct PopoverContentView: View {
                     
                     // Team Cache Status Indicator
                     if let profile = awsManager.selectedProfile {
-                        // TODO: Check if team cache is enabled for this profile
-                        let teamCacheEnabled = false // This should be loaded from profile settings
+                        let settings = awsManager.getTeamCacheSettings(for: profile.name)
                         
-                        if teamCacheEnabled {
+                        if settings.teamCacheEnabled {
                             HStack(spacing: 3) {
                                 Circle()
                                     .fill(Color.blue)
@@ -382,6 +381,22 @@ struct PopoverContentView: View {
                             .foregroundColor(.secondary)
                             .padding()
                     }
+                }
+            }
+            
+            // Team Cache Status (if enabled)
+            if let profile = awsManager.selectedProfile,
+               let controller = awsManager.teamCacheController {
+                let settings = awsManager.getTeamCacheSettings(for: profile.name)
+                if settings.teamCacheEnabled {
+                    Divider()
+                    
+                    TeamCacheStatusView(
+                        teamCacheController: controller,
+                        profileName: profile.name
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 4)
                 }
             }
             
@@ -710,9 +725,9 @@ struct PopoverContentView: View {
         
         // Otherwise use budget-based coloring
         let budget = awsManager.getBudget(for: cost.profileName)
-        if budget.monthlyBudget > 0 {
+        if let monthlyBudget = budget.monthlyBudget {
             let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let percentUsed = (amount / NSDecimalNumber(decimal: budget.monthlyBudget).doubleValue) * 100
+            let percentUsed = (amount / NSDecimalNumber(decimal: monthlyBudget).doubleValue) * 100
             if percentUsed >= 100 {
                 return .red
             } else if percentUsed >= 80 {
