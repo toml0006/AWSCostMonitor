@@ -29,7 +29,7 @@ The current roadmap includes Phase 5 (Monetization & Licensing) with trial syste
 - **Remove License Validation**: Eliminate license key systems, cryptographic validation, and Keychain storage for licenses
 - **Remove Feature Gating**: Make all current "Pro" features available to all users without restrictions
 - **Update App Store Listing**: Transition from freemium to paid app model with clear feature description
-- **Pricing Strategy**: Set appropriate paid app price point based on current Pro tier value ($29)
+- **Pricing Strategy**: Set appropriate paid app price point based on current Pro tier value ($3.99)
 
 ### Feature Unification
 

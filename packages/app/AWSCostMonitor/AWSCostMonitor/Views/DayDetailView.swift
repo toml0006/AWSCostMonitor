@@ -78,41 +78,27 @@ struct DayDetailView: View {
             // API Calls Section
             Divider()
             apiCallsSection
+            
+            // Footer with Close button
+            Divider()
+            footerView
         }
-        .frame(width: 700, height: showAPIDetails ? 600 : 450)
+        .frame(width: 700, height: showAPIDetails ? 650 : 500)
+        .onExitCommand {
+            dismiss()
+        }
     }
     
     private var headerView: some View {
         HStack {
-            // Navigation buttons
-            HStack(spacing: 0) {
-                Button(action: navigateToPreviousDay) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .medium))
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.borderless)
-                .keyboardShortcut(.leftArrow, modifiers: [])
-                .help("Previous day")
-                
-                Divider()
-                    .frame(height: 16)
-                
-                Button(action: navigateToNextDay) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .medium))
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.borderless)
-                .keyboardShortcut(.rightArrow, modifiers: [])
-                .help("Next day")
+            // Navigation buttons on the left, matching calendar view style
+            Button(action: navigateToPreviousDay) {
+                Image(systemName: "chevron.left")
+                    .font(.title2)
             }
-            .background(Color(NSColor.controlBackgroundColor))
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .buttonStyle(.plain)
+            .keyboardShortcut(.leftArrow, modifiers: [])
+            .help("Previous day")
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(dateFormatter.string(from: date))
@@ -129,14 +115,29 @@ struct DayDetailView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .padding(.leading, 8)
+            .padding(.horizontal, 8)
             
             Spacer()
             
-            Button("Close") {
-                dismiss()
+            // Calendar button to jump to today
+            Button(action: navigateToToday) {
+                Image(systemName: "calendar")
+                    .font(.title2)
             }
-            .keyboardShortcut(.escape, modifiers: [])
+            .buttonStyle(.plain)
+            .keyboardShortcut("t", modifiers: [.command])
+            .help("Go to today")
+            .disabled(isViewingToday)
+            
+            // Forward navigation button
+            Button(action: navigateToNextDay) {
+                Image(systemName: "chevron.right")
+                    .font(.title2)
+            }
+            .buttonStyle(.plain)
+            .disabled(isNextDayInFuture)
+            .keyboardShortcut(.rightArrow, modifiers: [])
+            .help(isNextDayInFuture ? "Cannot navigate to future dates" : "Next day")
         }
         .padding()
         .background(Color(NSColor.windowBackgroundColor))
@@ -507,7 +508,36 @@ struct DayDetailView: View {
         )
     }
     
+    // MARK: - Footer
+    
+    private var footerView: some View {
+        HStack {
+            Spacer()
+            
+            Button("Close") {
+                dismiss()
+            }
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+        }
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+    
     // MARK: - Navigation
+    
+    private var isNextDayInFuture: Bool {
+        let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+        let today = Calendar.current.startOfDay(for: Date())
+        let nextDayStart = Calendar.current.startOfDay(for: nextDay)
+        return nextDayStart > today
+    }
+    
+    private var isViewingToday: Bool {
+        let today = Calendar.current.startOfDay(for: Date())
+        let viewingDay = Calendar.current.startOfDay(for: date)
+        return viewingDay == today
+    }
     
     private func navigateToPreviousDay() {
         let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: date) ?? date
@@ -515,7 +545,13 @@ struct DayDetailView: View {
     }
     
     private func navigateToNextDay() {
+        guard !isNextDayInFuture else { return }
         let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
         onNavigateToDate?(nextDay)
+    }
+    
+    private func navigateToToday() {
+        let today = Calendar.current.startOfDay(for: Date())
+        onNavigateToDate?(today)
     }
 }

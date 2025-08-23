@@ -88,6 +88,7 @@ struct PopoverContentView: View {
                     Spacer()
                     
                     // Team Cache Status Indicator
+                    #if !OPENSOURCE
                     if let profile = awsManager.selectedProfile {
                         let settings = awsManager.getTeamCacheSettings(for: profile.name)
                         
@@ -103,6 +104,7 @@ struct PopoverContentView: View {
                             .help("Team cache enabled")
                         }
                     }
+                    #endif
                     
                     Picker("", selection: $awsManager.selectedProfile) {
                         ForEach(awsManager.profiles, id: \.self) { profile in
