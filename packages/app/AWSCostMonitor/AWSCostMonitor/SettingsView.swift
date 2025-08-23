@@ -1,14 +1,15 @@
 import SwiftUI
+import ServiceManagement
 
 struct SettingsView: View {
     @EnvironmentObject var awsManager: AWSManager
     @AppStorage("MenuBarDisplayFormat") private var displayFormat: String = MenuBarDisplayFormat.full.rawValue
     @AppStorage("RefreshIntervalMinutes") private var refreshInterval: Int = 5
     @AppStorage("SelectedAWSProfileName") private var selectedProfileName: String = ""
-    @State private var selectedCategory: String
+    @State private var selectedCategory: String = "Accounts"
     @State private var hoveredCategory: String? = nil
     
-    init(initialSelectedCategory: String = "Profiles") {
+    init(initialSelectedCategory: String = "Accounts") {
         _selectedCategory = State(initialValue: initialSelectedCategory)
     }
     
@@ -18,7 +19,8 @@ struct SettingsView: View {
     
     var settingsCategories: [String] {
         return [
-            "Profiles",
+            "General",
+            "Accounts",
             "Team Cache",
             "Refresh Rate",
             "Display",
@@ -100,7 +102,11 @@ struct SettingsView: View {
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    settingsContent(for: selectedCategory)
+                    if selectedCategory.isEmpty {
+                        AWSSettingsTab()
+                    } else {
+                        settingsContent(for: selectedCategory)
+                    }
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,11 +121,13 @@ struct SettingsView: View {
     
     func iconForCategory(_ category: String) -> String {
         switch category {
+        case "General":
+            return "gear"
         case "Refresh Rate":
             return "arrow.clockwise"
         case "Display":
             return "textformat"
-        case "Profiles":
+        case "Accounts":
             return "person.2"
         case "Team Cache":
             return "externaldrive.connected.to.line.below"
@@ -139,6 +147,8 @@ struct SettingsView: View {
     @ViewBuilder
     func settingsContent(for category: String) -> some View {
         switch category {
+        case "General":
+            GeneralSettingsTab()
         case "Refresh Rate":
             RefreshRateTab()
         case "Display":
@@ -151,7 +161,7 @@ struct SettingsView: View {
                     }
                 )
             )
-        case "Profiles":
+        case "Accounts":
             AWSSettingsTab()
         case "Team Cache":
             TeamCacheSettingsTab()
@@ -2659,6 +2669,193 @@ struct ProfileVisibilitySection: View {
         let profileManager = awsManager.getProfileManager()
         profileManager.markProfilesAsRemoved([profileName], preserveData: shouldShow)
         awsManager.updateProfileVisibility()
+    }
+}
+
+struct GeneralSettingsTab: View {
+    @State private var launchAtLogin: Bool = false
+    @State private var checkingLoginItem = true
+    @EnvironmentObject var awsManager: AWSManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("General Settings")
+                .font(.headline)
+            
+            // Launch at Login Toggle
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Startup")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                
+                HStack {
+                    Toggle("Launch AWSCostMonitor at login", isOn: $launchAtLogin)
+                        .disabled(checkingLoginItem)
+                        .onChange(of: launchAtLogin) { _, newValue in
+                            updateLaunchAtLogin(newValue)
+                        }
+                    
+                    Spacer()
+                    
+                    if checkingLoginItem {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                            .controlSize(.small)
+                    }
+                }
+                
+                Text("Automatically start AWSCostMonitor when you log in to your Mac")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.05))
+            .cornerRadius(8)
+            
+            Divider()
+            
+            // App Information
+            VStack(alignment: .leading, spacing: 12) {
+                Text("About")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                
+                HStack {
+                    Text("Version:")
+                    Spacer()
+                    Text(getAppVersion())
+                        .foregroundColor(.secondary)
+                }
+                .font(.system(size: 12))
+                
+                HStack {
+                    Text("Build:")
+                    Spacer()
+                    Text(getBuildNumber())
+                        .foregroundColor(.secondary)
+                }
+                .font(.system(size: 12))
+                
+                Divider()
+                
+                // Links
+                HStack(spacing: 16) {
+                    Button("Documentation") {
+                        if let url = URL(string: "https://toml0006.github.io/AWSCostMonitor/") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11))
+                    
+                    Button("Report Issue") {
+                        if let url = URL(string: "https://github.com/toml0006/AWSCostMonitor/issues") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11))
+                    
+                    Button("Privacy Policy") {
+                        if let url = URL(string: "https://toml0006.github.io/AWSCostMonitor/privacy") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11))
+                }
+            }
+            .padding()
+            .background(Color.gray.opacity(0.05))
+            .cornerRadius(8)
+            
+            // Privacy Notice
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "lock.shield")
+                        .foregroundColor(.green)
+                    Text("Privacy First")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("• All data stays on your Mac")
+                        .font(.caption)
+                    Text("• No telemetry or analytics collected")
+                        .font(.caption)
+                    Text("• AWS credentials never leave your device")
+                        .font(.caption)
+                    Text("• Open source and auditable")
+                        .font(.caption)
+                }
+                .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(8)
+            
+            Spacer()
+        }
+        .onAppear {
+            checkLoginItemStatus()
+        }
+    }
+    
+    private func checkLoginItemStatus() {
+        checkingLoginItem = true
+        
+        // Check if app is registered for launch at login
+        if #available(macOS 13.0, *) {
+            let service = SMAppService.mainApp
+            launchAtLogin = service.status == .enabled
+        } else {
+            // For macOS 12 and earlier, use legacy API
+            launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
+        
+        checkingLoginItem = false
+    }
+    
+    private func updateLaunchAtLogin(_ enabled: Bool) {
+        Task {
+            do {
+                let service = SMAppService.mainApp
+                if enabled {
+                    try await service.register()
+                } else {
+                    try await service.unregister()
+                }
+                
+                // Verify the change
+                await MainActor.run {
+                    checkLoginItemStatus()
+                    awsManager.log(.info, category: "Config", "Launch at login \(enabled ? "enabled" : "disabled")")
+                }
+            } catch {
+                await MainActor.run {
+                    // Revert the toggle if the operation failed
+                    launchAtLogin = !enabled
+                    awsManager.log(.error, category: "Config", "Failed to update launch at login: \(error)")
+                    
+                    // Show error to user
+                    let alert = NSAlert()
+                    alert.messageText = "Failed to Update Launch Setting"
+                    alert.informativeText = "Could not \(enabled ? "enable" : "disable") launch at login. Please try again or check System Settings > General > Login Items."
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
+                }
+            }
+        }
+    }
+    
+    private func getAppVersion() -> String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+    }
+    
+    private func getBuildNumber() -> String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
     }
 }
 
