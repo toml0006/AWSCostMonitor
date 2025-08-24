@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @EnvironmentObject var awsManager: AWSManager
+    @Environment(\.theme) var theme
     let highlightedService: String?
     @State private var selectedDate: Date = Date()
     @State private var currentMonth: Date = Date()
@@ -47,7 +48,8 @@ struct CalendarView: View {
             HStack {
                 Button(action: previousMonth) {
                     Image(systemName: "chevron.left")
-                        .font(.title2)
+                        .font(.system(size: theme.largeFontSize))
+                        .foregroundColor(theme.accentColor)
                 }
                 .buttonStyle(.plain)
                 .help("Previous month")
@@ -55,14 +57,15 @@ struct CalendarView: View {
                 Spacer()
                 
                 Text(dateFormatter.string(from: currentMonth))
-                    .font(.title)
-                    .fontWeight(.semibold)
+                    .themeFont(theme, size: .large, weight: .secondary)
+                    .foregroundColor(theme.textColor)
                 
                 Spacer()
                 
                 Button(action: nextMonth) {
                     Image(systemName: "chevron.right")
-                        .font(.title2)
+                        .font(.system(size: theme.largeFontSize))
+                        .foregroundColor(theme.accentColor)
                 }
                 .buttonStyle(.plain)
                 .help("Next month")
@@ -78,8 +81,8 @@ struct CalendarView: View {
                 .help("Go to current month")
                 .disabled(isCurrentMonth)
             }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor))
+            .themePadding(theme, .all, 12)
+            .background(theme.backgroundColor)
             
             Divider()
             
@@ -87,7 +90,8 @@ struct CalendarView: View {
             if awsManager.profiles.count > 1 {
                 HStack {
                     Text("Profile:")
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .regular, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                     
                     Picker("", selection: Binding(
                         get: { awsManager.selectedProfile },
@@ -110,13 +114,13 @@ struct CalendarView: View {
                     if let profile = awsManager.selectedProfile {
                         let budget = awsManager.getBudget(for: profile.name)
                         Text("Total: \(formatCurrency(monthTotal))")
-                            .font(.headline)
-                            .foregroundColor(budget.monthlyBudget.map { monthTotal > $0 } ?? false ? .red : .primary)
+                            .themeFont(theme, size: .large, weight: .primary)
+                            .foregroundColor(budget.monthlyBudget.map { monthTotal > $0 } ?? false ? theme.errorColor : theme.textColor)
                     }
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(NSColor.controlBackgroundColor))
+                .themePadding(theme, .horizontal, 12)
+                .themePadding(theme, .vertical, 8)
+                .background(theme.secondaryColor.opacity(0.1))
             }
             
             Divider()
@@ -128,17 +132,16 @@ struct CalendarView: View {
                     HStack(spacing: 0) {
                         ForEach(weekdaySymbols, id: \.self) { day in
                             Text(day)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.secondary)
+                                .themeFont(theme, size: .small, weight: .primary)
+                                .foregroundColor(theme.secondaryColor)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
                         }
                     }
-                    .background(Color(NSColor.controlBackgroundColor))
+                    .background(theme.secondaryColor.opacity(0.05))
                     
                     // Calendar days grid
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7), spacing: 1) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1 * theme.spacingMultiplier), count: 7), spacing: 1 * theme.spacingMultiplier) {
                         ForEach(calendarDays, id: \.self) { date in
                             if let date = date {
                                 DayCell(
@@ -160,51 +163,56 @@ struct CalendarView: View {
                             }
                         }
                     }
-                    .background(Color(NSColor.separatorColor))
+                    .background(theme.secondaryColor.opacity(0.2))
                 }
-                .padding()
+                .themePadding(theme, .all, 12)
             }
             
             // Legend
-            HStack(spacing: 20) {
-                HStack(spacing: 5) {
+            HStack(spacing: 20 * theme.spacingMultiplier) {
+                HStack(spacing: 5 * theme.spacingMultiplier) {
                     Circle()
-                        .fill(Color.green.opacity(0.3))
+                        .fill(theme.successColor.opacity(0.3))
                         .frame(width: 10, height: 10)
                     Text("Low spend")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .small, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                 }
                 
-                HStack(spacing: 5) {
+                HStack(spacing: 5 * theme.spacingMultiplier) {
                     Circle()
-                        .fill(Color.yellow.opacity(0.3))
+                        .fill(theme.chartColor(for: 2).opacity(0.3))
                         .frame(width: 10, height: 10)
                     Text("Medium spend")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .small, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                 }
                 
-                HStack(spacing: 5) {
+                HStack(spacing: 5 * theme.spacingMultiplier) {
                     Circle()
-                        .fill(Color.red.opacity(0.3))
+                        .fill(theme.errorColor.opacity(0.3))
                         .frame(width: 10, height: 10)
                     Text("High spend")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .small, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                 }
                 
                 Spacer()
                 
-                Button("Refresh") {
+                Button(action: {
                     Task {
                         await awsManager.fetchCostForSelectedProfile(force: true)
                     }
+                }) {
+                    Text("Refresh")
+                        .themeFont(theme, size: .regular, weight: .primary)
+                        .foregroundColor(awsManager.isLoading ? theme.secondaryColor : theme.accentColor)
                 }
+                .buttonStyle(.plain)
                 .disabled(awsManager.isLoading)
             }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor))
+            .themePadding(theme, .all, 12)
+            .background(theme.backgroundColor)
         }
         .frame(minWidth: 800, minHeight: 600)
         .sheet(isPresented: $showingDayDetail) {
@@ -377,6 +385,7 @@ struct DayCell: View {
     let isToday: Bool
     let isHovered: Bool
     let maxDailyCost: Decimal
+    @Environment(\.theme) var theme
     
     private let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -400,14 +409,14 @@ struct DayCell: View {
                         .stroke(borderColor, lineWidth: isToday ? 2 : 1)
                 )
             
-            VStack(spacing: 4) {
+            VStack(spacing: 4 * theme.spacingMultiplier) {
                 Text(dayFormatter.string(from: date))
-                    .font(.system(size: 14, weight: isToday ? .bold : .medium))
-                    .foregroundColor(isToday ? .accentColor : .primary)
+                    .themeFont(theme, size: .regular, weight: .primary)
+                    .foregroundColor(isToday ? theme.accentColor : theme.textColor)
                 
                 if let cost = dailyCost {
                     Text(formatAmount(cost.amount))
-                        .font(.system(size: 12, weight: .medium))
+                        .themeFont(theme, size: .small, weight: .secondary)
                         .foregroundColor(costColor(cost.amount))
                     
                     // Visual indicator bar
@@ -417,18 +426,18 @@ struct DayCell: View {
                             .frame(width: geometry.size.width * CGFloat(truncating: NSDecimalNumber(decimal: cost.amount / maxDailyCost)), height: 4)
                     }
                     .frame(height: 4)
-                    .padding(.horizontal, 4)
+                    .themePadding(theme, .horizontal, 4)
                 } else if date <= Date() {
                     Text("$0")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .small, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                 } else {
                     Text("-")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color.secondary.opacity(0.5))
+                        .themeFont(theme, size: .small, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor.opacity(0.5))
                 }
             }
-            .padding(8)
+            .themePadding(theme, .all, 8)
         }
         .frame(height: 80)
         .scaleEffect(isHovered ? 1.05 : 1.0)
@@ -437,21 +446,23 @@ struct DayCell: View {
     
     private var backgroundColor: Color {
         if isHovered {
-            return Color.accentColor.opacity(0.1)
+            return theme.accentColor.opacity(0.1)
         } else if let cost = dailyCost {
-            return costBackgroundColor(cost.amount)
+            let costValue = NSDecimalNumber(decimal: cost.amount).doubleValue
+            let maxValue = NSDecimalNumber(decimal: maxDailyCost).doubleValue
+            return theme.dayBackgroundColor(cost: costValue, maxCost: maxValue)
         } else {
-            return Color(NSColor.controlBackgroundColor)
+            return theme.backgroundColor
         }
     }
     
     private var borderColor: Color {
         if isToday {
-            return .accentColor
+            return theme.accentColor
         } else if isHovered {
-            return Color.accentColor.opacity(0.5)
+            return theme.accentColor.opacity(0.5)
         } else {
-            return Color(NSColor.separatorColor)
+            return theme.secondaryColor.opacity(0.3)
         }
     }
     
@@ -468,26 +479,13 @@ struct DayCell: View {
     private func costColor(_ amount: Decimal) -> Color {
         let percentage = NSDecimalNumber(decimal: amount / maxDailyCost).doubleValue
         if percentage > 0.75 {
-            return .red
+            return theme.errorColor
         } else if percentage > 0.5 {
-            return .orange
+            return theme.warningColor
         } else if percentage > 0.25 {
-            return .yellow
+            return theme.chartColor(for: 2)  // Yellow-ish from chart palette
         } else {
-            return .green
-        }
-    }
-    
-    private func costBackgroundColor(_ amount: Decimal) -> Color {
-        let percentage = NSDecimalNumber(decimal: amount / maxDailyCost).doubleValue
-        if percentage > 0.75 {
-            return Color.red.opacity(0.1)
-        } else if percentage > 0.5 {
-            return Color.orange.opacity(0.1)
-        } else if percentage > 0.25 {
-            return Color.yellow.opacity(0.1)
-        } else {
-            return Color.green.opacity(0.1)
+            return theme.successColor
         }
     }
 }

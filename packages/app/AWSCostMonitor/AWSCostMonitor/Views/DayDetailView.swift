@@ -16,6 +16,7 @@ struct DayDetailView: View {
     let highlightedService: String?
     let onNavigateToDate: ((Date) -> Void)?
     @Environment(\.dismiss) var dismiss
+    @Environment(\.theme) var theme
     @State private var hoveredService: String? = nil
     @State private var showAllServices = false
     @State private var showAPIDetails = false
@@ -94,7 +95,8 @@ struct DayDetailView: View {
             // Navigation buttons on the left, matching calendar view style
             Button(action: navigateToPreviousDay) {
                 Image(systemName: "chevron.left")
-                    .font(.title2)
+                    .font(.system(size: theme.largeFontSize))
+                    .foregroundColor(theme.accentColor)
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.leftArrow, modifiers: [])
@@ -102,27 +104,28 @@ struct DayDetailView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(dateFormatter.string(from: date))
-                    .font(.title2)
-                    .fontWeight(.semibold)
+                    .themeFont(theme, size: .large, weight: .primary)
+                    .foregroundColor(theme.textColor)
                 
                 if let cost = dailyCost {
                     Text("Total: \(currencyFormatter.string(from: NSDecimalNumber(decimal: cost.amount)) ?? "$0.00")")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .regular, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                 } else {
                     Text("No data available")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .regular, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                 }
             }
-            .padding(.horizontal, 8)
+            .themePadding(theme, .horizontal, 8)
             
             Spacer()
             
             // Calendar button to jump to today
             Button(action: navigateToToday) {
                 Image(systemName: "calendar")
-                    .font(.title2)
+                    .font(.system(size: theme.largeFontSize))
+                    .foregroundColor(isViewingToday ? theme.secondaryColor : theme.accentColor)
             }
             .buttonStyle(.plain)
             .keyboardShortcut("t", modifiers: [.command])
@@ -132,21 +135,23 @@ struct DayDetailView: View {
             // Forward navigation button
             Button(action: navigateToNextDay) {
                 Image(systemName: "chevron.right")
-                    .font(.title2)
+                    .font(.system(size: theme.largeFontSize))
+                    .foregroundColor(isNextDayInFuture ? theme.secondaryColor : theme.accentColor)
             }
             .buttonStyle(.plain)
             .disabled(isNextDayInFuture)
             .keyboardShortcut(.rightArrow, modifiers: [])
             .help(isNextDayInFuture ? "Cannot navigate to future dates" : "Next day")
         }
-        .padding()
-        .background(Color(NSColor.windowBackgroundColor))
+        .themePadding(theme, .all, 12)
+        .background(theme.backgroundColor)
     }
     
     private var donutChartView: some View {
         VStack {
             Text("Cost Distribution")
-                .font(.headline)
+                .themeFont(theme, size: .large, weight: .primary)
+                .foregroundColor(theme.textColor)
                 .padding(.bottom, 10)
             
             ZStack {
@@ -190,7 +195,7 @@ struct DayDetailView: View {
                         context.fill(path, with: .color(serviceColor.opacity(opacity)))
                         
                         // Add subtle stroke
-                        context.stroke(path, with: .color(Color.black.opacity(0.1)), lineWidth: 1)
+                        context.stroke(path, with: .color(theme.secondaryColor.opacity(0.2)), lineWidth: 1)
                         
                         currentAngle += angleSpan
                     }
@@ -209,45 +214,44 @@ struct DayDetailView: View {
                let service = processedServices.first(where: { $0.name == hovered }) {
                 // Show hovered service details
                 Text(service.name)
-                    .font(.caption)
+                    .themeFont(theme, size: .small, weight: .secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.textColor)
                 
                 Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .themeFont(theme, size: .large, weight: .primary)
+                    .foregroundColor(theme.primaryColor)
                 
                 let percentage = totalAmount > 0 ? (service.amount / totalAmount) * 100 : 0
                 Text("\(Int(truncating: NSDecimalNumber(decimal: percentage)))%")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themeFont(theme, size: .small, weight: .secondary)
+                    .foregroundColor(theme.secondaryColor)
             } else {
                 // Show total when nothing is hovered
                 Text("Total")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themeFont(theme, size: .small, weight: .secondary)
+                    .foregroundColor(theme.secondaryColor)
                 
                 Text(currencyFormatter.string(from: NSDecimalNumber(decimal: totalAmount)) ?? "$0")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .themeFont(theme, size: .large, weight: .primary)
+                    .foregroundColor(theme.primaryColor)
                 
                 Text("All Services")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themeFont(theme, size: .small, weight: .secondary)
+                    .foregroundColor(theme.secondaryColor)
             }
         }
         .frame(width: 140, height: 140)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(theme.backgroundColor)
         .clipShape(Circle())
     }
     
     private var serviceListView: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Services")
-                .font(.headline)
+                .themeFont(theme, size: .large, weight: .primary)
+                .foregroundColor(theme.textColor)
                 .padding(.bottom, 4)
             
             ScrollView {
@@ -258,7 +262,7 @@ struct DayDetailView: View {
                     
                     toggleButton
                 }
-                .padding(.trailing, 8)
+                .themePadding(theme, .trailing, 8)
             }
             .frame(maxHeight: 350)
         }
@@ -281,21 +285,22 @@ struct DayDetailView: View {
                 .frame(width: 8, height: 8)
             
             Text(service.serviceName)
-                .font(.system(size: 12))
+                .themeFont(theme, size: .small, weight: .secondary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .foregroundColor(theme.textColor)
             
             Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(service.amount > 10 ? .red : (service.amount > 1 ? .orange : .primary))
+                .themeFont(theme, size: .small, weight: .primary)
+                .foregroundColor(service.amount > 10 ? theme.errorColor : (service.amount > 1 ? theme.warningColor : theme.textColor))
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
+        .themePadding(theme, .vertical, 4)
+        .themePadding(theme, .horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(
-                    highlightedService == service.serviceName ? Color.blue.opacity(0.2) :
-                    hoveredService == service.serviceName ? Color.accentColor.opacity(0.1) : Color.clear
+                    highlightedService == service.serviceName ? theme.accentColor.opacity(0.2) :
+                    hoveredService == service.serviceName ? theme.accentColor.opacity(0.1) : Color.clear
                 )
         )
         .onHover { isHovered in
@@ -311,7 +316,7 @@ struct DayDetailView: View {
                     HStack {
                         Image(systemName: "chevron.down.circle")
                         Text("Show all services")
-                            .font(.caption)
+                            .themeFont(theme, size: .small, weight: .secondary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -322,7 +327,7 @@ struct DayDetailView: View {
                     HStack {
                         Image(systemName: "chevron.up.circle")
                         Text("Show less")
-                            .font(.caption)
+                            .themeFont(theme, size: .small, weight: .secondary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -351,19 +356,10 @@ struct DayDetailView: View {
     }
     
     private func colorForService(_ serviceName: String) -> Color {
-        // Define colors for top services
-        let serviceColors: [String: Color] = [
-            "Amazon OpenSearch Service": .blue,
-            "Tax": .green,
-            "Amazon Route 53": .orange,
-            "Claude 3.5 Sonnet (Amazon Bedrock Edition)": .purple,
-            "AWS Cost Explorer": .red,
-            "Amazon Simple Storage Service": .yellow,
-            "Other Services": .gray
-        ]
-        
-        if let color = serviceColors[serviceName] {
-            return color
+        // Use theme chart colors for services
+        let serviceNames = processedServices.map { $0.name }
+        if let index = serviceNames.firstIndex(of: serviceName) {
+            return theme.chartColor(for: index)
         }
         
         // Generate a consistent color based on the service name
@@ -393,7 +389,7 @@ struct DayDetailView: View {
                     
                     Image(systemName: showAPIDetails ? "chevron.up" : "chevron.down")
                         .foregroundColor(.secondary)
-                        .font(.caption)
+                        .themeFont(theme, size: .small, weight: .secondary)
                 }
                 .padding()
                 .contentShape(Rectangle())
@@ -435,7 +431,7 @@ struct DayDetailView: View {
                             .font(.title2)
                             .foregroundColor(Color(.systemBlue).opacity(0.5))
                         Text("No API calls recorded for this day")
-                            .font(.caption)
+                            .themeFont(theme, size: .small, weight: .secondary)
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical)
@@ -455,11 +451,11 @@ struct DayDetailView: View {
                 // Footer info
                 HStack(spacing: 16) {
                     Label("Rate Limit: 1 call/minute", systemImage: "speedometer")
-                        .font(.caption)
+                        .themeFont(theme, size: .small, weight: .secondary)
                         .foregroundColor(.secondary)
                     
                     Label("Est. cost: ~$\(String(format: "%.3f", Double(apiCalls.count) * 0.01))", systemImage: "dollarsign.circle")
-                        .font(.caption)
+                        .themeFont(theme, size: .small, weight: .secondary)
                         .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
@@ -518,10 +514,10 @@ struct DayDetailView: View {
                 dismiss()
             }
             .keyboardShortcut(.defaultAction)
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            .themePadding(theme, .horizontal, 12)
+            .themePadding(theme, .vertical, 12)
         }
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(theme.backgroundColor)
     }
     
     // MARK: - Navigation
