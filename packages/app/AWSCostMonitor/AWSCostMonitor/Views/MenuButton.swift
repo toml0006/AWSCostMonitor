@@ -15,6 +15,7 @@ struct MenuButton: View {
     @Binding var hoveredItem: String?
     @Binding var pressedItem: String?
     let itemId: String
+    @Environment(\.theme) var theme
     
     var body: some View {
         Button(action: {
@@ -33,19 +34,21 @@ struct MenuButton: View {
         }) {
             HStack {
                 Label(label, systemImage: systemImage)
+                    .themeFont(theme, size: .regular, weight: .primary)
+                    .foregroundColor(hoveredItem == itemId ? theme.accentColor : theme.textColor)
                 Spacer()
                 if let shortcut = shortcut {
                     Text(shortcut)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themeFont(theme, size: .small, weight: .secondary)
+                        .foregroundColor(theme.secondaryColor)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .themePadding(theme, .horizontal, 8)
+            .themePadding(theme, .vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(pressedItem == itemId ? Color.accentColor.opacity(0.2) :
-                          (hoveredItem == itemId ? Color.accentColor.opacity(0.1) : Color.clear))
+                    .fill(pressedItem == itemId ? theme.accentColor.opacity(0.2) :
+                          (hoveredItem == itemId ? theme.accentColor.opacity(0.1) : Color.clear))
                     .animation(.easeInOut(duration: 0.1), value: hoveredItem)
                     .animation(.easeInOut(duration: 0.1), value: pressedItem)
             )

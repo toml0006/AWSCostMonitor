@@ -10,6 +10,7 @@ import Charts
 
 struct PopoverContentView: View {
     @EnvironmentObject var awsManager: AWSManager
+    @Environment(\.theme) var theme
     @State private var showAllServices = false
     @State private var helpButtonHovered = false
     @State private var quitButtonHovered = false
@@ -29,11 +30,12 @@ struct PopoverContentView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("AWSCostMonitor")
-                        .font(.system(size: 16, weight: .semibold))
+                        .themeFont(theme, size: .large, weight: .secondary)
+                        .foregroundColor(theme.textColor)
                     #if DEBUG
                     Text("DEBUG BUILD")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.red)
+                        .foregroundColor(theme.errorColor)
                     #endif
                 }
                 Spacer()
@@ -43,8 +45,8 @@ struct PopoverContentView: View {
                     showHelpWindow()
                 }) {
                     Image(systemName: "questionmark.circle")
-                        .font(.system(size: 14))
-                        .foregroundColor(helpButtonHovered ? .primary : .secondary)
+                        .themeFont(theme, size: .regular)
+                        .foregroundColor(helpButtonHovered ? theme.accentColor : theme.secondaryColor)
                 }
                 .buttonStyle(.plain)
                 .onHover { isHovered in
@@ -171,21 +173,22 @@ struct PopoverContentView: View {
                             ProgressView()
                                 .controlSize(.small)
                             Text("Loading...")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .themeFont(theme, size: .small)
+                                .foregroundColor(theme.secondaryColor)
                         }
-                        .padding()
+                        .themePadding(theme)
                     } else if let errorMessage = awsManager.errorMessage {
                         // Error state
-                        VStack(spacing: 8) {
+                        VStack(spacing: 8 * theme.spacingMultiplier) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 24))
-                                .foregroundColor(.orange)
+                                .foregroundColor(theme.warningColor)
                             Text("Error Loading Profile")
-                                .font(.system(size: 12, weight: .semibold))
+                                .themeFont(theme, size: .regular, weight: .secondary)
+                                .foregroundColor(theme.textColor)
                             Text(errorMessage)
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .themeFont(theme, size: .small)
+                                .foregroundColor(theme.secondaryColor)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(3)
                             
