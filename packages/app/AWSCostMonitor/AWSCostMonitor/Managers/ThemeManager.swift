@@ -12,6 +12,10 @@ import AppKit
 
 class ThemeManager: ObservableObject {
     
+    // MARK: - Shared Instance
+    
+    static let shared = ThemeManager()
+    
     // MARK: - Published Properties
     
     @Published var currentTheme: Theme
