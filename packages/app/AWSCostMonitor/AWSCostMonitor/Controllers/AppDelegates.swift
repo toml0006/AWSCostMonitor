@@ -112,7 +112,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize the status bar controller with a small delay to ensure proper setup
         DispatchQueue.main.async { [weak self] in
-            self?.statusBarController = StatusBarController(awsManager: AWSManager.shared)
+            self?.statusBarController = StatusBarController(awsManager: AWSManager.shared, themeManager: ThemeManager.shared)
         }
         
         // Hide the dock icon
