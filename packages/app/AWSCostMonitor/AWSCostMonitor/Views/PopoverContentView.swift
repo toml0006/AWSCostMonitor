@@ -25,7 +25,8 @@ struct PopoverContentView: View {
     let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let _ = print("[DEBUG PopoverContentView] Rendering with \(awsManager.profiles.count) profiles: \(awsManager.profiles.map { $0.name })")  // Debug logging
+        return VStack(alignment: .leading, spacing: 8) {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -120,6 +121,7 @@ struct PopoverContentView: View {
                     .pickerStyle(MenuPickerStyle())
                     .labelsHidden()
                     .frame(maxWidth: 150)
+                    .id(awsManager.profiles.map { $0.name }.joined()) // Force refresh when profiles change
                     .onChange(of: awsManager.selectedProfile) { oldProfile, newProfile in
                         if let profile = newProfile {
                             // Save the selected profile, which will handle everything:

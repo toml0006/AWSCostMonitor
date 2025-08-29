@@ -77,6 +77,9 @@ class ThemeManager: ObservableObject {
         currentTheme = theme
         userDefaults.set(theme.identifier, forKey: selectedThemeKey)
         
+        // Post notification for theme change
+        NotificationCenter.default.post(name: NSNotification.Name("ThemeDidChange"), object: nil)
+        
         // Log theme change for debugging
         #if DEBUG
         print("ThemeManager: Selected theme '\(theme.name)' (\(theme.identifier))")
@@ -205,49 +208,10 @@ extension View {
         self.foregroundColor(theme.textColor)
     }
     
-    /// Apply theme-aware text formatting
-    func themeFont(_ theme: Theme, size: ThemeFontSize = .regular, weight: ThemeFontWeight = .primary) -> some View {
-        let fontSize: CGFloat
-        let fontWeight: Font.Weight
-        
-        switch size {
-        case .small:
-            fontSize = theme.smallFontSize
-        case .regular:
-            fontSize = theme.regularFontSize
-        case .large:
-            fontSize = theme.largeFontSize
-        }
-        
-        switch weight {
-        case .primary:
-            fontWeight = theme.primaryFontWeight
-        case .secondary:
-            fontWeight = theme.secondaryFontWeight
-        }
-        
-        return self.font(.system(size: fontSize, weight: fontWeight))
-    }
-    
-    /// Apply theme-aware padding
-    func themePadding(_ theme: Theme, _ edges: Edge.Set = .all, _ length: CGFloat? = nil) -> some View {
-        let scaledPadding = (length ?? 8.0) * theme.paddingScale
-        return self.padding(edges, scaledPadding)
-    }
     
     /// Apply theme-aware spacing
     func themeSpacing(_ theme: Theme, _ spacing: CGFloat = 8.0) -> some View {
         let scaledSpacing = spacing * theme.spacingMultiplier
         return self.padding(.bottom, scaledSpacing)
     }
-}
-
-// MARK: - Theme Helper Enums
-
-enum ThemeFontSize {
-    case small, regular, large
-}
-
-enum ThemeFontWeight {
-    case primary, secondary
 }

@@ -9,6 +9,50 @@ import Foundation
 import SwiftUI
 import AppKit
 
+// MARK: - View Extensions for Theme
+
+extension View {
+    
+    /// Apply theme-based font with size and weight
+    func themeFont(_ theme: Theme, size: ThemeFontSize = .regular, weight: ThemeFontWeight = .primary) -> some View {
+        let fontSize: CGFloat
+        switch size {
+        case .small:
+            fontSize = theme.smallFontSize
+        case .regular:
+            fontSize = theme.regularFontSize
+        case .large:
+            fontSize = theme.largeFontSize
+        }
+        
+        let fontWeight: Font.Weight
+        switch weight {
+        case .primary:
+            fontWeight = theme.primaryFontWeight
+        case .secondary:
+            fontWeight = theme.secondaryFontWeight
+        }
+        
+        return self.font(.system(size: fontSize, weight: fontWeight))
+    }
+    
+    /// Apply theme-based padding with multiplier
+    func themePadding(_ theme: Theme, _ edges: Edge.Set = .all, _ baseValue: CGFloat = 8) -> some View {
+        self.padding(edges, baseValue * theme.paddingScale)
+    }
+}
+
+enum ThemeFontSize {
+    case small
+    case regular
+    case large
+}
+
+enum ThemeFontWeight {
+    case primary
+    case secondary
+}
+
 // MARK: - NSColor Extensions for Theme Integration
 
 extension NSColor {

@@ -11,7 +11,7 @@ import Charts
 struct ServiceHistogramView: View {
     let dailyServiceCosts: [DailyServiceCost]
     let serviceName: String
-    @Environment(\.theme) var theme
+    @ObservedObject var themeManager = ThemeManager.shared
     
     var body: some View {
         let last14Days = getLast14DaysData()
@@ -23,22 +23,22 @@ struct ServiceHistogramView: View {
                 
                 HStack(spacing: 0) {
                     Text(histogramText.bars)
-                        .font(.system(size: 10 * theme.spacingMultiplier, design: .monospaced))
-                        .foregroundColor(theme.accentColor)
+                        .font(.system(size: 10 * themeManager.currentTheme.spacingMultiplier, design: .monospaced))
+                        .foregroundColor(themeManager.currentTheme.accentColor)
                     
                     Text(" ")
                         .font(.system(size: 6))
                     
                     Text(histogramText.trend)
-                        .font(.system(size: 8 * theme.spacingMultiplier))
+                        .font(.system(size: 8 * themeManager.currentTheme.spacingMultiplier))
                         .foregroundColor(histogramText.trendColor)
                 }
                 
                 Spacer()
                 
                 Text("14d")
-                    .themeFont(theme, size: .small, weight: .secondary)
-                    .foregroundColor(theme.secondaryColor)
+                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                    .foregroundColor(themeManager.currentTheme.secondaryColor)
             }
         }
     }
@@ -101,7 +101,7 @@ struct ServiceHistogramView: View {
         
         if maxAmount == 0.0 {
             let emptyBars = String(repeating: "▁", count: dailyData.count)
-            return (emptyBars, "—", theme.secondaryColor) // All zero bars with neutral trend
+            return (emptyBars, "—", themeManager.currentTheme.secondaryColor) // All zero bars with neutral trend
         }
         
         // Create bars using fine-grained Unicode blocks
@@ -124,13 +124,13 @@ struct ServiceHistogramView: View {
             
             if lastWeek > firstWeek * 1.2 { // 20% increase
                 trend = "↗"
-                trendColor = theme.errorColor
+                trendColor = themeManager.currentTheme.errorColor
             } else if lastWeek < firstWeek * 0.8 { // 20% decrease
                 trend = "↘"
-                trendColor = theme.successColor
+                trendColor = themeManager.currentTheme.successColor
             } else {
                 trend = "→"
-                trendColor = theme.secondaryColor
+                trendColor = themeManager.currentTheme.secondaryColor
             }
             
             return (bars, trend, trendColor)
@@ -145,13 +145,13 @@ struct ServiceHistogramView: View {
             
             if lastHalf > firstHalf * 1.2 { // 20% increase
                 trend = "↗"
-                trendColor = theme.errorColor
+                trendColor = themeManager.currentTheme.errorColor
             } else if lastHalf < firstHalf * 0.8 { // 20% decrease
                 trend = "↘"
-                trendColor = theme.successColor
+                trendColor = themeManager.currentTheme.successColor
             } else {
                 trend = "→"
-                trendColor = theme.secondaryColor
+                trendColor = themeManager.currentTheme.secondaryColor
             }
             
             return (bars, trend, trendColor)

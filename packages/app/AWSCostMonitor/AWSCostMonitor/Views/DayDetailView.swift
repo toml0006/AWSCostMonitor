@@ -16,7 +16,7 @@ struct DayDetailView: View {
     let highlightedService: String?
     let onNavigateToDate: ((Date) -> Void)?
     @Environment(\.dismiss) var dismiss
-    @Environment(\.theme) var theme
+    @ObservedObject var themeManager = ThemeManager.shared
     @State private var hoveredService: String? = nil
     @State private var showAllServices = false
     @State private var showAPIDetails = false
@@ -95,8 +95,8 @@ struct DayDetailView: View {
             // Navigation buttons on the left, matching calendar view style
             Button(action: navigateToPreviousDay) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: theme.largeFontSize))
-                    .foregroundColor(theme.accentColor)
+                    .font(.system(size: themeManager.currentTheme.largeFontSize))
+                    .foregroundColor(themeManager.currentTheme.accentColor)
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.leftArrow, modifiers: [])
@@ -104,28 +104,28 @@ struct DayDetailView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(dateFormatter.string(from: date))
-                    .themeFont(theme, size: .large, weight: .primary)
-                    .foregroundColor(theme.textColor)
+                    .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
+                    .foregroundColor(themeManager.currentTheme.textColor)
                 
                 if let cost = dailyCost {
                     Text("Total: \(currencyFormatter.string(from: NSDecimalNumber(decimal: cost.amount)) ?? "$0.00")")
-                        .themeFont(theme, size: .regular, weight: .secondary)
-                        .foregroundColor(theme.secondaryColor)
+                        .themeFont(themeManager.currentTheme, size: .regular, weight: .secondary)
+                        .foregroundColor(themeManager.currentTheme.secondaryColor)
                 } else {
                     Text("No data available")
-                        .themeFont(theme, size: .regular, weight: .secondary)
-                        .foregroundColor(theme.secondaryColor)
+                        .themeFont(themeManager.currentTheme, size: .regular, weight: .secondary)
+                        .foregroundColor(themeManager.currentTheme.secondaryColor)
                 }
             }
-            .themePadding(theme, .horizontal, 8)
+            .themePadding(themeManager.currentTheme, .horizontal, 8)
             
             Spacer()
             
             // Calendar button to jump to today
             Button(action: navigateToToday) {
                 Image(systemName: "calendar")
-                    .font(.system(size: theme.largeFontSize))
-                    .foregroundColor(isViewingToday ? theme.secondaryColor : theme.accentColor)
+                    .font(.system(size: themeManager.currentTheme.largeFontSize))
+                    .foregroundColor(isViewingToday ? themeManager.currentTheme.secondaryColor : themeManager.currentTheme.accentColor)
             }
             .buttonStyle(.plain)
             .keyboardShortcut("t", modifiers: [.command])
@@ -135,23 +135,23 @@ struct DayDetailView: View {
             // Forward navigation button
             Button(action: navigateToNextDay) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: theme.largeFontSize))
-                    .foregroundColor(isNextDayInFuture ? theme.secondaryColor : theme.accentColor)
+                    .font(.system(size: themeManager.currentTheme.largeFontSize))
+                    .foregroundColor(isNextDayInFuture ? themeManager.currentTheme.secondaryColor : themeManager.currentTheme.accentColor)
             }
             .buttonStyle(.plain)
             .disabled(isNextDayInFuture)
             .keyboardShortcut(.rightArrow, modifiers: [])
             .help(isNextDayInFuture ? "Cannot navigate to future dates" : "Next day")
         }
-        .themePadding(theme, .all, 12)
-        .background(theme.backgroundColor)
+        .themePadding(themeManager.currentTheme, .all, 12)
+        .background(themeManager.currentTheme.backgroundColor)
     }
     
     private var donutChartView: some View {
         VStack {
             Text("Cost Distribution")
-                .themeFont(theme, size: .large, weight: .primary)
-                .foregroundColor(theme.textColor)
+                .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
+                .foregroundColor(themeManager.currentTheme.textColor)
                 .padding(.bottom, 10)
             
             ZStack {
@@ -195,7 +195,7 @@ struct DayDetailView: View {
                         context.fill(path, with: .color(serviceColor.opacity(opacity)))
                         
                         // Add subtle stroke
-                        context.stroke(path, with: .color(theme.secondaryColor.opacity(0.2)), lineWidth: 1)
+                        context.stroke(path, with: .color(themeManager.currentTheme.secondaryColor.opacity(0.2)), lineWidth: 1)
                         
                         currentAngle += angleSpan
                     }
@@ -214,44 +214,44 @@ struct DayDetailView: View {
                let service = processedServices.first(where: { $0.name == hovered }) {
                 // Show hovered service details
                 Text(service.name)
-                    .themeFont(theme, size: .small, weight: .secondary)
+                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(theme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColor)
                 
                 Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
-                    .themeFont(theme, size: .large, weight: .primary)
-                    .foregroundColor(theme.primaryColor)
+                    .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
+                    .foregroundColor(themeManager.currentTheme.primaryColor)
                 
                 let percentage = totalAmount > 0 ? (service.amount / totalAmount) * 100 : 0
                 Text("\(Int(truncating: NSDecimalNumber(decimal: percentage)))%")
-                    .themeFont(theme, size: .small, weight: .secondary)
-                    .foregroundColor(theme.secondaryColor)
+                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                    .foregroundColor(themeManager.currentTheme.secondaryColor)
             } else {
                 // Show total when nothing is hovered
                 Text("Total")
-                    .themeFont(theme, size: .small, weight: .secondary)
-                    .foregroundColor(theme.secondaryColor)
+                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                    .foregroundColor(themeManager.currentTheme.secondaryColor)
                 
                 Text(currencyFormatter.string(from: NSDecimalNumber(decimal: totalAmount)) ?? "$0")
-                    .themeFont(theme, size: .large, weight: .primary)
-                    .foregroundColor(theme.primaryColor)
+                    .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
+                    .foregroundColor(themeManager.currentTheme.primaryColor)
                 
                 Text("All Services")
-                    .themeFont(theme, size: .small, weight: .secondary)
-                    .foregroundColor(theme.secondaryColor)
+                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                    .foregroundColor(themeManager.currentTheme.secondaryColor)
             }
         }
         .frame(width: 140, height: 140)
-        .background(theme.backgroundColor)
+        .background(themeManager.currentTheme.backgroundColor)
         .clipShape(Circle())
     }
     
     private var serviceListView: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Services")
-                .themeFont(theme, size: .large, weight: .primary)
-                .foregroundColor(theme.textColor)
+                .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
+                .foregroundColor(themeManager.currentTheme.textColor)
                 .padding(.bottom, 4)
             
             ScrollView {
@@ -262,7 +262,7 @@ struct DayDetailView: View {
                     
                     toggleButton
                 }
-                .themePadding(theme, .trailing, 8)
+                .themePadding(themeManager.currentTheme, .trailing, 8)
             }
             .frame(maxHeight: 350)
         }
@@ -285,22 +285,22 @@ struct DayDetailView: View {
                 .frame(width: 8, height: 8)
             
             Text(service.serviceName)
-                .themeFont(theme, size: .small, weight: .secondary)
+                .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .foregroundColor(theme.textColor)
+                .foregroundColor(themeManager.currentTheme.textColor)
             
             Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
-                .themeFont(theme, size: .small, weight: .primary)
-                .foregroundColor(service.amount > 10 ? theme.errorColor : (service.amount > 1 ? theme.warningColor : theme.textColor))
+                .themeFont(themeManager.currentTheme, size: .small, weight: .primary)
+                .foregroundColor(service.amount > 10 ? themeManager.currentTheme.errorColor : (service.amount > 1 ? themeManager.currentTheme.warningColor : themeManager.currentTheme.textColor))
         }
-        .themePadding(theme, .vertical, 4)
-        .themePadding(theme, .horizontal, 8)
+        .themePadding(themeManager.currentTheme, .vertical, 4)
+        .themePadding(themeManager.currentTheme, .horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(
-                    highlightedService == service.serviceName ? theme.accentColor.opacity(0.2) :
-                    hoveredService == service.serviceName ? theme.accentColor.opacity(0.1) : Color.clear
+                    highlightedService == service.serviceName ? themeManager.currentTheme.accentColor.opacity(0.2) :
+                    hoveredService == service.serviceName ? themeManager.currentTheme.accentColor.opacity(0.1) : Color.clear
                 )
         )
         .onHover { isHovered in
@@ -316,7 +316,7 @@ struct DayDetailView: View {
                     HStack {
                         Image(systemName: "chevron.down.circle")
                         Text("Show all services")
-                            .themeFont(theme, size: .small, weight: .secondary)
+                            .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -327,7 +327,7 @@ struct DayDetailView: View {
                     HStack {
                         Image(systemName: "chevron.up.circle")
                         Text("Show less")
-                            .themeFont(theme, size: .small, weight: .secondary)
+                            .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -359,7 +359,7 @@ struct DayDetailView: View {
         // Use theme chart colors for services
         let serviceNames = processedServices.map { $0.name }
         if let index = serviceNames.firstIndex(of: serviceName) {
-            return theme.chartColor(for: index)
+            return themeManager.currentTheme.chartColor(for: index)
         }
         
         // Generate a consistent color based on the service name
@@ -389,7 +389,7 @@ struct DayDetailView: View {
                     
                     Image(systemName: showAPIDetails ? "chevron.up" : "chevron.down")
                         .foregroundColor(.secondary)
-                        .themeFont(theme, size: .small, weight: .secondary)
+                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                 }
                 .padding()
                 .contentShape(Rectangle())
@@ -431,7 +431,7 @@ struct DayDetailView: View {
                             .font(.title2)
                             .foregroundColor(Color(.systemBlue).opacity(0.5))
                         Text("No API calls recorded for this day")
-                            .themeFont(theme, size: .small, weight: .secondary)
+                            .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical)
@@ -451,11 +451,11 @@ struct DayDetailView: View {
                 // Footer info
                 HStack(spacing: 16) {
                     Label("Rate Limit: 1 call/minute", systemImage: "speedometer")
-                        .themeFont(theme, size: .small, weight: .secondary)
+                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                         .foregroundColor(.secondary)
                     
                     Label("Est. cost: ~$\(String(format: "%.3f", Double(apiCalls.count) * 0.01))", systemImage: "dollarsign.circle")
-                        .themeFont(theme, size: .small, weight: .secondary)
+                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
                         .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
@@ -514,10 +514,10 @@ struct DayDetailView: View {
                 dismiss()
             }
             .keyboardShortcut(.defaultAction)
-            .themePadding(theme, .horizontal, 12)
-            .themePadding(theme, .vertical, 12)
+            .themePadding(themeManager.currentTheme, .horizontal, 12)
+            .themePadding(themeManager.currentTheme, .vertical, 12)
         }
-        .background(theme.backgroundColor)
+        .background(themeManager.currentTheme.backgroundColor)
     }
     
     // MARK: - Navigation

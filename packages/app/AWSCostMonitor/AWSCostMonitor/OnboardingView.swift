@@ -62,7 +62,7 @@ struct OnboardingView: View {
                     .tag(5)
             }
             .tabViewStyle(.automatic)
-            .frame(height: 350)
+            .frame(height: 400)
             
             // Navigation buttons
             HStack {
@@ -96,8 +96,8 @@ struct OnboardingView: View {
             }
             .padding(20)
         }
-        .frame(width: 600)
-        .frame(minHeight: 600)
+        .frame(width: 650)
+        .frame(minHeight: 650)
         .fixedSize(horizontal: false, vertical: true)
         .background(Color(NSColor.windowBackgroundColor))
     }
@@ -122,7 +122,7 @@ struct OnboardingView: View {
             }
             .font(.body)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 80)
+            .padding(.horizontal, 40)
         }
     }
     
@@ -258,7 +258,7 @@ struct OnboardingView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, 20)
                 }
                 .frame(maxHeight: 200)
             }
@@ -333,7 +333,7 @@ struct OnboardingView: View {
                         .foregroundColor(.orange)
                 }
             }
-            .padding(.horizontal, 60)
+            .padding(.horizontal, 40)
         }
     }
     
@@ -406,7 +406,7 @@ struct OnboardingView: View {
                         .padding(.leading, 32)
                 }
             }
-            .padding(.horizontal, 80)
+            .padding(.horizontal, 40)
         }
     }
     
