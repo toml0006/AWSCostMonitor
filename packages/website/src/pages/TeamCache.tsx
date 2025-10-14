@@ -331,7 +331,7 @@ const TeamCache: React.FC = () => {
           <details className="bg-white rounded-lg p-6">
             <summary className="font-semibold cursor-pointer">How do I disable Team Cache?</summary>
             <p className="mt-3 text-gray-600">
-              Simply toggle off "Enable Team Cache" in Settings > Refresh Settings for each profile. The app will immediately revert to direct API calls.
+              Simply toggle off "Enable Team Cache" in Settings &gt; Refresh Settings for each profile. The app will immediately revert to direct API calls.
             </p>
           </details>
         </div>
