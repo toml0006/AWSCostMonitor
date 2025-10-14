@@ -9,7 +9,7 @@ struct SettingsView: View {
     @State private var selectedCategory: String = "Accounts"
     @State private var hoveredCategory: String? = nil
     
-    init(initialSelectedCategory: String = "Accounts") {
+    init(initialSelectedCategory: String = "General") {
         _selectedCategory = State(initialValue: initialSelectedCategory)
     }
     
