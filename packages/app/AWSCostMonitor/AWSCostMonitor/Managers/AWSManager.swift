@@ -50,9 +50,13 @@ class AWSManager: ObservableObject {
     private var healthCheckTimer: DispatchSourceTimer? // Independent health check - ultimate failsafe
     private let timerQueue = DispatchQueue(label: "com.awscostmonitor.refresh", qos: .utility)
     
+    // Modern async timer task for more reliability
+    private var refreshTask: Task<Void, Never>?
+    private var timerValidationTask: Task<Void, Never>?
+    
     // Computed property to check if auto-refresh is active
     var isAutoRefreshActive: Bool {
-        return refreshTimer != nil
+        return refreshTimer != nil || refreshTask != nil
     }
     
     @Published var historicalData: [HistoricalCostData] = []
@@ -345,11 +349,12 @@ class AWSManager: ObservableObject {
             }
             
             self.checkForStartupRefresh()
-        }
-        
-        // Restore auto-refresh state if it was enabled
-        if autoRefreshEnabled {
-            startAutomaticRefresh()
+            
+            // Start auto-refresh after profiles are loaded and startup is complete
+            if self.autoRefreshEnabled {
+                self.log(.info, category: "Startup", "Starting automatic refresh after startup complete")
+                self.startAutomaticRefresh()
+            }
         }
 
         // ALWAYS start validation and health check timers (independent of auto-refresh state)
@@ -371,9 +376,10 @@ class AWSManager: ObservableObject {
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
 
-        // Stop any running timers
+        // Stop any running timers (both legacy and modern)
         stopAutomaticRefresh()
         stopBackgroundSyncTimer()
+        stopAsyncRefreshTimer()
 
         // Stop health check timer
         healthCheckTimer?.cancel()
@@ -382,6 +388,8 @@ class AWSManager: ObservableObject {
         #if DEBUG
         stopDebugTimer()
         #endif
+
+        log(.info, category: "Cleanup", "AWSManager deinitialized - all timers and observers cleaned up")
     }
     
     // Setup screen state monitoring for automatic refresh control
@@ -423,27 +431,50 @@ class AWSManager: ObservableObject {
     
     // Handle system wake notification
     @objc func systemDidWake() {
-        log(.warning, category: "Refresh", "System woke from sleep - checking if refresh is needed")
+        log(.info, category: "Refresh", "System woke from sleep")
 
-        // Give the system a moment to fully wake up
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self else { return }
+        // If auto-refresh is enabled, check if we need to refresh
+        if autoRefreshEnabled {
+            // Give the system a moment to fully wake up
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                guard let self = self else { return }
 
-            // Simple approach: just check if refresh is needed
-            self.checkAndRefreshIfNeeded()
+                // Check if both timer types are still valid
+                let hasDispatchTimer = self.refreshTimer != nil
+                let hasAsyncTimer = self.refreshTask != nil && !self.refreshTask!.isCancelled
 
-            // Also restart any missing timers as a failsafe
-            if self.autoRefreshEnabled {
-                // Check if validation timer is missing
+                self.log(.info, category: "Refresh", "After system wake - DispatchTimer: \(hasDispatchTimer), AsyncTimer: \(hasAsyncTimer)")
+
+                if hasDispatchTimer || hasAsyncTimer {
+                    // At least one timer is still running, trigger an immediate refresh
+                    self.log(.info, category: "Refresh", "At least one timer is still valid after system wake")
+                    Task {
+                        await self.fetchCostForSelectedProfile()
+                    }
+                } else {
+                    // Both timers are invalid, restart them
+                    self.log(.warning, category: "Refresh", "Both timers invalid after system wake - restarting automatic refresh")
+                    self.startAutomaticRefresh()
+                }
+
+                // Also restart any missing validation/health check timers as a failsafe
                 if self.timerValidationTimer == nil {
                     self.log(.warning, category: "Refresh", "Validation timer was lost during sleep - restarting")
                     self.startTimerValidation()
                 }
 
-                // Check if health check timer is missing
                 if self.healthCheckTimer == nil {
                     self.log(.warning, category: "HealthCheck", "Health check timer was lost during sleep - restarting")
                     self.startHealthCheckTimer()
+                }
+
+                // Also force validation of next refresh time
+                if let nextTime = self.nextRefreshTime {
+                    let timeUntilNext = nextTime.timeIntervalSinceNow
+                    if timeUntilNext < -300 { // More than 5 minutes overdue
+                        self.log(.warning, category: "Refresh", "Next refresh time is very stale (\(Int(-timeUntilNext)) seconds overdue) - restarting timers")
+                        self.startAutomaticRefresh()
+                    }
                 }
             }
         }
@@ -1540,12 +1571,13 @@ class AWSManager: ObservableObject {
         log(.debug, category: "RefreshTimer", "startAutomaticRefresh() called")
         #endif
         
-        // Cancel existing timer if present
+        // Cancel existing timers if present
         if refreshTimer != nil {
             refreshTimer?.cancel()
             refreshTimer = nil
-            nextRefreshTime = nil
         }
+        stopAsyncRefreshTimer() // Stop any async tasks
+        nextRefreshTime = nil
         
         autoRefreshEnabled = true // Persist the state
         
@@ -1568,11 +1600,15 @@ class AWSManager: ObservableObject {
             Task {
                 await fetchCostForSelectedProfile()
                 await MainActor.run {
-                    self.scheduleNextRefresh()
+                    // Start both timer implementations for redundancy
+                    self.scheduleNextRefresh() // Legacy DispatchSource timer
+                    self.startAsyncRefreshTimer() // Modern async timer
                 }
             }
         } else {
-            scheduleNextRefresh()
+            // Start both timer implementations for redundancy
+            scheduleNextRefresh() // Legacy DispatchSource timer
+            startAsyncRefreshTimer() // Modern async timer
         }
     }
     
@@ -1716,6 +1752,7 @@ class AWSManager: ObservableObject {
     
     // Stops automatic refresh
     func stopAutomaticRefresh() {
+        // Stop legacy DispatchSource timers
         if refreshTimer != nil {
             refreshTimer?.cancel()
             refreshTimer = nil
@@ -1724,8 +1761,14 @@ class AWSManager: ObservableObject {
             validationTimer.cancel()
             timerValidationTimer = nil
         }
+        
+        // Stop modern async timers
+        stopAsyncRefreshTimer()
+        
         nextRefreshTime = nil
         autoRefreshEnabled = false // Persist the state
+        
+        log(.info, category: "Refresh", "All refresh timers stopped")
     }
     
     // Independent health check timer - ultimate failsafe (runs every 5 minutes)
@@ -1866,13 +1909,119 @@ class AWSManager: ObservableObject {
     
     // Updates refresh interval and recreates timer if running
     func updateRefreshInterval(_ newInterval: Int) {
-        let wasRunning = refreshTimer != nil
+        let wasRunning = refreshTimer != nil || refreshTask != nil
         stopAutomaticRefresh() // Always stop first
         refreshInterval = newInterval
         
         if wasRunning {
             startAutomaticRefresh() // Restart with new interval
         }
+    }
+    
+    // MARK: - Modern Async Timer Implementation (More Robust)
+    
+    // Start modern async timer using Task for better reliability
+    private func startAsyncRefreshTimer() {
+        // Cancel existing async tasks
+        refreshTask?.cancel()
+        timerValidationTask?.cancel()
+        
+        // Get interval - use profile-specific or fallback to global
+        let intervalMinutes: Int
+        if let profile = selectedProfile {
+            let budget = getBudget(for: profile.name)
+            intervalMinutes = budget.refreshIntervalMinutes
+        } else {
+            intervalMinutes = refreshInterval
+            log(.warning, category: "AsyncRefresh", "No profile selected, using global interval: \(intervalMinutes) minutes")
+        }
+        
+        let interval = TimeInterval(intervalMinutes * 60)
+        
+        log(.info, category: "AsyncRefresh", "Starting modern async refresh timer for profile: \(selectedProfile?.name ?? "none"), interval: \(intervalMinutes) minutes")
+        
+        // Set next refresh time
+        nextRefreshTime = Date().addingTimeInterval(interval)
+        
+        // Create the main refresh task
+        refreshTask = Task { [weak self] in
+            guard let self = self else { return }
+            
+            while !Task.isCancelled && self.autoRefreshEnabled {
+                do {
+                    // Sleep for the interval duration
+                    try await Task.sleep(for: .seconds(interval))
+                    
+                    // Check if we're still supposed to be running
+                    guard !Task.isCancelled && self.autoRefreshEnabled else { break }
+                    
+                    await MainActor.run {
+                        // Update next refresh time
+                        self.nextRefreshTime = Date().addingTimeInterval(interval)
+                        self.log(.info, category: "AsyncRefresh", "🔄 Async refresh timer FIRED at \(Date())")
+                    }
+                    
+                    // Check screen state before refreshing
+                    if ScreenStateMonitor.shared.shouldAllowRefresh() {
+                        self.log(.info, category: "AsyncRefresh", "Screen is active, performing refresh")
+                        await self.fetchCostForSelectedProfile()
+                    } else {
+                        self.log(.info, category: "AsyncRefresh", "Skipped scheduled refresh: screen off or locked")
+                    }
+                } catch {
+                    // Handle cancellation gracefully
+                    if error is CancellationError {
+                        self.log(.info, category: "AsyncRefresh", "Async refresh timer was cancelled")
+                        break
+                    } else {
+                        self.log(.error, category: "AsyncRefresh", "Async refresh timer error: \(error)")
+                        // Wait a bit before retrying to avoid tight loops
+                        try? await Task.sleep(for: .seconds(30))
+                    }
+                }
+            }
+            
+            self.log(.info, category: "AsyncRefresh", "Async refresh timer task ended")
+        }
+        
+        // Create a validation task that checks every 60 seconds
+        timerValidationTask = Task { [weak self] in
+            guard let self = self else { return }
+            
+            while !Task.isCancelled && self.autoRefreshEnabled {
+                do {
+                    try await Task.sleep(for: .seconds(60))
+                    
+                    guard !Task.isCancelled && self.autoRefreshEnabled else { break }
+                    
+                    // Validate timer is still working
+                    if let nextTime = await MainActor.run(body: { self.nextRefreshTime }) {
+                        let timeUntilNext = nextTime.timeIntervalSinceNow
+                        if timeUntilNext < -120 { // More than 2 minutes overdue
+                            self.log(.warning, category: "AsyncRefresh", "Async timer is overdue by \(Int(-timeUntilNext)) seconds, restarting")
+                            await MainActor.run {
+                                self.startAutomaticRefresh()
+                            }
+                            break
+                        }
+                    }
+                } catch {
+                    if error is CancellationError {
+                        break
+                    }
+                    // Continue validation loop even on errors
+                }
+            }
+        }
+    }
+    
+    // Stop all async timer tasks
+    private func stopAsyncRefreshTimer() {
+        refreshTask?.cancel()
+        refreshTask = nil
+        timerValidationTask?.cancel()
+        timerValidationTask = nil
+        log(.info, category: "AsyncRefresh", "Stopped async refresh timer tasks")
     }
     
     // MARK: - Debug Timer Functions (only in DEBUG builds)
