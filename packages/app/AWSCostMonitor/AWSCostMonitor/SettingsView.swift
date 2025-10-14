@@ -24,6 +24,7 @@ struct SettingsView: View {
             "Team Cache",
             "Refresh Rate",
             "Display",
+            "Appearance",
             "Alerts",
             "Notifications",
             "CloudWatch",
@@ -127,6 +128,8 @@ struct SettingsView: View {
             return "arrow.clockwise"
         case "Display":
             return "textformat"
+        case "Appearance":
+            return "paintbrush"
         case "Accounts":
             return "person.2"
         case "Team Cache":
@@ -161,6 +164,8 @@ struct SettingsView: View {
                     }
                 )
             )
+        case "Appearance":
+            AppearanceSettingsTab(themeManager: ThemeManager.shared)
         case "Accounts":
             AWSSettingsTab()
         case "Team Cache":

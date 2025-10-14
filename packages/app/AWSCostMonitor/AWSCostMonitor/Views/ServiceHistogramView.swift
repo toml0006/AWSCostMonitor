@@ -11,6 +11,7 @@ import Charts
 struct ServiceHistogramView: View {
     let dailyServiceCosts: [DailyServiceCost]
     let serviceName: String
+    @ObservedObject var themeManager = ThemeManager.shared
     
     var body: some View {
         let last14Days = getLast14DaysData()
@@ -22,22 +23,22 @@ struct ServiceHistogramView: View {
                 
                 HStack(spacing: 0) {
                     Text(histogramText.bars)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.blue)
+                        .font(.system(size: 10 * themeManager.currentTheme.spacingMultiplier, design: .monospaced))
+                        .foregroundColor(themeManager.currentTheme.accentColor)
                     
                     Text(" ")
                         .font(.system(size: 6))
                     
                     Text(histogramText.trend)
-                        .font(.system(size: 8))
+                        .font(.system(size: 8 * themeManager.currentTheme.spacingMultiplier))
                         .foregroundColor(histogramText.trendColor)
                 }
                 
                 Spacer()
                 
                 Text("14d")
-                    .font(.system(size: 7))
-                    .foregroundColor(.secondary)
+                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                    .foregroundColor(themeManager.currentTheme.secondaryColor)
             }
         }
     }
@@ -100,7 +101,7 @@ struct ServiceHistogramView: View {
         
         if maxAmount == 0.0 {
             let emptyBars = String(repeating: "▁", count: dailyData.count)
-            return (emptyBars, "—", .secondary) // All zero bars with neutral trend
+            return (emptyBars, "—", themeManager.currentTheme.secondaryColor) // All zero bars with neutral trend
         }
         
         // Create bars using fine-grained Unicode blocks
@@ -123,13 +124,13 @@ struct ServiceHistogramView: View {
             
             if lastWeek > firstWeek * 1.2 { // 20% increase
                 trend = "↗"
-                trendColor = .red
+                trendColor = themeManager.currentTheme.errorColor
             } else if lastWeek < firstWeek * 0.8 { // 20% decrease
                 trend = "↘"
-                trendColor = .green
+                trendColor = themeManager.currentTheme.successColor
             } else {
                 trend = "→"
-                trendColor = .secondary
+                trendColor = themeManager.currentTheme.secondaryColor
             }
             
             return (bars, trend, trendColor)
@@ -144,13 +145,13 @@ struct ServiceHistogramView: View {
             
             if lastHalf > firstHalf * 1.2 { // 20% increase
                 trend = "↗"
-                trendColor = .red
+                trendColor = themeManager.currentTheme.errorColor
             } else if lastHalf < firstHalf * 0.8 { // 20% decrease
                 trend = "↘"
-                trendColor = .green
+                trendColor = themeManager.currentTheme.successColor
             } else {
                 trend = "→"
-                trendColor = .secondary
+                trendColor = themeManager.currentTheme.secondaryColor
             }
             
             return (bars, trend, trendColor)

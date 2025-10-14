@@ -47,6 +47,7 @@ class AWSManager: ObservableObject {
     }
     private var refreshTimer: DispatchSourceTimer?
     private var timerValidationTimer: DispatchSourceTimer? // Periodic timer to validate main refresh timer
+    private var healthCheckTimer: DispatchSourceTimer? // Independent health check - ultimate failsafe
     private let timerQueue = DispatchQueue(label: "com.awscostmonitor.refresh", qos: .utility)
     
     // Modern async timer task for more reliability
@@ -69,11 +70,13 @@ class AWSManager: ObservableObject {
     @AppStorage("AnomalyThresholdPercentage") private var anomalyThreshold: Double = 25.0 // 25% deviation triggers anomaly
     
     // Last month data caching
-    @Published var lastMonthData: [String: CostData] = [:] // Key is profileName
+    @Published var lastMonthData: [String: CostData] = [:] // Key is profileName - FULL month total
+    @Published var lastMonthMTDData: [String: CostData] = [:] // Key is profileName - MTD (same day) comparison
     @Published var lastMonthDataFetchDate: [String: Date] = [:] // When we fetched last month's data
     @Published var lastMonthServiceCosts: [String: [ServiceCost]] = [:] // Service breakdown by profile
     @Published var lastMonthDataLoading: [String: Bool] = [:] // Loading state per profile
     private let lastMonthDataKey = "LastMonthCostData"
+    private let lastMonthMTDDataKey = "LastMonthMTDCostData"
     private let lastMonthFetchDateKey = "LastMonthDataFetchDate"
     private let lastMonthServiceCostsKey = "LastMonthServiceCosts"
     
@@ -289,7 +292,15 @@ class AWSManager: ObservableObject {
             name: .awsConfigDemoMode,
             object: nil
         )
-        
+
+        // Listen for system wake from sleep
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(systemDidWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+
         // Load profiles on initialization
         loadProfiles()
         // Note: loadSelectedProfile() is now called after profiles are loaded in loadProfiles()
@@ -314,46 +325,9 @@ class AWSManager: ObservableObject {
         _ = ScreenStateMonitor.shared // Initialize the singleton
         setupScreenStateMonitoring()
         
-        // Check if we need a startup refresh
+        // Check if we need a startup refresh using the simple, reliable method
         log(.info, category: "Startup", "Checking for startup refresh with profile: \(selectedProfile?.name ?? "none")")
-        
-        // DEBUG: AGGRESSIVE REFRESH - Always refresh if data is older than 30 minutes
-        if let profile = selectedProfile,
-           let cachedData = costCache[profile.name] {
-            let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-            let budget = getBudget(for: profile.name)
-            let refreshIntervalSeconds = TimeInterval(budget.refreshIntervalMinutes * 60)
-            
-            // DEBUG: Force refresh if older than 30 minutes
-            let debugRefreshThreshold: TimeInterval = 30 * 60 // 30 minutes
-            
-            log(.warning, category: "Startup", "DEBUG MODE - Cache age: \(Int(cacheAge/60)) min, Debug threshold: 30 min, Normal interval: \(budget.refreshIntervalMinutes) min")
-            
-            if cacheAge > debugRefreshThreshold {
-                log(.warning, category: "Startup", "DEBUG: Cache is older than 30 min (\(Int(cacheAge/60)) min old) - FORCING IMMEDIATE REFRESH")
-                print("DEBUG: FORCING STARTUP REFRESH - Cache is \(Int(cacheAge/60)) minutes old")
-                Task { @MainActor in
-                    await fetchCostForSelectedProfile()
-                }
-            } else if cacheAge > refreshIntervalSeconds {
-                log(.warning, category: "Startup", "Cache is stale per normal interval (\(Int(cacheAge/60)) min old vs \(budget.refreshIntervalMinutes) min interval) - triggering refresh")
-                Task { @MainActor in
-                    await fetchCostForSelectedProfile()
-                }
-            } else {
-                log(.info, category: "Startup", "Cache is fresh (\(Int(cacheAge/60)) min old) - no refresh needed")
-            }
-        } else if selectedProfile != nil {
-            // No cache for selected profile, fetch immediately
-            log(.warning, category: "Startup", "No cache for selected profile - fetching data immediately")
-            print("DEBUG: NO CACHE - FORCING STARTUP REFRESH")
-            Task { @MainActor in
-                await fetchCostForSelectedProfile()
-            }
-        } else {
-            log(.error, category: "Startup", "No selected profile at all - cannot refresh")
-            print("DEBUG: NO SELECTED PROFILE - Cannot refresh")
-        }
+        checkAndRefreshIfNeeded()
         
         // Also schedule a secondary check after a delay to catch any edge cases
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
@@ -382,7 +356,13 @@ class AWSManager: ObservableObject {
                 self.startAutomaticRefresh()
             }
         }
-        
+
+        // ALWAYS start validation and health check timers (independent of auto-refresh state)
+        // These provide multi-layer failsafe protection
+        log(.info, category: "Init", "Starting independent validation and health check timers")
+        startTimerValidation()
+        startHealthCheckTimer()
+
         #if DEBUG
         // Start debug timer automatically to monitor timer execution
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -395,16 +375,20 @@ class AWSManager: ObservableObject {
         // Clean up observers
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
-        
+
         // Stop any running timers (both legacy and modern)
         stopAutomaticRefresh()
         stopBackgroundSyncTimer()
         stopAsyncRefreshTimer()
-        
+
+        // Stop health check timer
+        healthCheckTimer?.cancel()
+        healthCheckTimer = nil
+
         #if DEBUG
         stopDebugTimer()
         #endif
-        
+
         log(.info, category: "Cleanup", "AWSManager deinitialized - all timers and observers cleaned up")
     }
     
@@ -419,9 +403,10 @@ class AWSManager: ObservableObject {
         )
         
         // Subscribe to system wake notification to handle refresh after sleep
+        // Note: This is now also registered in init() but we keep it here for compatibility
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
-            selector: #selector(handleSystemWake),
+            selector: #selector(systemDidWake),
             name: NSWorkspace.didWakeNotification,
             object: nil
         )
@@ -445,21 +430,21 @@ class AWSManager: ObservableObject {
     }
     
     // Handle system wake notification
-    @objc private func handleSystemWake() {
+    @objc func systemDidWake() {
         log(.info, category: "Refresh", "System woke from sleep")
-        
+
         // If auto-refresh is enabled, check if we need to refresh
         if autoRefreshEnabled {
             // Give the system a moment to fully wake up
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
                 guard let self = self else { return }
-                
+
                 // Check if both timer types are still valid
                 let hasDispatchTimer = self.refreshTimer != nil
                 let hasAsyncTimer = self.refreshTask != nil && !self.refreshTask!.isCancelled
-                
+
                 self.log(.info, category: "Refresh", "After system wake - DispatchTimer: \(hasDispatchTimer), AsyncTimer: \(hasAsyncTimer)")
-                
+
                 if hasDispatchTimer || hasAsyncTimer {
                     // At least one timer is still running, trigger an immediate refresh
                     self.log(.info, category: "Refresh", "At least one timer is still valid after system wake")
@@ -471,7 +456,18 @@ class AWSManager: ObservableObject {
                     self.log(.warning, category: "Refresh", "Both timers invalid after system wake - restarting automatic refresh")
                     self.startAutomaticRefresh()
                 }
-                
+
+                // Also restart any missing validation/health check timers as a failsafe
+                if self.timerValidationTimer == nil {
+                    self.log(.warning, category: "Refresh", "Validation timer was lost during sleep - restarting")
+                    self.startTimerValidation()
+                }
+
+                if self.healthCheckTimer == nil {
+                    self.log(.warning, category: "HealthCheck", "Health check timer was lost during sleep - restarting")
+                    self.startHealthCheckTimer()
+                }
+
                 // Also force validation of next refresh time
                 if let nextTime = self.nextRefreshTime {
                     let timeUntilNext = nextTime.timeIntervalSinceNow
@@ -502,6 +498,7 @@ class AWSManager: ObservableObject {
         costCache.removeAll()
         cacheStatus.removeAll()
         lastMonthData.removeAll()
+        lastMonthMTDData.removeAll()
         
         // Clear the selected profile if it was a demo profile
         if let currentProfile = selectedProfile,
@@ -547,6 +544,7 @@ class AWSManager: ObservableObject {
         costCache.removeAll()
         cacheStatus.removeAll()
         lastMonthData.removeAll()
+        lastMonthMTDData.removeAll()
         
         // Set profiles to only demo profiles
         DispatchQueue.main.async { [weak self] in
@@ -1062,6 +1060,9 @@ class AWSManager: ObservableObject {
         if let data = try? JSONEncoder().encode(lastMonthData) {
             UserDefaults.standard.set(data, forKey: lastMonthDataKey)
         }
+        if let mtdData = try? JSONEncoder().encode(lastMonthMTDData) {
+            UserDefaults.standard.set(mtdData, forKey: lastMonthMTDDataKey)
+        }
         if let dateData = try? JSONEncoder().encode(lastMonthDataFetchDate) {
             UserDefaults.standard.set(dateData, forKey: lastMonthFetchDateKey)
         }
@@ -1069,12 +1070,16 @@ class AWSManager: ObservableObject {
             UserDefaults.standard.set(serviceData, forKey: lastMonthServiceCostsKey)
         }
     }
-    
+
     // Load last month data from UserDefaults
     func loadLastMonthData() {
         if let data = UserDefaults.standard.data(forKey: lastMonthDataKey),
            let decoded = try? JSONDecoder().decode([String: CostData].self, from: data) {
             lastMonthData = decoded
+        }
+        if let mtdData = UserDefaults.standard.data(forKey: lastMonthMTDDataKey),
+           let decodedMTD = try? JSONDecoder().decode([String: CostData].self, from: mtdData) {
+            lastMonthMTDData = decodedMTD
         }
         if let dateData = UserDefaults.standard.data(forKey: lastMonthFetchDateKey),
            let decodedDates = try? JSONDecoder().decode([String: Date].self, from: dateData) {
@@ -1662,31 +1667,38 @@ class AWSManager: ObservableObject {
         let timer = DispatchSource.makeTimerSource(queue: timerQueue)
         refreshTimer = timer
         
-        // Configure the timer to fire at the specified interval
-        timer.schedule(deadline: .now() + interval, repeating: interval)
-        
+        // Configure the timer - use a shorter check interval (15 min) to retry when screen unlocks
+        // but track when actual refreshes should occur based on the full interval
+        let checkInterval: TimeInterval = min(15 * 60, interval) // Check every 15 min or less
+        timer.schedule(deadline: .now() + interval, repeating: checkInterval)
+
         // Set the event handler for when the timer fires
         timer.setEventHandler { [weak self] in
             guard let self = self else { return }
-            
+
             self.log(.warning, category: "RefreshTimer", "🔄 Refresh timer FIRED at \(Date())")
-            
+
             #if DEBUG
             self.log(.debug, category: "RefreshTimer", "Refresh timer fired at \(Date())")
             #endif
-            
-            // Update next refresh time for display on main queue
-            DispatchQueue.main.async {
-                self.nextRefreshTime = Date().addingTimeInterval(interval)
-            }
-            
+
             Task { @MainActor in
-                // Check screen state before refreshing
-                if ScreenStateMonitor.shared.shouldAllowRefresh() {
-                    self.log(.info, category: "Refresh", "Screen is active, performing refresh")
+                // Check if it's time for a refresh AND screen is available
+                let now = Date()
+                let shouldRefreshNow = self.nextRefreshTime.map { now >= $0 } ?? true
+
+                if shouldRefreshNow && ScreenStateMonitor.shared.shouldAllowRefresh() {
+                    self.log(.info, category: "Refresh", "Screen is active and refresh is due, performing refresh")
                     await self.fetchCostForSelectedProfile()
+
+                    // Update next refresh time ONLY after successful refresh
+                    DispatchQueue.main.async {
+                        self.nextRefreshTime = Date().addingTimeInterval(interval)
+                    }
+                } else if shouldRefreshNow {
+                    self.log(.info, category: "Refresh", "Refresh is due but screen is off/locked. Will retry in \(Int(checkInterval/60)) minutes.")
                 } else {
-                    self.log(.info, category: "Refresh", "Skipped scheduled refresh: screen off or locked")
+                    self.log(.debug, category: "Refresh", "Timer check - refresh not yet due. Next refresh at \(self.nextRefreshTime!)")
                 }
             }
         }
@@ -1759,23 +1771,139 @@ class AWSManager: ObservableObject {
         log(.info, category: "Refresh", "All refresh timers stopped")
     }
     
+    // Independent health check timer - ultimate failsafe (runs every 5 minutes)
+    func startHealthCheckTimer() {
+        // Cancel any existing health check timer
+        if let existingTimer = healthCheckTimer {
+            existingTimer.cancel()
+            healthCheckTimer = nil
+        }
+
+        let healthTimer = DispatchSource.makeTimerSource(queue: timerQueue)
+        healthCheckTimer = healthTimer
+
+        // Check every 5 minutes (300 seconds)
+        healthTimer.schedule(deadline: .now() + 300, repeating: 300.0)
+
+        healthTimer.setEventHandler { [weak self] in
+            self?.performHealthCheck()
+        }
+
+        healthTimer.resume()
+
+        log(.info, category: "HealthCheck", "Started independent health check timer (runs every 5 minutes)")
+    }
+
+    // Perform comprehensive health check
+    func performHealthCheck() {
+        log(.debug, category: "HealthCheck", "Performing health check...")
+
+        // Check 1: Auto-refresh should be running but timer is nil
+        if autoRefreshEnabled && refreshTimer == nil {
+            log(.error, category: "HealthCheck", "CRITICAL: Auto-refresh enabled but timer is nil! Restarting...")
+            DispatchQueue.main.async { [weak self] in
+                self?.startAutomaticRefresh()
+            }
+            return
+        }
+
+        // Check 2: Timer exists but is significantly overdue
+        if autoRefreshEnabled, let nextTime = nextRefreshTime {
+            let overdue = -nextTime.timeIntervalSinceNow
+            if overdue > 300 { // More than 5 minutes overdue
+                log(.error, category: "HealthCheck", "CRITICAL: Timer is \(Int(overdue/60)) minutes overdue! Restarting...")
+                DispatchQueue.main.async { [weak self] in
+                    self?.startAutomaticRefresh()
+                }
+                return
+            }
+        }
+
+        // Check 3: Validation timer is missing
+        if autoRefreshEnabled && timerValidationTimer == nil {
+            log(.warning, category: "HealthCheck", "Validation timer is missing, restarting validation")
+            startTimerValidation()
+        }
+
+        log(.debug, category: "HealthCheck", "Health check passed - all timers healthy")
+    }
+
+    // Public method to validate timer health (called from UI interactions)
+    func validateTimerHealth() {
+        log(.debug, category: "TimerHealth", "User-triggered timer health validation")
+
+        guard autoRefreshEnabled else {
+            log(.debug, category: "TimerHealth", "Auto-refresh is disabled, skipping validation")
+            return
+        }
+
+        // Quick validation - check critical timers
+        var needsRecovery = false
+
+        if refreshTimer == nil {
+            log(.warning, category: "TimerHealth", "Refresh timer is nil - needs recovery")
+            needsRecovery = true
+        }
+
+        if timerValidationTimer == nil {
+            log(.warning, category: "TimerHealth", "Validation timer is nil - needs recovery")
+            needsRecovery = true
+        }
+
+        if healthCheckTimer == nil {
+            log(.warning, category: "TimerHealth", "Health check timer is nil - needs recovery")
+            needsRecovery = true
+        }
+
+        // Check if refresh is overdue
+        if let nextTime = nextRefreshTime {
+            let overdue = -nextTime.timeIntervalSinceNow
+            if overdue > 60 { // More than 1 minute overdue
+                log(.warning, category: "TimerHealth", "Refresh is \(Int(overdue/60)) minutes overdue")
+                needsRecovery = true
+            }
+        }
+
+        if needsRecovery {
+            log(.error, category: "TimerHealth", "Timer recovery needed - restarting all timers")
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.startAutomaticRefresh()
+                if self.timerValidationTimer == nil {
+                    self.startTimerValidation()
+                }
+                if self.healthCheckTimer == nil {
+                    self.startHealthCheckTimer()
+                }
+            }
+        } else {
+            log(.debug, category: "TimerHealth", "All timers healthy")
+        }
+    }
+
     // Validates that the timer is still running (failsafe)
     func validateRefreshTimer() {
         guard autoRefreshEnabled else { return }
-        
+
         if refreshTimer != nil {
             // Timer is valid, check if next refresh time makes sense
             if let nextTime = nextRefreshTime {
                 let timeUntilNext = nextTime.timeIntervalSinceNow
                 if timeUntilNext < -60 { // More than 1 minute overdue
                     log(.warning, category: "Refresh", "Timer is overdue by \(Int(-timeUntilNext)) seconds, restarting")
-                    startAutomaticRefresh()
+                    // Must run on main thread to avoid deadlock with @Published properties
+                    DispatchQueue.main.async { [weak self] in
+                        self?.startAutomaticRefresh()
+                    }
                 }
             }
         } else {
             // Timer is invalid or nil but should be running
             log(.warning, category: "Refresh", "Timer validation failed - restarting automatic refresh")
-            startAutomaticRefresh()
+            // Must run on main thread to avoid deadlock with @Published properties
+            DispatchQueue.main.async { [weak self] in
+                self?.startAutomaticRefresh()
+            }
         }
     }
     
@@ -1936,25 +2064,28 @@ class AWSManager: ObservableObject {
     private func handleDebugTimerTick() {
         debugTimerCount += 1
         debugLastUpdate = Date()
-        
+
         let timeString = Date().formatted(date: .omitted, time: .standard)
         debugTimerMessage = "Debug tick #\(debugTimerCount) at \(timeString)"
-        
+
         log(.warning, category: "Debug", "🔥 DEBUG TIMER TICK #\(debugTimerCount) at \(timeString) - FLASHING MENU BAR")
-        
+
         // Flash the menu bar by toggling a flag
         debugTimerFlash = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.debugTimerFlash = false
         }
-        
+
+        // CHECK IF REFRESH IS NEEDED (this is the simple, reliable approach!)
+        checkAndRefreshIfNeeded()
+
         // Also log the state of the refresh timer
         if refreshTimer != nil {
             log(.info, category: "Debug", "Refresh timer is active")
         } else {
             log(.warning, category: "Debug", "⚠️ Refresh timer is nil - auto-refresh not running!")
         }
-        
+
         if let nextRefresh = nextRefreshTime {
             let timeUntilRefresh = nextRefresh.timeIntervalSince(Date())
             log(.info, category: "Debug", "Next refresh scheduled for: \(nextRefresh), in \(Int(timeUntilRefresh)) seconds")
@@ -1973,7 +2104,42 @@ class AWSManager: ObservableObject {
         log(.info, category: "Debug", "Debug timer stopped")
     }
     #endif
-    
+
+    // Simple, reliable refresh check - called by the debug timer every minute
+    func checkAndRefreshIfNeeded() {
+        // Only check if auto-refresh is enabled and we have a profile
+        guard autoRefreshEnabled, let profile = selectedProfile else {
+            return
+        }
+
+        // Get the refresh interval for this profile
+        let budget = getBudget(for: profile.name)
+        let refreshIntervalSeconds = TimeInterval(budget.refreshIntervalMinutes * 60)
+
+        // Check if we have cached data
+        guard let cacheEntry = costCache[profile.name] else {
+            // No cache - trigger refresh immediately
+            log(.warning, category: "RefreshCheck", "No cache for \(profile.name) - triggering FORCED refresh")
+            Task { @MainActor in
+                await fetchCostForSelectedProfile(force: true)
+            }
+            return
+        }
+
+        // Check if cache is stale
+        let cacheAge = Date().timeIntervalSince(cacheEntry.fetchDate)
+        let cacheAgeMinutes = Int(cacheAge / 60)
+
+        if cacheAge > refreshIntervalSeconds {
+            log(.warning, category: "RefreshCheck", "Cache is stale (\(cacheAgeMinutes) min old, interval: \(budget.refreshIntervalMinutes) min) - triggering FORCED refresh")
+            Task { @MainActor in
+                await fetchCostForSelectedProfile(force: true)
+            }
+        } else {
+            log(.debug, category: "RefreshCheck", "Cache is fresh (\(cacheAgeMinutes) min old, interval: \(budget.refreshIntervalMinutes) min) - no refresh needed")
+        }
+    }
+
     // Check if API call is allowed based on rate limit
     func canMakeAPICall() -> Bool {
         guard let lastCall = lastAPICallTime else {
@@ -2003,66 +2169,16 @@ class AWSManager: ObservableObject {
     
     // Check if we need to perform a startup refresh
     func checkForStartupRefresh() {
-        // Only check if we have a selected profile
-        guard let profile = selectedProfile else {
-            log(.debug, category: "Startup", "No selected profile, skipping startup refresh check")
-            return
-        }
-        
-        // Get the budget-specific refresh interval for this profile
-        let budget = getBudget(for: profile.name)
-        let profileRefreshInterval = budget.refreshIntervalMinutes
-        let refreshIntervalSeconds = TimeInterval(profileRefreshInterval * 60)
-        
-        // First check if we have cached data and if it's stale
-        var shouldRefresh = false
-        var reason = ""
-        
-        if let cacheEntry = costCache[profile.name] {
-            // We have cached data - check if it's stale based on refresh interval
-            let cacheAge = Date().timeIntervalSince(cacheEntry.fetchDate)
-            
-            if cacheAge > refreshIntervalSeconds {
-                shouldRefresh = true
-                reason = "Cache is \(Int(cacheAge / 60)) minutes old (older than refresh interval of \(profileRefreshInterval) minutes)"
-            } else {
-                // Cache is fresh, but let's also check if it's valid for the current budget
-                if !cacheEntry.isValidForBudget(budget) {
-                    shouldRefresh = true
-                    reason = "Cache is invalid for current budget settings"
-                } else {
-                    log(.info, category: "Startup", "Cache is fresh (\(Int(cacheAge / 60)) minutes old) and valid for budget (interval: \(profileRefreshInterval) min), skipping startup refresh")
-                }
-            }
-        } else {
-            // No cache exists, check API call records as fallback
-            let profileRecords = apiRequestRecords.filter { $0.profileName == profile.name && $0.success }
-            if let lastRecord = profileRecords.sorted(by: { $0.timestamp > $1.timestamp }).first {
-                let timeSinceLastRefresh = Date().timeIntervalSince(lastRecord.timestamp)
-                
-                if timeSinceLastRefresh > refreshIntervalSeconds {
-                    shouldRefresh = true
-                    reason = "Last API call was \(Int(timeSinceLastRefresh / 60)) minutes ago (older than refresh interval of \(profileRefreshInterval) minutes)"
-                } else {
-                    log(.info, category: "Startup", "Last API call was \(Int(timeSinceLastRefresh / 60)) minutes ago, within interval of \(profileRefreshInterval) minutes")
-                }
-            } else {
-                // No previous API calls at all
-                shouldRefresh = true
-                reason = "No previous data found for this profile"
-            }
-        }
-        
-        // Perform refresh if needed
-        if shouldRefresh {
-            log(.info, category: "Startup", "Performing startup refresh for \(profile.name): \(reason)")
-            // Directly call the refresh
+        // Load cached data into UI first if available
+        if let profile = selectedProfile, let cacheEntry = costCache[profile.name] {
+            log(.info, category: "Startup", "Loading cached data into UI for \(profile.name)")
             Task { @MainActor in
-                await fetchCostForSelectedProfile()
+                await loadFromCache(cacheEntry)
             }
-        } else {
-            log(.info, category: "Startup", "No startup refresh needed for \(profile.name)")
         }
+
+        // Then check if we need to refresh (simple approach)
+        checkAndRefreshIfNeeded()
     }
     
     // Enhanced single-call data strategy with intelligent caching
@@ -2649,6 +2765,7 @@ class AWSManager: ObservableObject {
             self.dailyCostsByProfile.removeValue(forKey: "acme")
             self.dailyServiceCostsByProfile.removeValue(forKey: "acme")
             self.lastMonthData.removeValue(forKey: "acme")
+            self.lastMonthMTDData.removeValue(forKey: "acme")
             self.lastMonthDataFetchDate.removeValue(forKey: "acme")
             self.lastMonthServiceCosts.removeValue(forKey: "acme")
             
@@ -2840,6 +2957,19 @@ class AWSManager: ObservableObject {
                 amount: lastMonthTotal,
                 currency: "USD"
             )
+
+            // Calculate MTD for last month (same day comparison)
+            // For demo, we'll calculate what last month would have been at the same day
+            let daysInLastMonth = 30 // Assuming 30-day month for simplicity
+            let currentDay = 14 // We're showing 14 days of data
+            let lastMonthMTD = lastMonthTotal * Decimal(currentDay) / Decimal(daysInLastMonth)
+
+            self.lastMonthMTDData["acme"] = CostData(
+                profileName: "acme",
+                amount: lastMonthMTD, // Proportional amount for same day last month
+                currency: "USD"
+            )
+
             self.lastMonthDataFetchDate["acme"] = Date()
             self.lastMonthServiceCosts["acme"] = serviceCosts.map { service in
                 ServiceCost(
@@ -2935,29 +3065,32 @@ class AWSManager: ObservableObject {
             }
             
             let costResponse = try await client.getCostAndUsage(input: costInput)
-            
+
             if let resultsByTime = costResponse.resultsByTime,
                let firstResult = resultsByTime.first,
                let costString = firstResult.total?["UnblendedCost"]?.amount,
                let costDecimal = Decimal(string: costString) {
-                
+
                 let costData = CostData(
                     profileName: profileName,
                     amount: costDecimal,
                     currency: firstResult.total?["UnblendedCost"]?.unit ?? "USD"
                 )
-                
+
                 await MainActor.run {
                     self.lastMonthData[profileName] = costData
                     self.lastMonthDataFetchDate[profileName] = Date()
                     self.saveLastMonthData()
-                    
+
                     // Update cost trend now that we have last month data
                     self.updateCostTrend(for: profileName)
                 }
-                
+
                 log(.info, category: "API", "Successfully fetched last month cost for \(profileName): \(costDecimal)")
-                
+
+                // Also fetch MTD comparison data (same day last month)
+                await fetchLastMonthMTDData(for: profileName, client: client, calendar: calendar, formatter: formatter)
+
                 // Also fetch service breakdown for last month
                 await fetchLastMonthServiceBreakdown(for: profileName, client: client, startDate: startOfLastMonth, endDate: endOfLastMonth)
             }
@@ -2977,7 +3110,66 @@ class AWSManager: ObservableObject {
             self.lastMonthDataLoading[profileName] = false
         }
     }
-    
+
+    // Fetch last month's MTD data (up to same day of month) for comparison
+    private func fetchLastMonthMTDData(for profileName: String, client: CostExplorerClient, calendar: Calendar, formatter: DateFormatter) async {
+        do {
+            let now = Date()
+            let currentDay = calendar.component(.day, from: now)
+
+            // Calculate last month's date range up to the same day
+            let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: calendar.startOfDay(for: now))!
+            let startOfLastMonth = calendar.dateInterval(of: .month, for: lastMonthStart)!.start
+
+            // Set end date to the same day of last month (or last day if current day doesn't exist in last month)
+            var components = calendar.dateComponents([.year, .month], from: lastMonthStart)
+            components.day = currentDay
+            var endOfLastMonthMTD = calendar.date(from: components) ?? lastMonthStart
+
+            // Check if the day exists in last month (e.g., Feb 30 doesn't exist)
+            let lastMonthEnd = calendar.dateInterval(of: .month, for: lastMonthStart)!.end
+            if endOfLastMonthMTD > lastMonthEnd {
+                endOfLastMonthMTD = lastMonthEnd
+            }
+
+            // Add one day to end date for AWS API (exclusive end)
+            endOfLastMonthMTD = calendar.date(byAdding: .day, value: 1, to: endOfLastMonthMTD) ?? endOfLastMonthMTD
+
+            // Fetch MTD cost for last month
+            let mtdInput = GetCostAndUsageInput(
+                granularity: .monthly,
+                metrics: ["UnblendedCost"],
+                timePeriod: .init(
+                    end: formatter.string(from: endOfLastMonthMTD),
+                    start: formatter.string(from: startOfLastMonth)
+                )
+            )
+
+            let mtdResponse = try await client.getCostAndUsage(input: mtdInput)
+
+            if let resultsByTime = mtdResponse.resultsByTime,
+               let firstResult = resultsByTime.first,
+               let costString = firstResult.total?["UnblendedCost"]?.amount,
+               let costDecimal = Decimal(string: costString) {
+
+                let mtdData = CostData(
+                    profileName: profileName,
+                    amount: costDecimal,
+                    currency: firstResult.total?["UnblendedCost"]?.unit ?? "USD"
+                )
+
+                await MainActor.run {
+                    self.lastMonthMTDData[profileName] = mtdData
+                    self.saveLastMonthData()
+                }
+
+                log(.info, category: "API", "Successfully fetched last month MTD cost for \(profileName): \(costDecimal)")
+            }
+        } catch {
+            log(.error, category: "API", "Error fetching last month MTD cost for \(profileName): \(error.localizedDescription)")
+        }
+    }
+
     // Fetch service breakdown for last month
     private func fetchLastMonthServiceBreakdown(for profileName: String, client: CostExplorerClient, startDate: Date, endDate: Date) async {
         let formatter = DateFormatter()

@@ -1,0 +1,27 @@
+# AWSCostMonitor Architecture Analysis
+
+## Mac App Architecture
+
+- Lifecycle is anchored in the SwiftUI `App` struct, wiring shared singletons (`AWSManager`, `AWSConfigAccessManager`) and handling sandbox environment setup, onboarding, and notification permissions before scenes render ([`packages/app/AWSCostMonitor/AWSCostMonitor/AWSCostMonitorApp.swift:17`](../packages/app/AWSCostMonitor/AWSCostMonitor/AWSCostMonitorApp.swift#L17)).
+- `AWSManager` concentrates AWS-facing domain logic: profile discovery, rate limiting, circuit breaking, anomaly detection, multi-level caching, and async cost retrieval; it exposes state via `@Published` for the UI and persists to `UserDefaults` ([`packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift:18`](../packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift#L18), [`packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift:80`](../packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift#L80), [`packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift:1928`](../packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift#L1928)).
+- Team sharing extends that core via `TeamCacheController` timers and lock-aware download/upload coordination plus S3-backed storage in `S3CacheService`, including retry policy, TTL metadata, and optional audit logging ([`packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/TeamCacheController.swift:95`](../packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/TeamCacheController.swift#L95), [`packages/app/AWSCostMonitor/AWSCostMonitor/Managers/S3CacheService.swift:29`](../packages/app/AWSCostMonitor/AWSCostMonitor/Managers/S3CacheService.swift#L29)).
+- UI layers split between AppKit bridges (status item, windows) and SwiftUI views: the status bar host reacts to manager state and theme updates, while settings/onboarding scenes orchestrate feature toggles, AWS access, and per-profile configuration ([`packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/StatusBarController.swift:15`](../packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/StatusBarController.swift#L15), [`packages/app/AWSCostMonitor/AWSCostMonitor/SettingsView.swift:4`](../packages/app/AWSCostMonitor/AWSCostMonitor/SettingsView.swift#L4), [`packages/app/AWSCostMonitor/AWSCostMonitor/OnboardingView.swift:4`](../packages/app/AWSCostMonitor/AWSCostMonitor/OnboardingView.swift#L4)).
+- Platform services (sandbox bookmarks, screen/lock monitoring, alerts) are handled by dedicated managers, ensuring credentials access and refresh cadence obey macOS constraints before `AWSManager` runs network work ([`packages/app/AWSCostMonitor/AWSCostMonitor/AWSConfigAccessManager.swift:5`](../packages/app/AWSCostMonitor/AWSCostMonitor/AWSConfigAccessManager.swift#L5), [`packages/app/AWSCostMonitor/AWSCostMonitor/ScreenStateMonitor.swift:14`](../packages/app/AWSCostMonitor/AWSCostMonitor/ScreenStateMonitor.swift#L14), [`packages/app/AWSCostMonitor/AWSCostMonitor/CostAlertManager.swift:1`](../packages/app/AWSCostMonitor/AWSCostMonitor/CostAlertManager.swift#L1)).
+
+## Marketing Site
+
+- A Vite + React SPA under a monorepo workspace serves marketing content, using a `HashRouter`, themed context, and composable sections to support GitHub Pages deployment and Memphis-inspired styling assets ([`packages/website/src/App.jsx:1`](../packages/website/src/App.jsx#L1)).
+
+## Risks & Observations
+
+- `AWSManager` is a God object spanning configuration hydration, cache persistence, networking, alerting, and telemetry; the breadth raises maintainability and testability concerns (singletons and `@AppStorage` mix) ([`packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift:18`](../packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift#L18)).
+- `S3CacheService` is annotated `@MainActor` yet performs network and compression work, risking UI jank and preventing background concurrency; consider moving heavy operations off the main actor ([`packages/app/AWSCostMonitor/AWSCostMonitor/Managers/S3CacheService.swift:29`](../packages/app/AWSCostMonitor/AWSCostMonitor/Managers/S3CacheService.swift#L29)).
+- CloudWatch integration remains a mock while surfaced in settings, so users can enable an unfinished feature without guard rails ([`packages/app/AWSCostMonitor/AWSCostMonitor/CloudWatchIntegration.swift:1`](../packages/app/AWSCostMonitor/AWSCostMonitor/CloudWatchIntegration.swift#L1)).
+- Timer-based orchestration for screen state, refresh cadence, and team cache relies on `DispatchSourceTimer` and `Timer` mixes; ensure lifecycle cleanup is comprehensive to avoid leaks in long-running menu bar sessions ([`packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift:48`](../packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift#L48), [`packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/TeamCacheController.swift:119`](../packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/TeamCacheController.swift#L119), [`packages/app/AWSCostMonitor/AWSCostMonitor/ScreenStateMonitor.swift:48`](../packages/app/AWSCostMonitor/AWSCostMonitor/ScreenStateMonitor.swift#L48)).
+
+## Recommended Next Steps
+
+1. Split `AWSManager` into focused services (credentials, cost fetching, caching, alerts) with protocol seams to improve unit coverage and tractability.
+2. Rework `S3CacheService` off the main actor and add end-to-end tests for cache lease/expiry flows.
+3. Gate CloudWatch UI behind feature readiness or implement the promised SDK integration path.
+

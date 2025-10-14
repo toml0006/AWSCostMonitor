@@ -16,11 +16,13 @@ class StatusBarController: NSObject {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var awsManager: AWSManager
+    private var themeManager: ThemeManager
     private var eventMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
     
-    init(awsManager: AWSManager) {
+    init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared) {
         self.awsManager = awsManager
+        self.themeManager = themeManager
         super.init()
         
         // Create status item
@@ -34,6 +36,7 @@ class StatusBarController: NSObject {
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(awsManager)
+                .themed(themeManager)
         )
         
         updateStatusItemView()
@@ -64,6 +67,13 @@ class StatusBarController: NSObject {
             .store(in: &cancellables)
         
         awsManager.$selectedProfile
+            .sink { [weak self] _ in
+                self?.updateStatusItemView()
+            }
+            .store(in: &cancellables)
+        
+        // Subscribe to theme changes
+        themeManager.$currentTheme
             .sink { [weak self] _ in
                 self?.updateStatusItemView()
             }
@@ -111,15 +121,26 @@ class StatusBarController: NSObject {
         
         // Force thousands separator to always be true for now
         let useThousandsSeparator = true
-        // Don't set UserDefaults here - it causes infinite recursion!
         
         var titleString = ""
-        var titleColor: NSColor? = nil
+        var costStatus: MenuBarCostStatus = .normal
         
         // Setup number formatter
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.usesGroupingSeparator = useThousandsSeparator
+        
+        // Determine cost status using theme-aware status calculation
+        if let cost = awsManager.costData.first {
+            let budget = awsManager.getBudget(for: cost.profileName)
+            costStatus = ThemedMenuBarDisplay.getStatus(
+                for: cost,
+                lastMonthData: awsManager.lastMonthData,
+                budget: budget
+            )
+        } else if awsManager.isLoading {
+            costStatus = .loading
+        }
         
         switch displayFormat {
         case "abbreviated":
@@ -130,9 +151,6 @@ class StatusBarController: NSObject {
                 formatter.maximumFractionDigits = 0
                 let formattedAmount = formatter.string(from: NSNumber(value: amount)) ?? "0"
                 titleString = showCurrencySymbol ? "$\(formattedAmount)" : formattedAmount
-                if showColors {
-                    titleColor = getColorForCost(cost)
-                }
             } else if awsManager.isLoading {
                 titleString = "..."
             } else {
@@ -140,7 +158,7 @@ class StatusBarController: NSObject {
             }
             
         case "full":
-            // No icon for full format
+            // No icon for full format  
             button.image = nil
             if let cost = awsManager.costData.first {
                 let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
@@ -148,9 +166,6 @@ class StatusBarController: NSObject {
                 formatter.maximumFractionDigits = decimalPlaces
                 let formattedAmount = formatter.string(from: NSNumber(value: amount)) ?? "0"
                 titleString = showCurrencySymbol ? "$\(formattedAmount)" : formattedAmount
-                if showColors {
-                    titleColor = getColorForCost(cost)
-                }
             } else if awsManager.isLoading {
                 titleString = "Loading..."
             } else {
@@ -158,8 +173,8 @@ class StatusBarController: NSObject {
             }
             
         case "iconOnly":
-            // Show colorful cloud icon only for icon-only mode
-            button.image = MenuBarCloudIcon.createImage(size: 18)
+            // Use theme-aware icon
+            button.image = themeManager.currentTheme.createMenuBarIcon(size: 18)
             titleString = "" // No text when showing icon only
         
         default:
@@ -167,90 +182,42 @@ class StatusBarController: NSObject {
             titleString = "AW$"
         }
         
-        // Apply the title with optional color and flash effect
+        // Create themed attributed string
         #if DEBUG
         if flash {
-            // Flash with bright red when debug timer ticks
-            let attributes: [NSAttributedString.Key: Any] = [
-                .foregroundColor: NSColor.systemRed,
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .bold),
-                .backgroundColor: NSColor.systemYellow.withAlphaComponent(0.3)
-            ]
-            button.attributedTitle = NSAttributedString(string: "⚡\(titleString)⚡", attributes: attributes)
-        } else if showColors && titleColor != nil {
-            let attributes: [NSAttributedString.Key: Any] = [
-                .foregroundColor: titleColor!,
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-            ]
-            button.attributedTitle = NSAttributedString(string: titleString, attributes: attributes)
+            // Flash with debug styling
+            button.attributedTitle = themeManager.createMenuBarAttributedString(
+                text: "⚡\(titleString)⚡",
+                status: costStatus,
+                isFlashing: true
+            )
+        } else if showColors {
+            button.attributedTitle = themeManager.createMenuBarAttributedString(
+                text: titleString,
+                status: costStatus
+            )
         } else {
-            // Use regular title without color
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-            ]
-            button.attributedTitle = NSAttributedString(string: titleString, attributes: attributes)
+            button.attributedTitle = themeManager.createMenuBarAttributedString(
+                text: titleString,
+                status: .normal
+            )
         }
         #else
-        if showColors && titleColor != nil {
-            let attributes: [NSAttributedString.Key: Any] = [
-                .foregroundColor: titleColor!,
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-            ]
-            button.attributedTitle = NSAttributedString(string: titleString, attributes: attributes)
+        if showColors {
+            button.attributedTitle = themeManager.createMenuBarAttributedString(
+                text: titleString,
+                status: costStatus
+            )
         } else {
-            // Use regular title without color
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-            ]
-            button.attributedTitle = NSAttributedString(string: titleString, attributes: attributes)
+            button.attributedTitle = themeManager.createMenuBarAttributedString(
+                text: titleString,
+                status: .normal
+            )
         }
         #endif
     }
     
-    private func getColorForCost(_ cost: CostData) -> NSColor? {
-        // Prioritize last month comparison over budget for better user feedback
-        if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
-           lastMonthCost.amount > 0 {
-            let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
-            let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
-            
-            // Green for spending less than last month (good)
-            if percentChange < -5 {
-                return NSColor.systemGreen
-            }
-            // Orange/Red for spending significantly more than last month (concerning)
-            else if percentChange > 20 {
-                return NSColor.systemRed
-            }
-            else if percentChange > 10 {
-                return NSColor.systemOrange
-            }
-            // White/default for small changes (within normal range)
-            else {
-                return nil
-            }
-        }
-        
-        // Fallback to budget-based coloring if no last month data
-        let budget = awsManager.getBudget(for: cost.profileName)
-        if let monthlyBudget = budget.monthlyBudget {
-            let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let percentUsed = (amount / NSDecimalNumber(decimal: monthlyBudget).doubleValue) * 100
-            if percentUsed >= 100 {
-                return NSColor.systemRed
-            } else if percentUsed >= 80 {
-                return NSColor.systemOrange
-            } else if percentUsed >= 60 {
-                return NSColor.systemYellow
-            } else {
-                return NSColor.systemGreen
-            }
-        }
-        
-        // No color if no comparison data available
-        return nil
-    }
+    // Legacy color method replaced by theme-aware ThemedMenuBarDisplay.getStatus()
     
     @objc func togglePopover() {
         if popover.isShown {
@@ -262,6 +229,9 @@ class StatusBarController: NSObject {
     
     func showPopover() {
         if let button = statusItem.button {
+            // Validate timer health when user opens the menu
+            awsManager.validateTimerHealth()
+
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }
