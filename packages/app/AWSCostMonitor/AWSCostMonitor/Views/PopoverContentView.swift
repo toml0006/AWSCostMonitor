@@ -269,16 +269,16 @@ struct PopoverContentView: View {
                                     .textSelection(.enabled)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    // Percentage comparison to last month
-                                    if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
-                                       lastMonthCost.amount > 0 {
+                                    // Percentage comparison to last month (same day)
+                                    if let lastMonthMTD = awsManager.lastMonthMTDData[cost.profileName],
+                                       lastMonthMTD.amount > 0 {
                                         let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
-                                        let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
+                                        let lastAmount = NSDecimalNumber(decimal: lastMonthMTD.amount).doubleValue
                                         let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
                                         let isPositive = percentChange > 0
                                         let textColor = isPositive ? Color.red : Color.green
                                         let iconName = isPositive ? "arrow.up" : "arrow.down"
-                                        
+
                                         HStack(spacing: 2) {
                                             Image(systemName: iconName)
                                                 .foregroundColor(textColor)

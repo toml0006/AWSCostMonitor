@@ -229,6 +229,9 @@ class StatusBarController: NSObject {
     
     func showPopover() {
         if let button = statusItem.button {
+            // Validate timer health when user opens the menu
+            awsManager.validateTimerHealth()
+
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }
