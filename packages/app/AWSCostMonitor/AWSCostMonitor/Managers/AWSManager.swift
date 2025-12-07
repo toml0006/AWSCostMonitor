@@ -58,9 +58,16 @@ class AWSManager: ObservableObject {
     var isAutoRefreshActive: Bool {
         return refreshTimer != nil || refreshTask != nil
     }
+
+    // User-selected breakdown preference
+    var breakdownMode: CostBreakdownMode {
+        get { CostBreakdownMode(rawValue: costBreakdownModeRaw) ?? .service }
+        set { costBreakdownModeRaw = newValue.rawValue }
+    }
     
     @Published var historicalData: [HistoricalCostData] = []
     @Published var serviceCosts: [ServiceCost] = []
+    @Published var tagCosts: [TagCost] = []
     @Published var costTrend: CostTrend = .stable
     @Published var projectedMonthlyTotal: Decimal?
     @Published var isLoadingServices = false
@@ -82,6 +89,10 @@ class AWSManager: ObservableObject {
     
     // API request tracking per profile
     @Published var apiRequestsPerProfile: [String: [APIRequestRecord]] = [:]
+
+    // Breakdown preferences
+    @AppStorage("CostBreakdownMode") private var costBreakdownModeRaw: String = CostBreakdownMode.service.rawValue
+    @AppStorage("CostBreakdownTagKey") var costBreakdownTagKey: String = "Environment"
     
     // Enhanced caching system
     @Published var costCache: [String: CostCacheEntry] = [:] // Key is profileName
@@ -2530,6 +2541,13 @@ class AWSManager: ObservableObject {
                     Task {
                         await self.fetchLastMonthData(for: profile.name)
                     }
+
+                    // Fetch tag breakdown if user prefers tag view
+                    if self.breakdownMode == .tag {
+                        Task {
+                            await self.fetchTagBreakdown()
+                        }
+                    }
                 }
             } else {
                 // No data returned
@@ -2566,6 +2584,29 @@ class AWSManager: ObservableObject {
         await MainActor.run {
             self.isLoading = false
             self.isLoadingServices = false
+        }
+    }
+
+    func handleBreakdownModeChange(_ mode: CostBreakdownMode) async {
+        breakdownMode = mode
+        await fetchBreakdownForCurrentMode()
+    }
+    
+    func handleBreakdownTagKeyChange(_ key: String) async {
+        costBreakdownTagKey = key
+        if breakdownMode == .tag {
+            await fetchTagBreakdown()
+        }
+    }
+    
+    func fetchBreakdownForCurrentMode() async {
+        switch breakdownMode {
+        case .service:
+            if serviceCosts.isEmpty {
+                await fetchServiceBreakdown()
+            }
+        case .tag:
+            await fetchTagBreakdown()
         }
     }
     
@@ -2683,6 +2724,112 @@ class AWSManager: ObservableObject {
             let errorMessage = error.localizedDescription
             log(.error, category: "API", "Error fetching service breakdown: \(errorMessage)")
             recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-ServiceBreakdown", success: false, duration: duration, error: errorMessage)
+        }
+        
+        await MainActor.run {
+            self.isLoadingServices = false
+        }
+    }
+
+    // Fetch cost breakdown by tag
+    func fetchTagBreakdown() async {
+        guard let profile = selectedProfile else { return }
+        let tagKey = costBreakdownTagKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tagKey.isEmpty else {
+            log(.warning, category: "API", "Tag breakdown requested but no tag key configured")
+            await MainActor.run {
+                self.tagCosts = []
+            }
+            return
+        }
+        
+        if !canMakeAPICall() {
+            // We allow a follow-up tag breakdown even if we just fetched costs to honor the user's view preference
+            log(.warning, category: "API", "Proceeding with tag breakdown even though rate limiter is active")
+        }
+        
+        log(.info, category: "API", "Fetching tag breakdown for profile: \(profile.name) with key: \(tagKey)")
+        let startTime = Date()
+        
+        await MainActor.run {
+            self.isLoadingServices = true
+            self.tagCosts = []
+        }
+        
+        do {
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            
+            let config = try await CostExplorerClient.CostExplorerClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
+                region: profile.region ?? "us-east-1"
+            )
+            let client = CostExplorerClient(config: config)
+            
+            let calendar = Calendar.current
+            let now = Date()
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+            let endOfToday = calendar.date(byAdding: .day, value: 1, to: now)!
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            
+            let input = GetCostAndUsageInput(
+                granularity: .monthly,
+                groupBy: [.init(key: tagKey, type: .tag)],
+                metrics: ["UnblendedCost"],
+                timePeriod: .init(
+                    end: dateFormatter.string(from: endOfToday),
+                    start: dateFormatter.string(from: startOfMonth)
+                )
+            )
+            
+            await MainActor.run {
+                self.lastAPICallTime = Date()
+            }
+            
+            let output = try await client.getCostAndUsage(input: input)
+            
+            if let resultByTime = output.resultsByTime?.first,
+               let groups = resultByTime.groups {
+                var tags: [TagCost] = []
+                
+                for group in groups {
+                    let rawKey = group.keys?.first ?? ""
+                    let label: String
+                    if rawKey.contains("$") {
+                        label = rawKey.split(separator: "$", maxSplits: 1, omittingEmptySubsequences: false).dropFirst().first.map(String.init) ?? rawKey
+                    } else {
+                        label = rawKey.isEmpty ? "(untagged)" : rawKey
+                    }
+                    
+                    if let metrics = group.metrics,
+                       let unblendedCost = metrics["UnblendedCost"],
+                       let amountString = unblendedCost.amount,
+                       let currency = unblendedCost.unit,
+                       let amount = Decimal(string: amountString),
+                       amount > 0 {
+                        tags.append(TagCost(tagValue: label, amount: amount, currency: currency))
+                    }
+                }
+                tags.sort()
+                let sortedTags = tags
+                
+                await MainActor.run {
+                    self.tagCosts = sortedTags
+                    let duration = Date().timeIntervalSince(startTime)
+                    self.recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-TagBreakdown", success: true, duration: duration)
+                    self.log(.info, category: "API", "Tag breakdown loaded: \(sortedTags.count) tags")
+                }
+            } else {
+                let duration = Date().timeIntervalSince(startTime)
+                recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-TagBreakdown", success: false, duration: duration, error: "No data returned")
+                log(.warning, category: "API", "No tag breakdown data returned")
+            }
+        } catch {
+            let duration = Date().timeIntervalSince(startTime)
+            let errorMessage = error.localizedDescription
+            log(.error, category: "API", "Error fetching tag breakdown: \(errorMessage)")
+            recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-TagBreakdown", success: false, duration: duration, error: errorMessage)
         }
         
         await MainActor.run {
@@ -3966,4 +4113,3 @@ enum CostFetchError: LocalizedError {
 }
 
 // MARK: - Custom Status Bar Implementation with Popover
-

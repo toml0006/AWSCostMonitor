@@ -46,6 +46,33 @@ struct ServiceCost: Identifiable, Comparable, Codable {
     }
 }
 
+// Tag-level cost breakdown
+struct TagCost: Identifiable, Comparable, Codable {
+    var id = UUID()
+    let tagValue: String
+    let amount: Decimal
+    let currency: String
+    
+    static func < (lhs: TagCost, rhs: TagCost) -> Bool {
+        lhs.amount > rhs.amount // Sort by amount descending
+    }
+}
+
+// User preference for breakdown view
+enum CostBreakdownMode: String, CaseIterable, Codable, Identifiable {
+    case service
+    case tag
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .service: return "Service"
+        case .tag: return "Tag"
+        }
+    }
+}
+
 // Daily cost data point
 struct DailyCost: Identifiable, Codable {
     var id = UUID()

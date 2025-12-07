@@ -12,6 +12,12 @@ struct ContentView: View {
     @EnvironmentObject var awsManager: AWSManager
     @State private var hoveredItem: String? = nil
     @State private var pressedItem: String? = nil
+    @AppStorage("CostBreakdownMode") private var breakdownModeRaw: String = CostBreakdownMode.service.rawValue
+    @AppStorage("CostBreakdownTagKey") private var costBreakdownTagKey: String = "Environment"
+    
+    private var breakdownMode: CostBreakdownMode {
+        CostBreakdownMode(rawValue: breakdownModeRaw) ?? .service
+    }
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -224,63 +230,160 @@ struct ContentView: View {
                         }
                     }
                     
-                    // Service breakdown section - moved below month comparison
+                    // Breakdown section - allow service or tag view
                     if awsManager.costData.first != nil {
                         Divider()
                         
-                        DisclosureGroup("Cost Breakdown by Service") {
-                            if awsManager.serviceCosts.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Breakdown view")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Picker("", selection: Binding(
+                                    get: { breakdownMode },
+                                    set: { newMode in
+                                        breakdownModeRaw = newMode.rawValue
+                                    }
+                                )) {
+                                    ForEach(CostBreakdownMode.allCases) { mode in
+                                        Text(mode.displayName).tag(mode)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 200)
+                            }
+                            
+                            if breakdownMode == .tag {
                                 HStack {
-                                    Image(systemName: "info.circle")
-                                        .foregroundColor(.secondary)
-                                    Text("No service data available")
+                                    Text("Tag key:")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
-                                }
-                                .padding(.vertical, 4)
-                            } else {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    ForEach(awsManager.serviceCosts.prefix(8)) { service in
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            // Service name and cost
-                                            HStack {
-                                                Text(service.serviceName)
-                                                    .font(.caption)
-                                                    .lineLimit(1)
-                                                    .truncationMode(.tail)
-                                                Spacer()
-                                                Text(CostDisplayFormatter.format(
-                                                    amount: service.amount,
-                                                    currency: service.currency,
-                                                    format: .full,
-                                                    showCurrencySymbol: true,
-                                                    decimalPlaces: 2,
-                                                    useThousandsSeparator: true
-                                                ))
-                                                .font(.caption)
-                                                .monospacedDigit()
-                                            }
-                                            
-                                            // 7-day histogram for this service
-                                            if let profileName = awsManager.selectedProfile?.name,
-                                               let dailyServiceCosts = awsManager.dailyServiceCostsByProfile[profileName],
-                                               !dailyServiceCosts.isEmpty {
-                                                ServiceHistogramView(
-                                                    dailyServiceCosts: dailyServiceCosts,
-                                                    serviceName: service.serviceName
-                                                )
-                                            }
+                                    TextField("e.g. Environment", text: $costBreakdownTagKey)
+                                        .textFieldStyle(.roundedBorder)
+                                        .onSubmit {
+                                            Task { await awsManager.handleBreakdownTagKeyChange(costBreakdownTagKey) }
                                         }
+                                    Button("Update") {
+                                        Task { await awsManager.handleBreakdownTagKeyChange(costBreakdownTagKey) }
                                     }
-                                    
-                                    if awsManager.serviceCosts.count > 8 {
-                                        Text("... and \(awsManager.serviceCosts.count - 8) more services")
+                                    .font(.caption)
+                                }
+                            }
+                        
+                            DisclosureGroup("Cost Breakdown by \(breakdownMode.displayName)") {
+                                if awsManager.isLoadingServices {
+                                    HStack {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                        Text("Loading breakdown…")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
-                                            .italic()
+                                    }
+                                    .padding(.vertical, 4)
+                                } else if breakdownMode == .service {
+                                    if awsManager.serviceCosts.isEmpty {
+                                        HStack {
+                                            Image(systemName: "info.circle")
+                                                .foregroundColor(.secondary)
+                                            Text("No service data available")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .padding(.vertical, 4)
+                                    } else {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            ForEach(awsManager.serviceCosts.prefix(8)) { service in
+                                                VStack(alignment: .leading, spacing: 3) {
+                                                    HStack {
+                                                        Text(service.serviceName)
+                                                            .font(.caption)
+                                                            .lineLimit(1)
+                                                            .truncationMode(.tail)
+                                                        Spacer()
+                                                        Text(CostDisplayFormatter.format(
+                                                            amount: service.amount,
+                                                            currency: service.currency,
+                                                            format: .full,
+                                                            showCurrencySymbol: true,
+                                                            decimalPlaces: 2,
+                                                            useThousandsSeparator: true
+                                                        ))
+                                                        .font(.caption)
+                                                        .monospacedDigit()
+                                                    }
+                                                    
+                                                    if let profileName = awsManager.selectedProfile?.name,
+                                                       let dailyServiceCosts = awsManager.dailyServiceCostsByProfile[profileName],
+                                                       !dailyServiceCosts.isEmpty {
+                                                        ServiceHistogramView(
+                                                            dailyServiceCosts: dailyServiceCosts,
+                                                            serviceName: service.serviceName
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if awsManager.serviceCosts.count > 8 {
+                                                Text("... and \(awsManager.serviceCosts.count - 8) more services")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                    .italic()
+                                            }
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
+                                } else {
+                                    let trimmedKey = costBreakdownTagKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    if trimmedKey.isEmpty {
+                                        HStack {
+                                            Image(systemName: "info.circle")
+                                                .foregroundColor(.secondary)
+                                            Text("Enter a tag key to view tag costs")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .padding(.vertical, 4)
+                                    } else if awsManager.tagCosts.isEmpty {
+                                        HStack {
+                                            Image(systemName: "info.circle")
+                                                .foregroundColor(.secondary)
+                                            Text("No tag data available")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .padding(.vertical, 4)
+                                    } else {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            ForEach(awsManager.tagCosts.prefix(8)) { tag in
+                                                HStack {
+                                                    Text(tag.tagValue.isEmpty ? "(untagged)" : tag.tagValue)
+                                                        .font(.caption)
+                                                        .lineLimit(1)
+                                                        .truncationMode(.tail)
+                                                    Spacer()
+                                                    Text(CostDisplayFormatter.format(
+                                                        amount: tag.amount,
+                                                        currency: tag.currency,
+                                                        format: .full,
+                                                        showCurrencySymbol: true,
+                                                        decimalPlaces: 2,
+                                                        useThousandsSeparator: true
+                                                    ))
+                                                    .font(.caption)
+                                                    .monospacedDigit()
+                                                }
+                                            }
+                                            
+                                            if awsManager.tagCosts.count > 8 {
+                                                Text("... and \(awsManager.tagCosts.count - 8) more tags")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                    .italic()
+                                            }
+                                        }
+                                        .padding(.vertical, 4)
                                     }
                                 }
-                                .padding(.vertical, 4)
                             }
                         }
                     }
@@ -719,6 +822,11 @@ struct ContentView: View {
                 await awsManager.fetchCostForSelectedProfile()
             }
         }
+        .onChange(of: breakdownModeRaw) { _, newValue in
+            if let mode = CostBreakdownMode(rawValue: newValue) {
+                Task { await awsManager.handleBreakdownModeChange(mode) }
+            }
+        }
         // Add keyboard shortcuts for profile switching (1-9)
         .background(
             ForEach(0..<min(awsManager.profiles.count, 9), id: \.self) { index in
@@ -734,7 +842,7 @@ struct ContentView: View {
             }
         )
         .onAppear {
-            // Timer removed to prevent threading issues
+            Task { await awsManager.fetchBreakdownForCurrentMode() }
         }
         .onDisappear {
             // Timer cleanup removed
