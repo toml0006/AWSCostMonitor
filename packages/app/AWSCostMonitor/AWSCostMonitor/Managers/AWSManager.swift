@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import OSLog
+import ObjectiveC
 import AWSCostExplorer
 import AWSSTS
 import AWSSDKIdentity
@@ -37,11 +38,15 @@ class AWSManager: ObservableObject {
     @Published var nextRefreshTime: Date?
     @Published var refreshInterval: Int = 5 { // minutes
         didSet {
-            // Automatically recreate timer when interval changes
-            let wasRunning = refreshTimer != nil
+            // Automatically recreate timers when interval changes if any timer was active
+            let wasRunning = isAutoRefreshActive
             if wasRunning {
+                // Preserve autoRefreshEnabled state across restart
+                let shouldBeEnabled = autoRefreshEnabled
                 stopAutomaticRefresh()
-                startAutomaticRefresh()
+                if shouldBeEnabled {
+                    startAutomaticRefresh()
+                }
             }
         }
     }
@@ -55,7 +60,9 @@ class AWSManager: ObservableObject {
     
     // Computed property to check if auto-refresh is active
     var isAutoRefreshActive: Bool {
-        return refreshTimer != nil || refreshTask != nil
+        // Consider Dispatch timer presence OR an async Task that hasn't been cancelled
+        let asyncActive = (refreshTask != nil) && (!(refreshTask?.isCancelled ?? true))
+        return (refreshTimer != nil) || asyncActive
     }
     
     @Published var historicalData: [HistoricalCostData] = []
@@ -106,7 +113,8 @@ class AWSManager: ObservableObject {
     @Published var apiRequestRecords: [APIRequestRecord] = []
     @AppStorage("DebugMode") var debugMode: Bool = false
     @AppStorage("MaxLogEntries") private var maxLogEntries: Int = 1000
-    @AppStorage("AutoRefreshEnabled") var autoRefreshEnabled: Bool = false
+    // Default to true so new installs auto-refresh without manual toggling.
+    @AppStorage("AutoRefreshEnabled") var autoRefreshEnabled: Bool = true
     
     // Cost alerts
     let alertManager = CostAlertManager()
@@ -124,6 +132,9 @@ class AWSManager: ObservableObject {
     private let displayFormatKey = "MenuBarDisplayFormat"
     private let historicalDataKey = "HistoricalCostData"
     private let apiRequestRecordsKey = "APIRequestRecords"
+    
+    // UserDefaults - use app-specific suite where data is actually stored
+    private let userDefaults = UserDefaults(suiteName: "middleout.AWSCostMonitor") ?? UserDefaults.standard
     
     // Profile Management
     private let profileManager = ProfileManager()
@@ -269,9 +280,23 @@ class AWSManager: ObservableObject {
         
         // Check AWS config access first
         let accessManager = AWSConfigAccessManager.shared
+        print("[DEBUG] AWS Config Access Manager Status:")
+        print("[DEBUG] - hasAccess: \(accessManager.hasAccess)")
+        print("[DEBUG] - needsAccessGrant: \(accessManager.needsAccessGrant)")
+        print("[DEBUG] - isSandboxed: \(ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil)")
+        
         if accessManager.needsAccessGrant {
             log(.info, category: "Config", "AWS config access needed, will prompt user")
-            // The UI will handle prompting for access
+            print("[DEBUG] AWS config access needed - this is why profiles are not loading!")
+            print("[DEBUG] Attempting to request AWS config access...")
+            
+            // Create a persistent window that won't disappear
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                print("[DEBUG] Creating persistent AWS config access window...")
+                self.createPersistentAWSConfigWindow()
+            }
+        } else {
+            print("[DEBUG] AWS config access is available")
         }
         
         // Listen for AWS config access granted notification
@@ -279,6 +304,14 @@ class AWSManager: ObservableObject {
             self,
             selector: #selector(awsConfigAccessGranted),
             name: .awsConfigAccessGranted,
+            object: nil
+        )
+        
+        // Also listen for when profiles are loaded after config access is granted
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(profilesLoadedAfterConfigAccess),
+            name: .profilesLoadedAfterConfigAccess,
             object: nil
         )
         
@@ -314,46 +347,7 @@ class AWSManager: ObservableObject {
         _ = ScreenStateMonitor.shared // Initialize the singleton
         setupScreenStateMonitoring()
         
-        // Check if we need a startup refresh
-        log(.info, category: "Startup", "Checking for startup refresh with profile: \(selectedProfile?.name ?? "none")")
-        
-        // DEBUG: AGGRESSIVE REFRESH - Always refresh if data is older than 30 minutes
-        if let profile = selectedProfile,
-           let cachedData = costCache[profile.name] {
-            let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-            let budget = getBudget(for: profile.name)
-            let refreshIntervalSeconds = TimeInterval(budget.refreshIntervalMinutes * 60)
-            
-            // DEBUG: Force refresh if older than 30 minutes
-            let debugRefreshThreshold: TimeInterval = 30 * 60 // 30 minutes
-            
-            log(.warning, category: "Startup", "DEBUG MODE - Cache age: \(Int(cacheAge/60)) min, Debug threshold: 30 min, Normal interval: \(budget.refreshIntervalMinutes) min")
-            
-            if cacheAge > debugRefreshThreshold {
-                log(.warning, category: "Startup", "DEBUG: Cache is older than 30 min (\(Int(cacheAge/60)) min old) - FORCING IMMEDIATE REFRESH")
-                print("DEBUG: FORCING STARTUP REFRESH - Cache is \(Int(cacheAge/60)) minutes old")
-                Task { @MainActor in
-                    await fetchCostForSelectedProfile()
-                }
-            } else if cacheAge > refreshIntervalSeconds {
-                log(.warning, category: "Startup", "Cache is stale per normal interval (\(Int(cacheAge/60)) min old vs \(budget.refreshIntervalMinutes) min interval) - triggering refresh")
-                Task { @MainActor in
-                    await fetchCostForSelectedProfile()
-                }
-            } else {
-                log(.info, category: "Startup", "Cache is fresh (\(Int(cacheAge/60)) min old) - no refresh needed")
-            }
-        } else if selectedProfile != nil {
-            // No cache for selected profile, fetch immediately
-            log(.warning, category: "Startup", "No cache for selected profile - fetching data immediately")
-            print("DEBUG: NO CACHE - FORCING STARTUP REFRESH")
-            Task { @MainActor in
-                await fetchCostForSelectedProfile()
-            }
-        } else {
-            log(.error, category: "Startup", "No selected profile at all - cannot refresh")
-            print("DEBUG: NO SELECTED PROFILE - Cannot refresh")
-        }
+        // Note: Startup refresh logic moved to after profiles are loaded in loadProfiles()
         
         // Also schedule a secondary check after a delay to catch any edge cases
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
@@ -374,7 +368,8 @@ class AWSManager: ObservableObject {
                 }
             }
             
-            self.checkForStartupRefresh()
+            // REMOVED: checkForStartupRefresh() - conflicts with performStartupRefreshCheck()
+            // The performStartupRefreshCheck() method is called after profiles are loaded
             
             // Start auto-refresh after profiles are loaded and startup is complete
             if self.autoRefreshEnabled {
@@ -433,9 +428,21 @@ class AWSManager: ObservableObject {
         let screenMonitor = ScreenStateMonitor.shared
         if screenMonitor.canRefresh {
             // Screen is on and unlocked - resume refresh if needed
-            if autoRefreshEnabled && refreshTimer == nil {
-                log(.info, category: "Refresh", "Resuming automatic refresh - screen is on and unlocked")
+            let timersActive = isAutoRefreshActive
+            if autoRefreshEnabled && !timersActive {
+                log(.info, category: "Refresh", "Resuming automatic refresh - timers were inactive and screen is on/unlocked")
                 startAutomaticRefresh()
+            }
+
+            // Catch-up: if auto-refresh is enabled and data appears stale, trigger an immediate refresh
+            if autoRefreshEnabled {
+                // Use existing staleness logic
+                if checkIfRefreshNeeded() {
+                    log(.info, category: "Refresh", "Catch-up refresh after becoming active/unlocked")
+                    Task { @MainActor in
+                        await self.fetchCostForSelectedProfile()
+                    }
+                }
             }
         } else {
             // Screen is off or locked - don't stop the timer, just skip refreshes
@@ -507,7 +514,7 @@ class AWSManager: ObservableObject {
         if let currentProfile = selectedProfile,
            demoProfiles.contains(where: { $0.name == currentProfile.name }) {
             selectedProfile = nil
-            UserDefaults.standard.removeObject(forKey: "SelectedAWSProfileName")
+            userDefaults.removeObject(forKey: "SelectedAWSProfileName")
         }
         
         // Reload profiles from AWS config
@@ -527,6 +534,22 @@ class AWSManager: ObservableObject {
             Task {
                 await fetchCostForSelectedProfile()
             }
+        }
+        
+        // Post notification that profiles are loaded after config access
+        NotificationCenter.default.post(name: .profilesLoadedAfterConfigAccess, object: nil)
+    }
+    
+    // Handle profiles loaded after config access is granted
+    @objc func profilesLoadedAfterConfigAccess() {
+        log(.info, category: "Config", "Profiles loaded after config access granted - performing delayed startup refresh")
+        print("[DEBUG] PROFILES LOADED AFTER CONFIG ACCESS - Performing delayed startup refresh")
+        
+        // Add a small delay to ensure AWS config access is fully processed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.log(.info, category: "Config", "Delayed startup refresh check starting...")
+            print("[DEBUG] DELAYED STARTUP REFRESH CHECK STARTING...")
+            self.performStartupRefreshCheck()
         }
     }
     
@@ -667,8 +690,73 @@ class AWSManager: ObservableObject {
         }
     }
     
+    // CRITICAL FIX: Perform startup refresh check after profiles are loaded
+    private func performStartupRefreshCheck() {
+        log(.info, category: "Startup", "=== STARTUP REFRESH CHECK BEGIN ===")
+        log(.info, category: "Startup", "Selected profile: \(selectedProfile?.name ?? "nil")")
+        log(.info, category: "Startup", "Auto refresh enabled: \(autoRefreshEnabled)")
+        log(.info, category: "Startup", "Cost cache keys: \(Array(costCache.keys))")
+        log(.info, category: "Startup", "Profile count: \(profiles.count)")
+        
+        // Check team cache settings
+        let teamCacheSettings = loadTeamCacheSettings()
+        log(.info, category: "Startup", "Team cache settings: \(teamCacheSettings)")
+        
+        // DEBUG: AGGRESSIVE REFRESH - Always refresh if data is older than 30 minutes
+        if let profile = selectedProfile {
+            log(.info, category: "Startup", "Profile found: \(profile.name), region: \(profile.region ?? "nil")")
+            
+            if let cachedData = costCache[profile.name] {
+                let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
+                let budget = getBudget(for: profile.name)
+                let refreshIntervalSeconds = TimeInterval(budget.refreshIntervalMinutes * 60)
+                
+                // DEBUG: Force refresh if older than 30 minutes
+                let debugRefreshThreshold: TimeInterval = 30 * 60 // 30 minutes
+                
+                log(.warning, category: "Startup", "DEBUG MODE - Cache age: \(Int(cacheAge/60)) min, Debug threshold: 30 min, Normal interval: \(budget.refreshIntervalMinutes) min")
+                log(.info, category: "Startup", "Cache fetch date: \(cachedData.fetchDate)")
+                log(.info, category: "Startup", "Cache MTD total: \(cachedData.mtdTotal)")
+                
+                if cacheAge > debugRefreshThreshold {
+                    log(.warning, category: "Startup", "DEBUG: Cache is older than 30 min (\(Int(cacheAge/60)) min old) - FORCING IMMEDIATE REFRESH")
+                    print("DEBUG: FORCING STARTUP REFRESH - Cache is \(Int(cacheAge/60)) minutes old")
+                    Task { @MainActor in
+                        log(.warning, category: "Startup", "STARTING STARTUP REFRESH TASK")
+                        await fetchCostForSelectedProfile(force: true, bypassTeamCache: true)
+                        log(.warning, category: "Startup", "STARTUP REFRESH TASK COMPLETED")
+                    }
+                } else if cacheAge > refreshIntervalSeconds {
+                    log(.warning, category: "Startup", "Cache is stale per normal interval (\(Int(cacheAge/60)) min old vs \(budget.refreshIntervalMinutes) min interval) - triggering refresh")
+                    Task { @MainActor in
+                        await fetchCostForSelectedProfile(force: true, bypassTeamCache: true)
+                    }
+                } else {
+                    log(.info, category: "Startup", "Cache is fresh (\(Int(cacheAge/60)) min old) - no refresh needed")
+                }
+            } else {
+                // No cache for selected profile, fetch immediately
+                log(.warning, category: "Startup", "No cache for selected profile '\(profile.name)' - fetching data immediately")
+                print("DEBUG: NO CACHE - FORCING STARTUP REFRESH")
+                Task { @MainActor in
+                    log(.warning, category: "Startup", "STARTING NO-CACHE STARTUP REFRESH TASK")
+                    await fetchCostForSelectedProfile(force: true, bypassTeamCache: true)
+                    log(.warning, category: "Startup", "NO-CACHE STARTUP REFRESH TASK COMPLETED")
+                }
+            }
+        } else {
+            log(.error, category: "Startup", "No selected profile at all - cannot refresh")
+            print("DEBUG: NO SELECTED PROFILE - Cannot refresh")
+        }
+        
+        log(.info, category: "Startup", "=== STARTUP REFRESH CHECK END ===")
+    }
+    
     // Check for profile changes and handle new/removed profiles
     private func checkForProfileChanges(currentProfiles: [AWSProfile]) {
+        log(.warning, category: "Startup", "=== CHECK FOR PROFILE CHANGES CALLED ===")
+        log(.warning, category: "Startup", "Current profiles count: \(currentProfiles.count)")
+        log(.warning, category: "Startup", "Current profiles: \(currentProfiles.map { $0.name })")
         // Check if we should scan for changes
         let shouldScan = profileManager.shouldScanForChanges()
         log(.info, category: "ProfileManagement", "Should scan for changes: \(shouldScan)")
@@ -731,11 +819,11 @@ class AWSManager: ObservableObject {
                     let budget = self.getBudget(for: firstProfile.name)
                     self.refreshInterval = budget.refreshIntervalMinutes
                     
-                    // Start automatic refresh if not already running
-                    if self.refreshTimer == nil && !self.autoRefreshEnabled {
-                        self.log(.info, category: "Startup", "Starting automatic refresh for auto-selected profile: \(firstProfile.name)")
-                        self.startAutomaticRefresh()
-                    }
+                    // Start automatic refresh if enabled and not already running
+                    if self.autoRefreshEnabled && !self.isAutoRefreshActive {
+                         self.log(.info, category: "Startup", "Starting automatic refresh for auto-selected profile: \(firstProfile.name)")
+                         self.startAutomaticRefresh()
+                     }
                     
                     // Trigger immediate refresh to load data
                     Task {
@@ -745,6 +833,24 @@ class AWSManager: ObservableObject {
             } else if self.selectedProfile != nil {
                 print("[DEBUG] Profile already selected: \(self.selectedProfile!.name)")
             }
+        }
+        
+        // CRITICAL FIX: Perform startup refresh check AFTER profile selection is complete
+        // This ensures selectedProfile is set before checking for startup refresh
+        log(.warning, category: "Startup", "=== STARTUP SEQUENCE DEBUG ===")
+        log(.warning, category: "Startup", "Profile selection complete - selectedProfile: \(selectedProfile?.name ?? "nil")")
+        log(.warning, category: "Startup", "Total profiles loaded: \(profiles.count)")
+        log(.warning, category: "Startup", "Profiles: \(profiles.map { $0.name })")
+        
+        if self.selectedProfile != nil {
+            log(.warning, category: "Startup", "Profile selected successfully - calling performStartupRefreshCheck()")
+            performStartupRefreshCheck()
+            
+            // Also post notification for delayed startup refresh
+            NotificationCenter.default.post(name: .profilesLoadedAfterConfigAccess, object: nil)
+        } else {
+            log(.warning, category: "Startup", "No profile selected after profile loading - skipping startup refresh check")
+            print("DEBUG: NO PROFILE SELECTED - Cannot perform startup refresh check")
         }
         
         // Handle new profiles (only show alerts after first launch)
@@ -796,34 +902,46 @@ class AWSManager: ObservableObject {
     
     // Loads the selected profile name from UserDefaults.
     func loadSelectedProfile() {
-        if let storedProfileName = UserDefaults.standard.string(forKey: selectedProfileKey) {
+        print("[DEBUG] === LOAD SELECTED PROFILE DEBUG ===")
+        print("[DEBUG] Available profiles count: \(profiles.count)")
+        print("[DEBUG] Available profiles: \(profiles.map { $0.name })")
+        
+        if let storedProfileName = userDefaults.string(forKey: selectedProfileKey) {
+            print("[DEBUG] Stored profile name: \(storedProfileName)")
+            
             // Find the profile object corresponding to the stored name
             self.selectedProfile = self.profiles.first { $0.name == storedProfileName }
             
             if self.selectedProfile != nil {
+                print("[DEBUG] Restored saved profile: \(storedProfileName)")
                 log(.info, category: "Startup", "Restored saved profile: \(storedProfileName)")
                 
                 // Load profile-specific refresh settings
                 let budget = getBudget(for: storedProfileName)
                 self.refreshInterval = budget.refreshIntervalMinutes
                 
-                // Start automatic refresh if not already running
-                if refreshTimer == nil && !autoRefreshEnabled {
+                // Start automatic refresh if enabled but timers are not active
+                if autoRefreshEnabled && !isAutoRefreshActive {
                     log(.info, category: "Startup", "Starting automatic refresh for loaded profile: \(storedProfileName)")
                     startAutomaticRefresh()
                 }
             } else {
+                print("[DEBUG] Saved profile '\(storedProfileName)' not found in current profiles")
+                print("[DEBUG] Available profiles: \(profiles.map { $0.name })")
                 log(.warning, category: "Startup", "Saved profile '\(storedProfileName)' not found in current profiles")
+                log(.warning, category: "Startup", "Available profiles: \(profiles.map { $0.name })")
             }
         } else {
+            print("[DEBUG] No saved profile preference found")
             log(.info, category: "Startup", "No saved profile preference found")
         }
+        print("[DEBUG] Final selectedProfile after loadSelectedProfile: \(selectedProfile?.name ?? "nil")")
         // Note: Fallback to first profile is handled in loadProfiles() after this function is called
     }
     
     // Saves the selected profile name to UserDefaults.
     func saveSelectedProfile(profile: AWSProfile) {
-        UserDefaults.standard.set(profile.name, forKey: selectedProfileKey)
+        userDefaults.set(profile.name, forKey: selectedProfileKey)
         
         // Clear ALL previous data when switching profiles
         self.costData = []
@@ -836,9 +954,12 @@ class AWSManager: ObservableObject {
         let budget = getBudget(for: profile.name)
         self.refreshInterval = budget.refreshIntervalMinutes
         
-        // Restart refresh timer with new interval if active
-        if refreshTimer != nil {
+        // Restart refresh timers if they are active, or start them if auto-refresh is enabled
+        let timersActive = isAutoRefreshActive
+        if timersActive {
             stopAutomaticRefresh()
+            startAutomaticRefresh()
+        } else if autoRefreshEnabled {
             startAutomaticRefresh()
         }
         
@@ -903,7 +1024,7 @@ class AWSManager: ObservableObject {
     
     // Loads the display format preference from UserDefaults.
     func loadDisplayFormat() {
-        if let storedFormat = UserDefaults.standard.string(forKey: displayFormatKey),
+        if let storedFormat = userDefaults.string(forKey: displayFormatKey),
            let format = MenuBarDisplayFormat(rawValue: storedFormat) {
             self.displayFormat = format
         } else {
@@ -914,7 +1035,7 @@ class AWSManager: ObservableObject {
     
     // Saves the display format preference to UserDefaults.
     func saveDisplayFormat(_ format: MenuBarDisplayFormat) {
-        UserDefaults.standard.set(format.rawValue, forKey: displayFormatKey)
+        userDefaults.set(format.rawValue, forKey: displayFormatKey)
         self.displayFormat = format
     }
     
@@ -922,7 +1043,7 @@ class AWSManager: ObservableObject {
     
     // Load budgets from UserDefaults
     func loadBudgets() {
-        if let data = UserDefaults.standard.data(forKey: "ProfileBudgets"),
+        if let data = userDefaults.data(forKey: "ProfileBudgets"),
            let budgets = try? JSONDecoder().decode([String: ProfileBudget].self, from: data) {
             self.profileBudgets = budgets
         }
@@ -931,7 +1052,7 @@ class AWSManager: ObservableObject {
     // Save budgets to UserDefaults
     func saveBudgets() {
         if let data = try? JSONEncoder().encode(profileBudgets) {
-            UserDefaults.standard.set(data, forKey: "ProfileBudgets")
+            userDefaults.set(data, forKey: "ProfileBudgets")
         }
     }
     
@@ -981,11 +1102,11 @@ class AWSManager: ObservableObject {
             if refreshIntervalMinutes > 0 {
                 // If timer is already running, restart it with new interval
                 // Otherwise, start it for the first time
-                if refreshTimer != nil {
+                if isAutoRefreshActive {
                     stopAutomaticRefresh()
                 }
                 startAutomaticRefresh()
-            } else if refreshTimer != nil {
+            } else if isAutoRefreshActive {
                 // If interval is 0 or negative, stop the timer
                 stopAutomaticRefresh()
             }
@@ -1028,7 +1149,7 @@ class AWSManager: ObservableObject {
     
     // Load historical data from UserDefaults
     func loadHistoricalData() {
-        if let data = UserDefaults.standard.data(forKey: historicalDataKey),
+        if let data = userDefaults.data(forKey: historicalDataKey),
            let historical = try? JSONDecoder().decode([HistoricalCostData].self, from: data) {
             self.historicalData = historical
         }
@@ -1037,7 +1158,7 @@ class AWSManager: ObservableObject {
     // Save historical data to UserDefaults
     func saveHistoricalData() {
         if let data = try? JSONEncoder().encode(historicalData) {
-            UserDefaults.standard.set(data, forKey: historicalDataKey)
+            userDefaults.set(data, forKey: historicalDataKey)
         }
     }
     
@@ -1585,6 +1706,12 @@ class AWSManager: ObservableObject {
             intervalMinutes = refreshInterval // Fallback to global interval
         }
         
+        // Validate interval before scheduling
+        guard intervalMinutes > 0 else {
+            log(.warning, category: "Refresh", "Invalid refresh interval (\(intervalMinutes) minutes). Timers will not start.")
+            return
+        }
+        
         log(.info, category: "Refresh", "Starting automatic refresh timer for profile: \(selectedProfile?.name ?? "none"), interval: \(intervalMinutes) minutes")
         
         // Check if we need to refresh immediately due to stale data
@@ -1611,6 +1738,7 @@ class AWSManager: ObservableObject {
     private func checkIfRefreshNeeded() -> Bool {
         // If we don't have a next refresh time, we need to refresh
         guard let scheduledTime = nextRefreshTime else {
+            log(.info, category: "Refresh", "No next refresh time scheduled, refresh needed")
             return true
         }
         
@@ -1620,7 +1748,7 @@ class AWSManager: ObservableObject {
             return true
         }
         
-        // Also check if data is too old based on last API call time
+        // Check if data is too old based on last API call time
         if let lastCall = lastAPICallTime {
             let timeSinceLastCall = Date().timeIntervalSince(lastCall)
             // Use profile-specific interval if available
@@ -1634,6 +1762,23 @@ class AWSManager: ObservableObject {
             let maxAge = TimeInterval(intervalMinutes * 60)
             if timeSinceLastCall > maxAge {
                 log(.info, category: "Refresh", "Data is stale (last fetch: \(Int(timeSinceLastCall/60)) minutes ago, max age: \(intervalMinutes) minutes)")
+                return true
+            }
+        } else {
+            // CRITICAL FIX: If lastAPICallTime is null, check cache data age directly
+            if let profile = selectedProfile,
+               let cachedData = costCache[profile.name] {
+                let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
+                let intervalMinutes = getBudget(for: profile.name).refreshIntervalMinutes
+                let maxAge = TimeInterval(intervalMinutes * 60)
+                
+                if cacheAge > maxAge {
+                    log(.info, category: "Refresh", "Cache data is stale (age: \(Int(cacheAge/60)) minutes, max age: \(intervalMinutes) minutes) - lastAPICallTime was null")
+                    return true
+                }
+            } else if lastAPICallTime == nil {
+                // No API call time and no cache data - definitely need refresh
+                log(.info, category: "Refresh", "No lastAPICallTime and no cache data - refresh needed")
                 return true
             }
         }
@@ -1681,8 +1826,24 @@ class AWSManager: ObservableObject {
             }
             
             Task { @MainActor in
-                // Check screen state before refreshing
-                if ScreenStateMonitor.shared.shouldAllowRefresh() {
+                // AGGRESSIVE STALENESS CHECK: Force refresh if cache data is older than 2 hours
+                var forceRefreshDueToStaleCache = false
+                if let profile = self.selectedProfile,
+                   let cachedData = self.costCache[profile.name] {
+                    let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
+                    let twoHours: TimeInterval = 2 * 60 * 60 // 2 hours
+                    if cacheAge > twoHours {
+                        forceRefreshDueToStaleCache = true
+                        self.log(.warning, category: "Refresh", "AGGRESSIVE: Cache is \(Int(cacheAge/3600)) hours old, forcing refresh")
+                    }
+                }
+                
+                // Check if data is stale and force refresh if needed
+                if self.checkIfRefreshNeeded() || forceRefreshDueToStaleCache {
+                    let reason = forceRefreshDueToStaleCache ? "AGGRESSIVE cache staleness check" : "Standard staleness check"
+                    self.log(.info, category: "Refresh", "Data is stale (\(reason)), forcing refresh regardless of screen state")
+                    await self.fetchCostForSelectedProfile(force: true)
+                } else if ScreenStateMonitor.shared.shouldAllowRefresh() {
                     self.log(.info, category: "Refresh", "Screen is active, performing refresh")
                     await self.fetchCostForSelectedProfile()
                 } else {
@@ -1781,7 +1942,7 @@ class AWSManager: ObservableObject {
     
     // Updates refresh interval and recreates timer if running
     func updateRefreshInterval(_ newInterval: Int) {
-        let wasRunning = refreshTimer != nil || refreshTask != nil
+        let wasRunning = isAutoRefreshActive
         stopAutomaticRefresh() // Always stop first
         refreshInterval = newInterval
         
@@ -1833,8 +1994,24 @@ class AWSManager: ObservableObject {
                         self.log(.info, category: "AsyncRefresh", "🔄 Async refresh timer FIRED at \(Date())")
                     }
                     
-                    // Check screen state before refreshing
-                    if ScreenStateMonitor.shared.shouldAllowRefresh() {
+                    // AGGRESSIVE STALENESS CHECK: Force refresh if cache data is older than 2 hours
+                    var forceRefreshDueToStaleCache = false
+                    if let profile = self.selectedProfile,
+                       let cachedData = self.costCache[profile.name] {
+                        let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
+                        let twoHours: TimeInterval = 2 * 60 * 60 // 2 hours
+                        if cacheAge > twoHours {
+                            forceRefreshDueToStaleCache = true
+                            self.log(.warning, category: "AsyncRefresh", "AGGRESSIVE: Cache is \(Int(cacheAge/3600)) hours old, forcing refresh")
+                        }
+                    }
+                    
+                    // Check if data is stale and force refresh if needed
+                    if self.checkIfRefreshNeeded() || forceRefreshDueToStaleCache {
+                        let reason = forceRefreshDueToStaleCache ? "AGGRESSIVE cache staleness check" : "Standard staleness check"
+                        self.log(.info, category: "AsyncRefresh", "Data is stale (\(reason)), forcing refresh regardless of screen state")
+                        await self.fetchCostForSelectedProfile(force: true)
+                    } else if ScreenStateMonitor.shared.shouldAllowRefresh() {
                         self.log(.info, category: "AsyncRefresh", "Screen is active, performing refresh")
                         await self.fetchCostForSelectedProfile()
                     } else {
@@ -1852,7 +2029,10 @@ class AWSManager: ObservableObject {
                     }
                 }
             }
-            
+            // Ensure the task handle is cleared when the task ends so state checks are accurate
+            await MainActor.run {
+                self.refreshTask = nil
+            }
             self.log(.info, category: "AsyncRefresh", "Async refresh timer task ended")
         }
         
@@ -2066,7 +2246,7 @@ class AWSManager: ObservableObject {
     }
     
     // Enhanced single-call data strategy with intelligent caching
-    func fetchCostForSelectedProfile(force: Bool = false) async {
+    func fetchCostForSelectedProfile(force: Bool = false, bypassTeamCache: Bool = false) async {
         guard let profile = selectedProfile else {
             let error = "No profile selected."
             log(.warning, category: "API", error)
@@ -2101,11 +2281,17 @@ class AWSManager: ObservableObject {
             return
         }
         
-        // Cache-first lookup strategy: team cache → local cache → API (unless forced)
-        if !force {
+        log(.info, category: "API", "=== FETCH COST DATA START ===")
+        log(.info, category: "API", "Profile: \(profile.name), Force: \(force), BypassTeamCache: \(bypassTeamCache)")
+        
+        // Cache-first lookup strategy: team cache → local cache → API (unless forced or bypassing team cache)
+        if !force && !bypassTeamCache {
+            log(.info, category: "API", "Checking team cache first for profile: \(profile.name)")
             if await checkTeamCacheFirst(for: profile) {
+                log(.info, category: "API", "Team cache hit - data loaded from team cache")
                 return // Team cache hit, data loaded
             }
+            log(.info, category: "API", "Team cache miss - falling back to local cache")
             
             // Fallback to local cache if team cache miss/disabled
             if let cachedData = costCache[profile.name] {
@@ -2114,7 +2300,18 @@ class AWSManager: ObservableObject {
                     log(.info, category: "Cache", "Using local cached data for \(profile.name), age: \(Int(Date().timeIntervalSince(cachedData.fetchDate) / 60)) minutes")
                     await loadFromCache(cachedData)
                     return
+                } else {
+                    log(.info, category: "Cache", "Local cache is stale for \(profile.name), age: \(Int(Date().timeIntervalSince(cachedData.fetchDate) / 60)) minutes")
                 }
+            } else {
+                log(.info, category: "Cache", "No local cache found for \(profile.name)")
+            }
+        } else {
+            if bypassTeamCache {
+                log(.warning, category: "API", "BYPASSING TEAM CACHE - Fetching directly from Cost Explorer API")
+            }
+            if force {
+                log(.warning, category: "API", "FORCE REFRESH - Bypassing all caches")
             }
         }
         
@@ -2450,6 +2647,15 @@ class AWSManager: ObservableObject {
         await MainActor.run {
             self.isLoading = false
             self.isLoadingServices = false
+        }
+        
+        log(.info, category: "API", "=== FETCH COST DATA END ===")
+        log(.info, category: "API", "Final cost data count: \(self.costData.count)")
+        if let firstCost = self.costData.first {
+            log(.info, category: "API", "Final cost amount: \(firstCost.amount)")
+        }
+        if let error = self.errorMessage {
+            log(.error, category: "API", "Final error message: \(error)")
         }
     }
     
@@ -3066,15 +3272,15 @@ class AWSManager: ObservableObject {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(costCache)
-            UserDefaults.standard.set(data, forKey: costCacheKey)
+            userDefaults.set(data, forKey: costCacheKey)
             
             // Also save daily costs
             let dailyData = try encoder.encode(dailyCostsByProfile)
-            UserDefaults.standard.set(dailyData, forKey: dailyCostsKey)
+            userDefaults.set(dailyData, forKey: dailyCostsKey)
             
             // Save daily service costs for histograms
             let dailyServiceData = try encoder.encode(dailyServiceCostsByProfile)
-            UserDefaults.standard.set(dailyServiceData, forKey: dailyServiceCostsKey)
+            userDefaults.set(dailyServiceData, forKey: dailyServiceCostsKey)
             
             log(.debug, category: "Cache", "Saved cache data for \(costCache.count) profiles")
             
@@ -3093,7 +3299,7 @@ class AWSManager: ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             
-            if let data = UserDefaults.standard.data(forKey: costCacheKey) {
+            if let data = userDefaults.data(forKey: costCacheKey) {
                 costCache = try decoder.decode([String: CostCacheEntry].self, from: data)
                 log(.debug, category: "Cache", "Loaded cache data for \(costCache.count) profiles")
                 
@@ -3114,12 +3320,12 @@ class AWSManager: ObservableObject {
                 }
             }
             
-            if let dailyData = UserDefaults.standard.data(forKey: dailyCostsKey) {
+            if let dailyData = userDefaults.data(forKey: dailyCostsKey) {
                 dailyCostsByProfile = try decoder.decode([String: [DailyCost]].self, from: dailyData)
                 log(.debug, category: "Cache", "Loaded daily cost data for \(dailyCostsByProfile.count) profiles")
             }
             
-            if let dailyServiceData = UserDefaults.standard.data(forKey: dailyServiceCostsKey) {
+            if let dailyServiceData = userDefaults.data(forKey: dailyServiceCostsKey) {
                 dailyServiceCostsByProfile = try decoder.decode([String: [DailyServiceCost]].self, from: dailyServiceData)
                 log(.debug, category: "Cache", "Loaded daily service cost data for \(dailyServiceCostsByProfile.count) profiles")
             }
@@ -3653,6 +3859,75 @@ class AWSManager: ObservableObject {
         log(.info, category: "Analytics", "Detected \(anomalies.count) anomalies for \(profileName)")
     }
     
+    // MARK: - AWS Config Access Window
+    
+    /// Create a persistent window for AWS config access that won't disappear
+    private func createPersistentAWSConfigWindow() {
+        let awsConfigView = AWSConfigAccessView()
+        
+        let hostingController = NSHostingController(rootView: awsConfigView)
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 450),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "AWS Configuration Access Required"
+        window.contentViewController = hostingController
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        window.hidesOnDeactivate = false
+        
+        // Make it modal so it stays on top and doesn't disappear
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        
+        // Keep the window alive
+        var windowRef = window
+        objc_setAssociatedObject(self, "awsConfigWindow", windowRef, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("[DEBUG] PERSISTENT AWS Config Access window created and displayed")
+        print("[DEBUG] Window size: \(window.frame.size)")
+        print("[DEBUG] Window level: \(window.level.rawValue)")
+        
+        // Also try to show the file picker using the existing method
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            print("[DEBUG] Attempting to show file picker using existing requestAccess method...")
+            AWSConfigAccessManager.shared.requestAccess(from: window)
+        }
+    }
+    
+    
+    /// Show a modal window for AWS config access request
+    private func showAWSConfigAccessWindow() {
+        let awsConfigView = AWSConfigAccessView()
+        
+        let hostingController = NSHostingController(rootView: awsConfigView)
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 400),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "AWS Configuration Access Required"
+        window.contentViewController = hostingController
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+        
+        // Make it visible and persistent
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        
+        print("[DEBUG] AWS Config Access modal window displayed and waiting for user interaction")
+    }
+    
     // MARK: - Demo Mode Support
     
     #if !OPENSOURCE
@@ -3774,4 +4049,3 @@ enum CostFetchError: LocalizedError {
 }
 
 // MARK: - Custom Status Bar Implementation with Popover
-

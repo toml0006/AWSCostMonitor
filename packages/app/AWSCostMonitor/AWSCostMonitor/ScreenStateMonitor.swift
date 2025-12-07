@@ -29,6 +29,9 @@ class ScreenStateMonitor: ObservableObject {
     private var displayWrangler: Any?
     private let logger = Logger(subsystem: "com.middleout.AWSCostMonitor", category: "ScreenState")
     private var cancellables = Set<AnyCancellable>()
+    private var userActivityTimer: DispatchSourceTimer?
+    private let activityQueue = DispatchQueue(label: "com.awscostmonitor.userActivity", qos: .utility)
+    private var lastUserActive: Bool = true
     
     // MARK: - Initialization
     
@@ -39,6 +42,9 @@ class ScreenStateMonitor: ObservableObject {
         
         // Check initial state
         checkCurrentScreenState()
+        
+        // Start monitoring user activity transitions (idle -> active)
+        startUserActivityMonitoring()
     }
     
     deinit {
@@ -145,21 +151,25 @@ class ScreenStateMonitor: ObservableObject {
     private func handleScreenSleep() {
         logger.info("Screen is going to sleep")
         isScreenOn = false
+        notifyScreenStateChanged()
     }
     
     private func handleScreenWake() {
         logger.info("Screen woke up")
         isScreenOn = true
+        notifyScreenStateChanged()
     }
     
     private func handleSystemSleep() {
         logger.info("System is going to sleep")
         isScreenOn = false
+        notifyScreenStateChanged()
     }
     
     private func handleSystemWake() {
         logger.info("System woke up")
         isScreenOn = true
+        notifyScreenStateChanged()
         // Double-check screen state after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.checkCurrentScreenState()
@@ -171,21 +181,25 @@ class ScreenStateMonitor: ObservableObject {
     @objc private func handleScreenLock() {
         logger.info("Screen locked")
         isSystemUnlocked = false
+        notifyScreenStateChanged()
     }
     
     @objc private func handleScreenUnlock() {
         logger.info("Screen unlocked")
         isSystemUnlocked = true
+        notifyScreenStateChanged()
     }
     
     @objc private func handleSessionSwitch() {
         logger.info("Session became active")
         isSystemUnlocked = true
+        notifyScreenStateChanged()
     }
     
     @objc private func handleSessionInactive() {
         logger.info("Session became inactive")
         isSystemUnlocked = false
+        notifyScreenStateChanged()
     }
     
     // MARK: - State Checking
@@ -194,6 +208,7 @@ class ScreenStateMonitor: ObservableObject {
         // Check if any screen is active
         let screens = NSScreen.screens
         isScreenOn = !screens.isEmpty
+        notifyScreenStateChanged()
         
         // Additional check using CGDisplay
         if isScreenOn {
@@ -211,6 +226,14 @@ class ScreenStateMonitor: ObservableObject {
         
         logger.info("Current screen state: \(self.isScreenOn ? "on" : "off")")
     }
+
+    // Notify observers that effective screen/lock state changed
+    private func notifyScreenStateChanged() {
+        NotificationCenter.default.post(
+            name: Notification.Name("ScreenStateChanged"),
+            object: nil
+        )
+    }
     
     // MARK: - Power Assertion (Optional)
     
@@ -222,12 +245,37 @@ class ScreenStateMonitor: ObservableObject {
             eventType: .null
         )
         
-        // Consider user active if there was input in the last 5 minutes
-        let isActive = idleTime < 300 // 5 minutes
+        // Consider user active if there was input in the last 30 minutes
+        // For menu bar apps, we want to allow refreshes even when user is "idle"
+        let isActive = idleTime < 1800 // 30 minutes
         
         logger.debug("User idle time: \(idleTime) seconds, active: \(isActive)")
         
         return isActive
+    }
+    
+    // MARK: - User Activity Monitoring
+    private func startUserActivityMonitoring() {
+        let timer = DispatchSource.makeTimerSource(queue: activityQueue)
+        userActivityTimer = timer
+        // Check every 30 seconds to balance responsiveness and efficiency
+        timer.schedule(deadline: .now() + 30, repeating: 30)
+        timer.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            let active = self.isUserActive()
+            DispatchQueue.main.async {
+                if active != self.lastUserActive {
+                    self.lastUserActive = active
+                    let state = active ? "active" : "idle"
+                    self.logger.info("User activity changed: \(state)")
+                    // When user becomes active and other conditions allow, trigger catch-up
+                    if active && self.isScreenOn && self.isSystemUnlocked && self.canRefresh {
+                        self.notifyScreenStateChanged()
+                    }
+                }
+            }
+        }
+        timer.resume()
     }
     
     // MARK: - Cleanup
@@ -239,6 +287,11 @@ class ScreenStateMonitor: ObservableObject {
         
         DistributedNotificationCenter.default().removeObserver(self)
         cancellables.removeAll()
+        
+        if let t = userActivityTimer {
+            t.cancel()
+            userActivityTimer = nil
+        }
     }
     
     // MARK: - Public Methods
