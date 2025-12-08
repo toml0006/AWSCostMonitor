@@ -283,6 +283,7 @@ extension Notification.Name {
     static let awsConfigAccessGranted = Notification.Name("awsConfigAccessGranted")
     static let awsConfigAccessRevoked = Notification.Name("awsConfigAccessRevoked")
     static let awsConfigDemoMode = Notification.Name("awsConfigDemoMode")
+    static let profilesLoadedAfterConfigAccess = Notification.Name("profilesLoadedAfterConfigAccess")
 }
 
 // MARK: - SwiftUI View for First Run

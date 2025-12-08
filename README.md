@@ -118,6 +118,17 @@ npm run dev:website
 
 Visit `http://localhost:5173` to see the marketing site.
 
+### Auto-Refresh Behavior & Troubleshooting
+
+The app uses a dual-timer strategy (Dispatch timer + async Task) and is screen-aware to avoid unnecessary API calls while you’re away. When you become active/unlocked, it performs a catch-up refresh if data is stale.
+
+- How timers are scheduled and validated
+- How idle/lock state affects refresh execution
+- Catch-up refresh behavior and logs to look for
+- Verification steps without opening the popover
+
+See: `docs/AUTO_REFRESH.md`
+
 ## 📦 Installation
 
 ### Download Pre-built App

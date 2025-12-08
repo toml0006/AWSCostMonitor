@@ -1,0 +1,972 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -project packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -configuration Debug -destination platform=macOS,arch=x86_64 CODE_SIGNING_ALLOWED=NO -derivedDataPath ./build/DerivedData
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+2025-09-15 13:17:40.734 xcodebuild[8001:193868119]  DVTDeviceOperation: Encountered a build number "" that is incompatible with DVTBuildVersion.
+2025-09-15 13:17:40.738 xcodebuild[8001:193868119]  DVTDeviceOperation: Encountered a build number "" that is incompatible with DVTBuildVersion.
+2025-09-15 13:17:40.740 xcodebuild[8001:193867995] [MT] DVTDeviceOperation: Encountered a build number "" that is incompatible with DVTBuildVersion.
+2025-09-15 13:17:40.740 xcodebuild[8001:193867995] [MT] DVTDeviceOperation: Encountered a build number "" that is incompatible with DVTBuildVersion.
+Resolve Package Graph
+
+
+Resolved source packages:
+  swift-nio-extras: https://github.com/apple/swift-nio-extras.git @ 1.29.0
+  swift-nio-http2: https://github.com/apple/swift-nio-http2.git @ 1.38.0
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 3.13.3
+  swift-nio-transport-services: https://github.com/apple/swift-nio-transport-services.git @ 1.25.0
+  swift-http-structured-headers: https://github.com/apple/swift-http-structured-headers.git @ 1.3.0
+  swift-service-lifecycle: https://github.com/swift-server/swift-service-lifecycle.git @ 2.8.0
+  swift-certificates: https://github.com/apple/swift-certificates.git @ 1.11.0
+  swift-algorithms: https://github.com/apple/swift-algorithms.git @ 1.2.1
+  smithy-swift: https://github.com/smithy-lang/smithy-swift @ 0.150.0
+  swift-async-algorithms: https://github.com/apple/swift-async-algorithms.git @ 1.0.4
+  SwiftProtobuf: https://github.com/apple/swift-protobuf.git @ 1.30.0
+  aws-sdk-swift: https://github.com/awslabs/aws-sdk-swift @ 1.5.12
+  swift-log: https://github.com/apple/swift-log.git @ 1.6.4
+  Opentracing: https://github.com/undefinedlabs/opentracing-objc @ 0.5.2
+  swift-numerics: https://github.com/apple/swift-numerics.git @ 1.0.3
+  swift-metrics: https://github.com/apple/swift-metrics.git @ 2.7.0
+  swift-collections: https://github.com/apple/swift-collections.git @ 1.2.1
+  aws-crt-swift: https://github.com/awslabs/aws-crt-swift @ 0.52.1
+  grpc-swift: https://github.com/grpc/grpc-swift.git @ 1.26.1
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.4.0
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.4.0
+  swift-nio-ssl: https://github.com/apple/swift-nio-ssl.git @ 2.33.0
+  swift-atomics: https://github.com/apple/swift-atomics.git @ 1.3.0
+  Thrift: https://github.com/undefinedlabs/Thrift-Swift @ 1.1.2
+  opentelemetry-swift: https://github.com/open-telemetry/opentelemetry-swift @ 1.17.1
+  swift-argument-parser: https://github.com/apple/swift-argument-parser.git @ 1.6.1
+  swift-nio: https://github.com/apple/swift-nio.git @ 2.85.0
+  swift-system: https://github.com/apple/swift-system.git @ 1.6.1
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (86 targets)
+    Target 'AWSCostMonitor' in project 'AWSCostMonitor'
+        ➜ Explicit dependency on target 'AWSCostExplorer' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSS3' in project 'aws-sdk-swift'
+    Target 'AWSS3' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSS3' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSO' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSOOIDC' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'AWSS3' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSO' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSOOIDC' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'AWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSO' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSOOIDC' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'AWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSO' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSOOIDC' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'AWSCostExplorer' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSCostExplorer' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSO' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSOOIDC' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'AWSCostExplorer' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSO' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'InternalAWSSSOOIDC' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'InternalAWSSSOOIDC' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'InternalAWSSSO' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'InternalAWSSTS' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'SmithyWaitersAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyWaitersAPI' in project 'smithy-swift'
+    Target 'SmithyWaitersAPI' in project 'smithy-swift' (no dependencies)
+    Target 'AWSSDKEventStreamsAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+    Target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'aws-sdk-swift_AWSClientRuntime' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKPartitions' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+    Target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+    Target 'aws-sdk-swift_AWSClientRuntime' in project 'aws-sdk-swift' (no dependencies)
+    Target 'AWSSDKPartitions' in project 'aws-sdk-swift' (no dependencies)
+    Target 'AWSSDKHTTPAuth' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+    Target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPClient' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'AWSSDKIdentity' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+    Target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'AWSSDKChecksums' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+    Target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPClient' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'smithy-swift_ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyTimestamps' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyReadWrite' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyXML' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyJSON' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyFormURL' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPClient' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyCBOR' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'InMemoryExporter' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryProtocolExporterHTTP' in project 'opentelemetry-swift'
+    Target 'ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'smithy-swift_ClientRuntime' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyTimestamps' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyReadWrite' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyXML' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyJSON' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyFormURL' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPClient' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyCBOR' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'InMemoryExporter' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryProtocolExporterHTTP' in project 'opentelemetry-swift'
+    Target 'OpenTelemetryProtocolExporterHTTP' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryProtocolExporterHttp' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryProtocolExporterCommon' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'DataCompression' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'SwiftProtobuf' in project 'SwiftProtobuf'
+    Target 'OpenTelemetryProtocolExporterHttp' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryProtocolExporterCommon' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'DataCompression' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'SwiftProtobuf' in project 'SwiftProtobuf'
+    Target 'DataCompression' in project 'opentelemetry-swift' (no dependencies)
+    Target 'OpenTelemetryProtocolExporterCommon' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'SwiftProtobuf' in project 'SwiftProtobuf'
+    Target 'SwiftProtobuf' in project 'SwiftProtobuf'
+        ➜ Explicit dependency on target 'SwiftProtobuf' in project 'SwiftProtobuf'
+        ➜ Explicit dependency on target 'SwiftProtobuf_SwiftProtobuf' in project 'SwiftProtobuf'
+    Target 'SwiftProtobuf' in project 'SwiftProtobuf'
+        ➜ Explicit dependency on target 'SwiftProtobuf_SwiftProtobuf' in project 'SwiftProtobuf'
+    Target 'SwiftProtobuf_SwiftProtobuf' in project 'SwiftProtobuf' (no dependencies)
+    Target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+    Target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+    Target 'InMemoryExporter' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'InMemoryExporter' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+    Target 'InMemoryExporter' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+    Target 'OpenTelemetrySdk' in project 'opentelemetry-swift'
+        ➜ Explicit dependency on target 'OpenTelemetryApi' in project 'opentelemetry-swift'
+    Target 'OpenTelemetryApi' in project 'opentelemetry-swift' (no dependencies)
+    Target 'SmithyCBOR' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyTimestamps' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyReadWrite' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyChecksums' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPClient' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyEventStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyEventStreamsAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyEventStreamsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyHTTPAuth' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPClient' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyChecksumsAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyHTTPAuthAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyHTTPClient' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyStreams' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyHTTPAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyIdentity' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyIdentityAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyFormURL' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyTimestamps' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyReadWrite' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyJSON' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyTimestamps' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyReadWrite' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyXML' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyTimestamps' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyReadWrite' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyReadWrite' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyTimestamps' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'SmithyTimestamps' in project 'smithy-swift' (no dependencies)
+    Target 'SmithyRetries' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'SmithyRetriesAPI' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'SmithyRetriesAPI' in project 'smithy-swift' (no dependencies)
+    Target 'smithy-swift_ClientRuntime' in project 'smithy-swift' (no dependencies)
+    Target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'Smithy' in project 'smithy-swift'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'Logging' in project 'swift-log'
+        ➜ Explicit dependency on target 'Logging' in project 'swift-log'
+    Target 'Logging' in project 'swift-log' (no dependencies)
+    Target 'AWSSDKCommon' in project 'aws-sdk-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+    Target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'aws-crt-swift_AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCompression' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCal' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCIo' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCHttp' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCSdkUtils' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCAuth' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCChecksums' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCEventStream' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCMqtt' in project 'aws-crt-swift'
+    Target 'AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'aws-crt-swift_AwsCommonRuntimeKit' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCompression' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCal' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCIo' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCHttp' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCSdkUtils' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCAuth' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCChecksums' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCEventStream' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCMqtt' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'LibNative' in project 'aws-crt-swift'
+    Target 'LibNative' in project 'aws-crt-swift' (no dependencies)
+    Target 'AwsCMqtt' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCompression' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCal' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCIo' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCHttp' in project 'aws-crt-swift'
+    Target 'AwsCEventStream' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCChecksums' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCal' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCIo' in project 'aws-crt-swift'
+    Target 'AwsCChecksums' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+    Target 'AwsCAuth' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCompression' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCal' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCIo' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCHttp' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCSdkUtils' in project 'aws-crt-swift'
+    Target 'AwsCSdkUtils' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+    Target 'AwsCHttp' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCompression' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCal' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCIo' in project 'aws-crt-swift'
+    Target 'AwsCIo' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCal' in project 'aws-crt-swift'
+    Target 'AwsCCal' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+    Target 'AwsCCompression' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCCommon' in project 'aws-crt-swift'
+    Target 'AwsCCommon' in project 'aws-crt-swift'
+        ➜ Explicit dependency on target 'AwsCPlatformConfig' in project 'aws-crt-swift'
+    Target 'AwsCPlatformConfig' in project 'aws-crt-swift' (no dependencies)
+    Target 'aws-crt-swift_AwsCommonRuntimeKit' in project 'aws-crt-swift' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch x86_64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 702419e2dfe4e26c8a00253336032a97
+Build description path: /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/XCBuildData/702419e2dfe4e26c8a00253336032a97.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SDKStatCaches.noindex/macosx15.5-24F74-8254517eb8b97d462ccbc072ba9094c9.sdkstatcache
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk -o /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SDKStatCaches.noindex/macosx15.5-24F74-8254517eb8b97d462ccbc072ba9094c9.sdkstatcache
+
+ProcessInfoPlistFile /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/smithy-swift_ClientRuntime.bundle/Contents/Info.plist /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/smithy-swift.build/Debug/smithy-swift_ClientRuntime.build/empty-smithy-swift_ClientRuntime.plist (in target 'smithy-swift_ClientRuntime' from project 'smithy-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/smithy-swift
+    builtin-infoPlistUtility /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/smithy-swift.build/Debug/smithy-swift_ClientRuntime.build/empty-smithy-swift_ClientRuntime.plist -producttype com.apple.product-type.bundle -expandbuildsettings -platform macosx -o /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/smithy-swift_ClientRuntime.bundle/Contents/Info.plist
+
+ProcessInfoPlistFile /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/aws-crt-swift_AwsCommonRuntimeKit.bundle/Contents/Info.plist /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-crt-swift.build/Debug/aws-crt-swift_AwsCommonRuntimeKit.build/empty-aws-crt-swift_AwsCommonRuntimeKit.plist (in target 'aws-crt-swift_AwsCommonRuntimeKit' from project 'aws-crt-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift
+    builtin-infoPlistUtility /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-crt-swift.build/Debug/aws-crt-swift_AwsCommonRuntimeKit.build/empty-aws-crt-swift_AwsCommonRuntimeKit.plist -producttype com.apple.product-type.bundle -expandbuildsettings -platform macosx -o /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/aws-crt-swift_AwsCommonRuntimeKit.bundle/Contents/Info.plist
+
+ProcessInfoPlistFile /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/SwiftProtobuf_SwiftProtobuf.bundle/Contents/Info.plist /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/SwiftProtobuf.build/Debug/SwiftProtobuf_SwiftProtobuf.build/empty-SwiftProtobuf_SwiftProtobuf.plist (in target 'SwiftProtobuf_SwiftProtobuf' from project 'SwiftProtobuf')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/swift-protobuf
+    builtin-infoPlistUtility /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/SwiftProtobuf.build/Debug/SwiftProtobuf_SwiftProtobuf.build/empty-SwiftProtobuf_SwiftProtobuf.plist -producttype com.apple.product-type.bundle -expandbuildsettings -platform macosx -o /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/SwiftProtobuf_SwiftProtobuf.bundle/Contents/Info.plist
+
+ProcessInfoPlistFile /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/aws-sdk-swift_AWSClientRuntime.bundle/Contents/Info.plist /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/aws-sdk-swift_AWSClientRuntime.build/empty-aws-sdk-swift_AWSClientRuntime.plist (in target 'aws-sdk-swift_AWSClientRuntime' from project 'aws-sdk-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-sdk-swift
+    builtin-infoPlistUtility /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/aws-sdk-swift_AWSClientRuntime.build/empty-aws-sdk-swift_AWSClientRuntime.plist -producttype com.apple.product-type.bundle -expandbuildsettings -platform macosx -o /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/aws-sdk-swift_AWSClientRuntime.bundle/Contents/Info.plist
+
+WriteAuxiliaryFile /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.SwiftFileList (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    write-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.SwiftFileList
+
+WriteAuxiliaryFile /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.SwiftConstValuesFileList (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    write-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.LinkFileList (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    write-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.LinkFileList
+
+SwiftDriver AWSS3 normal x86_64 com.apple.xcode.tools.swift.compiler (in target 'AWSS3' from project 'aws-sdk-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name AWSS3 -Onone -enforce-exclusivity\=checked @/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/Objects-normal/x86_64/AWSS3.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/Source/LibNative/module.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCMqtt.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCEventStream.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCChecksums.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCAuth.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCSdkUtils.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCHttp.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCIo.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCal.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCompression.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCommon.modulemap -DXcode -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk -target x86_64-apple-macos12.0 -g -module-cache-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -suppress-warnings -index-store-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Index.noindex/DataStore -swift-version 5 -I /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -I /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SDKStatCaches.noindex/macosx15.5-24F74-8254517eb8b97d462ccbc072ba9094c9.sdkstatcache -output-file-map /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/Objects-normal/x86_64/AWSS3-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/Objects-normal/x86_64/AWSS3.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex/Session.modulevalidation -package-name aws_sdk_swift -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/Objects-normal/x86_64/AWSS3_const_extract_protocols.json -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-mqtt/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-event-stream/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-checksums/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-auth/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-sdkutils/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-http/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-io/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-cal/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-compression/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-common/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/config -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/DerivedSources-normal/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/DerivedSources/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSS3.build/Objects-normal/x86_64/AWSS3-Swift.h -working-directory /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+SwiftDriver AWSCostExplorer normal x86_64 com.apple.xcode.tools.swift.compiler (in target 'AWSCostExplorer' from project 'aws-sdk-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name AWSCostExplorer -Onone -enforce-exclusivity\=checked @/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/Objects-normal/x86_64/AWSCostExplorer.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/Source/LibNative/module.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCMqtt.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCEventStream.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCChecksums.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCAuth.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCSdkUtils.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCHttp.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCIo.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCal.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCompression.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCommon.modulemap -DXcode -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk -target x86_64-apple-macos12.0 -g -module-cache-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -suppress-warnings -index-store-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Index.noindex/DataStore -swift-version 5 -I /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -I /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SDKStatCaches.noindex/macosx15.5-24F74-8254517eb8b97d462ccbc072ba9094c9.sdkstatcache -output-file-map /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/Objects-normal/x86_64/AWSCostExplorer-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/Objects-normal/x86_64/AWSCostExplorer.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex/Session.modulevalidation -package-name aws_sdk_swift -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/Objects-normal/x86_64/AWSCostExplorer_const_extract_protocols.json -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-mqtt/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-event-stream/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-checksums/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-auth/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-sdkutils/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-http/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-io/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-cal/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-compression/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-common/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/config -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/DerivedSources-normal/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/DerivedSources/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSCostExplorer.build/Objects-normal/x86_64/AWSCostExplorer-Swift.h -working-directory /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+SwiftDriver AWSCostMonitor normal x86_64 com.apple.xcode.tools.swift.compiler (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name AWSCostMonitor -Onone -enforce-exclusivity\=checked @/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/Source/LibNative/module.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCMqtt.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCEventStream.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCChecksums.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCAuth.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCSdkUtils.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCHttp.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCIo.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCal.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCompression.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCommon.modulemap -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk -target x86_64-apple-macos14.0 -g -module-cache-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Index.noindex/DataStore -swift-version 5 -I /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -emit-localized-strings -emit-localized-strings-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SDKStatCaches.noindex/macosx15.5-24F74-8254517eb8b97d462ccbc072ba9094c9.sdkstatcache -output-file-map /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor_const_extract_protocols.json -Xcc -iquote -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-generated-files.hmap -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-own-target-headers.hmap -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor-c4b1178411a593b1aca73a624a38addc-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-project-headers.hmap -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-mqtt/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-event-stream/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-checksums/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-auth/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-sdkutils/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-http/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-io/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-cal/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-compression/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-common/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/config -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources-normal/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor-Swift.h -working-directory /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor -experimental-emit-module-separately -disable-cmo
+
+ExtractAppIntentsMetadata (in target 'AWSSTS' from project 'aws-sdk-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-sdk-swift
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name AWSSTS --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk --xcode-version 16F6 --platform-family macOS --deployment-target 12.0 --bundle-identifier aws-sdk-swift.AWSSTS --output /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/AWSSTS.appintents --target-triple x86_64-apple-macos12.0 --binary-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/AWSSTS.o --dependency-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSSTS.build/Objects-normal/x86_64/AWSSTS_dependency_info.dat --stringsdata-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSSTS.build/Objects-normal/x86_64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSSTS.build/Objects-normal/x86_64/AWSSTS.SwiftFileList --metadata-file-list /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSSTS.build/AWSSTS.DependencyMetadataFileList --static-metadata-file-list /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSSTS.build/AWSSTS.DependencyStaticMetadataFileList --swift-const-vals-list /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/aws-sdk-swift.build/Debug/AWSSTS.build/Objects-normal/x86_64/AWSSTS.SwiftConstValuesFileList --force --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2025-09-15 13:17:53.926 appintentsmetadataprocessor[9067:193870091] Starting appintentsmetadataprocessor export
+2025-09-15 13:17:53.963 appintentsmetadataprocessor[9067:193870091] Extracted no relevant App Intents symbols, skipping writing output
+
+RegisterExecutionPolicyException /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/AWSSTS.o (in target 'AWSSTS' from project 'aws-sdk-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-sdk-swift
+    builtin-RegisterExecutionPolicyException /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/AWSSTS.o
+
+SwiftCompile normal x86_64 Compiling\ MacTextFieldView.swift,\ LogModels.swift,\ AWSConfigAccessManager.swift,\ CloudWatchIntegration.swift,\ CostModels.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/MacTextFieldView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/LogModels.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/AWSConfigAccessManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CloudWatchIntegration.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/CostModels.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/MacTextFieldView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/LogModels.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/AWSConfigAccessManager.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CloudWatchIntegration.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/CostModels.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 Compiling\ RealHistogramView.swift,\ CostAlertManager.swift,\ DataExporter.swift,\ AWSProfile.swift,\ DayDetailView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/RealHistogramView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CostAlertManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/DataExporter.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/AWSProfile.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/DayDetailView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/RealHistogramView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CostAlertManager.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/DataExporter.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/AWSProfile.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/DayDetailView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 Compiling\ ProfileChangeAlert.swift,\ TeamCacheModels.swift,\ ProfileBudget.swift,\ DisplayFormat.swift,\ CostDisplayFormatter.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/ProfileChangeAlert.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/TeamCacheModels.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/ProfileBudget.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/DisplayFormat.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/CostDisplayFormatter.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/ProfileChangeAlert.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/TeamCacheModels.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/ProfileBudget.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/DisplayFormat.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/CostDisplayFormatter.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 Compiling\ INIParser.swift,\ CalendarWindowController.swift,\ MultiProfileDashboard.swift,\ OnboardingView.swift,\ StatusBarController.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/INIParser.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/CalendarWindowController.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/MultiProfileDashboard.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/OnboardingView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/StatusBarController.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/INIParser.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/CalendarWindowController.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/MultiProfileDashboard.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/OnboardingView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/StatusBarController.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 Compiling\ StoreManager.swift,\ CloudIconView.swift,\ DemoDataProvider.swift,\ CalendarView.swift,\ AWSCredentialsHelper.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/StoreManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CloudIconView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/DemoDataProvider.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/CalendarView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/AWSCredentialsHelper.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/StoreManager.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CloudIconView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/DemoDataProvider.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/CalendarView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/AWSCredentialsHelper.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 Compiling\ ContentView.swift,\ TeamCacheController.swift,\ AppDelegates.swift,\ AWSManager.swift,\ Extensions.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/ContentView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/TeamCacheController.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/AppDelegates.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/Extensions.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/ContentView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/TeamCacheController.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/AppDelegates.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/Extensions.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 Compiling\ ExportView.swift,\ ProfileManagement.swift,\ BuildConfiguration.swift,\ MenuButton.swift,\ Errors.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/ExportView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/ProfileManagement.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/BuildConfiguration.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/MenuButton.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/Errors.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/ExportView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/ProfileManagement.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/BuildConfiguration.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/MenuButton.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/Errors.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftEmitModule normal x86_64 Emitting\ module\ for\ AWSCostMonitor (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -emit-module -experimental-skip-non-inlinable-function-bodies-without-types /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/StoreManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CloudIconView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/DemoDataProvider.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/CalendarView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/AWSCredentialsHelper.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/RealHistogramView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CostAlertManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/DataExporter.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/AWSProfile.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/DayDetailView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/MacTextFieldView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/LogModels.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/AWSConfigAccessManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/CloudWatchIntegration.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/CostModels.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/ExportView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/ProfileManagement.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/BuildConfiguration.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/MenuButton.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/Errors.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/ProfileChangeAlert.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/TeamCacheModels.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/ProfileBudget.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Models/DisplayFormat.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/CostDisplayFormatter.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/ContentView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/TeamCacheController.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/AppDelegates.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/AWSManager.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/Extensions.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Utilities/INIParser.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/CalendarWindowController.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/MultiProfileDashboard.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/OnboardingView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Controllers/StatusBarController.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/ScreenStateMonitor.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/SettingsView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/AWSCostMonitorApp.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/SpotlightIntents.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/HelpView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/TodayWidget.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/ServiceHistogramView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/IconGenerator.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/S3CacheService.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/PopoverContentView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/TeamCacheStatusView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources/GeneratedAssetSymbols.swift -target x86_64-apple-macos14.0 -enable-objc-interop -stack-check -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk -I /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=4 -module-cache-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 5 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/Source/LibNative/module.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCMqtt.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCEventStream.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCChecksums.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCAuth.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCSdkUtils.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCHttp.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCIo.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCal.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCompression.modulemap -Xcc -fmodule-map-file\=/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/AwsCCommon.modulemap -Xcc -ivfsstatcache -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SDKStatCaches.noindex/macosx15.5-24F74-8254517eb8b97d462ccbc072ba9094c9.sdkstatcache -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-generated-files.hmap -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-own-target-headers.hmap -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor-c4b1178411a593b1aca73a624a38addc-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/AWSCostMonitor-project-headers.hmap -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-mqtt/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-event-stream/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-checksums/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-auth/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-sdkutils/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-http/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-io/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-cal/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-compression/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/aws-c-common/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-crt-swift/aws-common-runtime/config -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Products/Debug/include -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources-normal/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources/x86_64 -Xcc -I/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources -Xcc -DDEBUG\=1 -module-name AWSCostMonitor -frontend-parseable-output -disable-clang-spi -target-sdk-version 15.5 -target-sdk-name macosx15.5 -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -emit-module-doc-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.swiftdoc -emit-module-source-info-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.swiftsourceinfo -emit-objc-header-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor-Swift.h -serialize-diagnostics-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor-master-emit-module.dia -emit-dependencies-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor-master-emit-module.d -o /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.swiftmodule -emit-abi-descriptor-path /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/Objects-normal/x86_64/AWSCostMonitor.abi.json
+
+EmitSwiftModule normal x86_64 (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+/Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/ScreenStateMonitor.swift:268:38: error: unterminated string literal
+                    self.logger.info("User activity changed: \(active ? \"active\" : \"idle\")")
+                                     ^
+
+SwiftCompile normal x86_64 Compiling\ S3CacheService.swift,\ PopoverContentView.swift,\ TeamCacheStatusView.swift,\ GeneratedAssetSymbols.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/S3CacheService.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/PopoverContentView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/TeamCacheStatusView.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Managers/S3CacheService.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/PopoverContentView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor/Views/TeamCacheStatusView.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftCompile normal x86_64 /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/Build/Intermediates.noindex/AWSCostMonitor.build/Debug/AWSCostMonitor.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor
+    
+
+SwiftEmitModule normal x86_64 Emitting\ module\ for\ AWSS3 (in target 'AWSS3' from project 'aws-sdk-swift')
+
+EmitSwiftModule normal x86_64 (in target 'AWSS3' from project 'aws-sdk-swift')
+    cd /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/packages/app/AWSCostMonitor/AWSCostMonitor.xcodeproj
+    
+
+SwiftCompile normal x86_64 Compiling\ Models.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-sdk-swift/Sources/Services/AWSS3/Sources/AWSS3/Models.swift (in target 'AWSS3' from project 'aws-sdk-swift')
+Command SwiftCompile failed with a nonzero exit code
+
+** BUILD FAILED **
+
+
+The following build commands failed:
+	SwiftEmitModule normal x86_64 Emitting\ module\ for\ AWSCostMonitor (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+	EmitSwiftModule normal x86_64 (in target 'AWSCostMonitor' from project 'AWSCostMonitor')
+	SwiftCompile normal x86_64 Compiling\ Models.swift /Users/jackson/dev/middleout/AWSCostMonitor/.conductor/bugfix-timer/build/DerivedData/SourcePackages/checkouts/aws-sdk-swift/Sources/Services/AWSS3/Sources/AWSS3/Models.swift (in target 'AWSS3' from project 'aws-sdk-swift')
+	Building project AWSCostMonitor with scheme AWSCostMonitor and configuration Debug
+(4 failures)
