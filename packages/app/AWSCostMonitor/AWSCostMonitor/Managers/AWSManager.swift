@@ -52,6 +52,7 @@ class AWSManager: ObservableObject {
     }
     private var refreshTimer: DispatchSourceTimer?
     private var timerValidationTimer: DispatchSourceTimer? // Periodic timer to validate main refresh timer
+    private var healthCheckTimer: DispatchSourceTimer? // Independent health check - ultimate failsafe
     private let timerQueue = DispatchQueue(label: "com.awscostmonitor.refresh", qos: .utility)
     
     // Modern async timer task for more reliability
@@ -76,11 +77,13 @@ class AWSManager: ObservableObject {
     @AppStorage("AnomalyThresholdPercentage") private var anomalyThreshold: Double = 25.0 // 25% deviation triggers anomaly
     
     // Last month data caching
-    @Published var lastMonthData: [String: CostData] = [:] // Key is profileName
+    @Published var lastMonthData: [String: CostData] = [:] // Key is profileName - FULL month total
+    @Published var lastMonthMTDData: [String: CostData] = [:] // Key is profileName - MTD (same day) comparison
     @Published var lastMonthDataFetchDate: [String: Date] = [:] // When we fetched last month's data
     @Published var lastMonthServiceCosts: [String: [ServiceCost]] = [:] // Service breakdown by profile
     @Published var lastMonthDataLoading: [String: Bool] = [:] // Loading state per profile
     private let lastMonthDataKey = "LastMonthCostData"
+    private let lastMonthMTDDataKey = "LastMonthMTDCostData"
     private let lastMonthFetchDateKey = "LastMonthDataFetchDate"
     private let lastMonthServiceCostsKey = "LastMonthServiceCosts"
     
@@ -377,7 +380,12 @@ class AWSManager: ObservableObject {
                 self.startAutomaticRefresh()
             }
         }
-        
+
+        // Independent validation and health check timers to guard against stalled timers
+        log(.info, category: "Init", "Starting validation and health check timers")
+        startTimerValidation()
+        startHealthCheckTimer()
+
         #if DEBUG
         // Start debug timer automatically to monitor timer execution
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -395,6 +403,10 @@ class AWSManager: ObservableObject {
         stopAutomaticRefresh()
         stopBackgroundSyncTimer()
         stopAsyncRefreshTimer()
+        if let healthTimer = healthCheckTimer {
+            healthTimer.cancel()
+            healthCheckTimer = nil
+        }
         
         #if DEBUG
         stopDebugTimer()
@@ -463,7 +475,7 @@ class AWSManager: ObservableObject {
                 
                 // Check if both timer types are still valid
                 let hasDispatchTimer = self.refreshTimer != nil
-                let hasAsyncTimer = self.refreshTask != nil && !self.refreshTask!.isCancelled
+                let hasAsyncTimer = self.refreshTask != nil && !(self.refreshTask?.isCancelled ?? true)
                 
                 self.log(.info, category: "Refresh", "After system wake - DispatchTimer: \(hasDispatchTimer), AsyncTimer: \(hasAsyncTimer)")
                 
@@ -477,6 +489,17 @@ class AWSManager: ObservableObject {
                     // Both timers are invalid, restart them
                     self.log(.warning, category: "Refresh", "Both timers invalid after system wake - restarting automatic refresh")
                     self.startAutomaticRefresh()
+                }
+
+                // Restart any missing validation/health check timers as a failsafe
+                if self.timerValidationTimer == nil {
+                    self.log(.warning, category: "Refresh", "Validation timer was lost during sleep - restarting")
+                    self.startTimerValidation()
+                }
+
+                if self.healthCheckTimer == nil {
+                    self.log(.warning, category: "HealthCheck", "Health check timer was lost during sleep - restarting")
+                    self.startHealthCheckTimer()
                 }
                 
                 // Also force validation of next refresh time
@@ -509,6 +532,8 @@ class AWSManager: ObservableObject {
         costCache.removeAll()
         cacheStatus.removeAll()
         lastMonthData.removeAll()
+        lastMonthMTDData.removeAll()
+        lastMonthMTDData.removeAll()
         
         // Clear the selected profile if it was a demo profile
         if let currentProfile = selectedProfile,
@@ -1183,6 +1208,9 @@ class AWSManager: ObservableObject {
         if let data = try? JSONEncoder().encode(lastMonthData) {
             UserDefaults.standard.set(data, forKey: lastMonthDataKey)
         }
+        if let mtdData = try? JSONEncoder().encode(lastMonthMTDData) {
+            UserDefaults.standard.set(mtdData, forKey: lastMonthMTDDataKey)
+        }
         if let dateData = try? JSONEncoder().encode(lastMonthDataFetchDate) {
             UserDefaults.standard.set(dateData, forKey: lastMonthFetchDateKey)
         }
@@ -1196,6 +1224,10 @@ class AWSManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: lastMonthDataKey),
            let decoded = try? JSONDecoder().decode([String: CostData].self, from: data) {
             lastMonthData = decoded
+        }
+        if let mtdData = UserDefaults.standard.data(forKey: lastMonthMTDDataKey),
+           let decodedMTD = try? JSONDecoder().decode([String: CostData].self, from: mtdData) {
+            lastMonthMTDData = decodedMTD
         }
         if let dateData = UserDefaults.standard.data(forKey: lastMonthFetchDateKey),
            let decodedDates = try? JSONDecoder().decode([String: Date].self, from: dateData) {
@@ -1910,6 +1942,10 @@ class AWSManager: ObservableObject {
             validationTimer.cancel()
             timerValidationTimer = nil
         }
+        if let healthTimer = healthCheckTimer {
+            healthTimer.cancel()
+            healthCheckTimer = nil
+        }
         
         // Stop modern async timers
         stopAsyncRefreshTimer()
@@ -1918,6 +1954,116 @@ class AWSManager: ObservableObject {
         autoRefreshEnabled = false // Persist the state
         
         log(.info, category: "Refresh", "All refresh timers stopped")
+    }
+
+    // Independent health check timer - ultimate failsafe (runs every 5 minutes)
+    func startHealthCheckTimer() {
+        // Cancel any existing health check timer
+        if let existingTimer = healthCheckTimer {
+            existingTimer.cancel()
+            healthCheckTimer = nil
+        }
+
+        let healthTimer = DispatchSource.makeTimerSource(queue: timerQueue)
+        healthCheckTimer = healthTimer
+
+        // Check every 5 minutes (300 seconds)
+        healthTimer.schedule(deadline: .now() + 300, repeating: 300.0)
+
+        healthTimer.setEventHandler { [weak self] in
+            self?.performHealthCheck()
+        }
+
+        healthTimer.resume()
+
+        log(.info, category: "HealthCheck", "Started independent health check timer (runs every 5 minutes)")
+    }
+
+    // Perform comprehensive health check
+    func performHealthCheck() {
+        log(.debug, category: "HealthCheck", "Performing health check...")
+
+        // Check 1: Auto-refresh should be running but timer is nil
+        if autoRefreshEnabled && refreshTimer == nil {
+            log(.error, category: "HealthCheck", "CRITICAL: Auto-refresh enabled but timer is nil! Restarting...")
+            DispatchQueue.main.async { [weak self] in
+                self?.startAutomaticRefresh()
+            }
+            return
+        }
+
+        // Check 2: Timer exists but is significantly overdue
+        if autoRefreshEnabled, let nextTime = nextRefreshTime {
+            let overdue = -nextTime.timeIntervalSinceNow
+            if overdue > 300 { // More than 5 minutes overdue
+                log(.error, category: "HealthCheck", "CRITICAL: Timer is \(Int(overdue/60)) minutes overdue! Restarting...")
+                DispatchQueue.main.async { [weak self] in
+                    self?.startAutomaticRefresh()
+                }
+                return
+            }
+        }
+
+        // Check 3: Validation timer is missing
+        if autoRefreshEnabled && timerValidationTimer == nil {
+            log(.warning, category: "HealthCheck", "Validation timer is missing, restarting validation")
+            startTimerValidation()
+        }
+
+        log(.debug, category: "HealthCheck", "Health check passed - all timers healthy")
+    }
+
+    // Public method to validate timer health (called from UI interactions)
+    func validateTimerHealth() {
+        log(.debug, category: "TimerHealth", "User-triggered timer health validation")
+
+        guard autoRefreshEnabled else {
+            log(.debug, category: "TimerHealth", "Auto-refresh is disabled, skipping validation")
+            return
+        }
+
+        // Quick validation - check critical timers
+        var needsRecovery = false
+
+        if refreshTimer == nil {
+            log(.warning, category: "TimerHealth", "Refresh timer is nil - needs recovery")
+            needsRecovery = true
+        }
+
+        if timerValidationTimer == nil {
+            log(.warning, category: "TimerHealth", "Validation timer is nil - needs recovery")
+            needsRecovery = true
+        }
+
+        if healthCheckTimer == nil {
+            log(.warning, category: "TimerHealth", "Health check timer is nil - needs recovery")
+            needsRecovery = true
+        }
+
+        // Check if refresh is overdue
+        if let nextTime = nextRefreshTime {
+            let overdue = -nextTime.timeIntervalSinceNow
+            if overdue > 60 { // More than 1 minute overdue
+                log(.warning, category: "TimerHealth", "Refresh is \(Int(overdue/60)) minutes overdue")
+                needsRecovery = true
+            }
+        }
+
+        if needsRecovery {
+            log(.error, category: "TimerHealth", "Timer recovery needed - restarting all timers")
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.startAutomaticRefresh()
+                if self.timerValidationTimer == nil {
+                    self.startTimerValidation()
+                }
+                if self.healthCheckTimer == nil {
+                    self.startHealthCheckTimer()
+                }
+            }
+        } else {
+            log(.debug, category: "TimerHealth", "All timers healthy")
+        }
     }
     
     // Validates that the timer is still running (failsafe)
@@ -1930,13 +2076,17 @@ class AWSManager: ObservableObject {
                 let timeUntilNext = nextTime.timeIntervalSinceNow
                 if timeUntilNext < -60 { // More than 1 minute overdue
                     log(.warning, category: "Refresh", "Timer is overdue by \(Int(-timeUntilNext)) seconds, restarting")
-                    startAutomaticRefresh()
+                    DispatchQueue.main.async { [weak self] in
+                        self?.startAutomaticRefresh()
+                    }
                 }
             }
         } else {
             // Timer is invalid or nil but should be running
             log(.warning, category: "Refresh", "Timer validation failed - restarting automatic refresh")
-            startAutomaticRefresh()
+            DispatchQueue.main.async { [weak self] in
+                self?.startAutomaticRefresh()
+            }
         }
     }
     
@@ -2855,6 +3005,7 @@ class AWSManager: ObservableObject {
             self.dailyCostsByProfile.removeValue(forKey: "acme")
             self.dailyServiceCostsByProfile.removeValue(forKey: "acme")
             self.lastMonthData.removeValue(forKey: "acme")
+            self.lastMonthMTDData.removeValue(forKey: "acme")
             self.lastMonthDataFetchDate.removeValue(forKey: "acme")
             self.lastMonthServiceCosts.removeValue(forKey: "acme")
             
@@ -3046,6 +3197,18 @@ class AWSManager: ObservableObject {
                 amount: lastMonthTotal,
                 currency: "USD"
             )
+
+            // Calculate MTD for last month (same day comparison)
+            let daysInLastMonth = 30 // Approximation for demo data
+            let currentDay = 14 // Demo shows 14 days of data
+            let lastMonthMTD = lastMonthTotal * Decimal(currentDay) / Decimal(daysInLastMonth)
+
+            self.lastMonthMTDData["acme"] = CostData(
+                profileName: "acme",
+                amount: lastMonthMTD,
+                currency: "USD"
+            )
+
             self.lastMonthDataFetchDate["acme"] = Date()
             self.lastMonthServiceCosts["acme"] = serviceCosts.map { service in
                 ServiceCost(
@@ -3163,8 +3326,9 @@ class AWSManager: ObservableObject {
                 }
                 
                 log(.info, category: "API", "Successfully fetched last month cost for \(profileName): \(costDecimal)")
-                
-                // Also fetch service breakdown for last month
+
+                // Also fetch MTD comparison and service breakdown for last month
+                await fetchLastMonthMTDData(for: profileName, client: client, calendar: calendar, formatter: formatter)
                 await fetchLastMonthServiceBreakdown(for: profileName, client: client, startDate: startOfLastMonth, endDate: endOfLastMonth)
             }
             
@@ -3181,6 +3345,65 @@ class AWSManager: ObservableObject {
         // Clear loading state
         await MainActor.run {
             self.lastMonthDataLoading[profileName] = false
+        }
+    }
+
+    // Fetch last month's MTD data (up to same day of month) for comparison
+    private func fetchLastMonthMTDData(for profileName: String, client: CostExplorerClient, calendar: Calendar, formatter: DateFormatter) async {
+        do {
+            let now = Date()
+            let currentDay = calendar.component(.day, from: now)
+
+            // Calculate last month's date range up to the same day
+            let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: calendar.startOfDay(for: now))!
+            let startOfLastMonth = calendar.dateInterval(of: .month, for: lastMonthStart)!.start
+
+            // Set end date to the same day of last month (or last day if current day doesn't exist in last month)
+            var components = calendar.dateComponents([.year, .month], from: lastMonthStart)
+            components.day = currentDay
+            var endOfLastMonthMTD = calendar.date(from: components) ?? lastMonthStart
+
+            // Check if the day exists in last month (e.g., Feb 30 doesn't exist)
+            let lastMonthEnd = calendar.dateInterval(of: .month, for: lastMonthStart)!.end
+            if endOfLastMonthMTD > lastMonthEnd {
+                endOfLastMonthMTD = lastMonthEnd
+            }
+
+            // Add one day to end date for AWS API (exclusive end)
+            endOfLastMonthMTD = calendar.date(byAdding: .day, value: 1, to: endOfLastMonthMTD) ?? endOfLastMonthMTD
+
+            // Fetch MTD cost for last month
+            let mtdInput = GetCostAndUsageInput(
+                granularity: .monthly,
+                metrics: ["UnblendedCost"],
+                timePeriod: .init(
+                    end: formatter.string(from: endOfLastMonthMTD),
+                    start: formatter.string(from: startOfLastMonth)
+                )
+            )
+
+            let mtdResponse = try await client.getCostAndUsage(input: mtdInput)
+
+            if let resultsByTime = mtdResponse.resultsByTime,
+               let firstResult = resultsByTime.first,
+               let costString = firstResult.total?["UnblendedCost"]?.amount,
+               let costDecimal = Decimal(string: costString) {
+
+                let mtdData = CostData(
+                    profileName: profileName,
+                    amount: costDecimal,
+                    currency: firstResult.total?["UnblendedCost"]?.unit ?? "USD"
+                )
+
+                await MainActor.run {
+                    self.lastMonthMTDData[profileName] = mtdData
+                    self.saveLastMonthData()
+                }
+
+                log(.info, category: "API", "Successfully fetched last month MTD cost for \(profileName): \(costDecimal)")
+            }
+        } catch {
+            log(.error, category: "API", "Error fetching last month MTD cost for \(profileName): \(error.localizedDescription)")
         }
     }
     

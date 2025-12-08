@@ -236,15 +236,8 @@ struct AWSCostMonitorApp: App {
     }
     
     var body: some Scene {
-        // Show AWS config access window if needed (but not during onboarding)
-        WindowGroup("AWS Configuration Access") {
-            let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "HasCompletedOnboarding")
-            if configAccessManager.needsAccessGrant && hasCompletedOnboarding {
-                AWSConfigAccessView()
-                    .frame(width: 450, height: 400)
-            }
-        }
-        .windowResizability(.contentSize)
+        // Note: AWS config access window is now shown programmatically via AppDelegate
+        // when needed, not as a WindowGroup (which always shows a window at launch)
         
         // Use Settings scene for the app
         Settings {

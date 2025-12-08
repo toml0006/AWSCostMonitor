@@ -112,7 +112,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize the status bar controller with a small delay to ensure proper setup
         DispatchQueue.main.async { [weak self] in
-            self?.statusBarController = StatusBarController(awsManager: AWSManager.shared)
+            self?.statusBarController = StatusBarController(awsManager: AWSManager.shared, themeManager: ThemeManager.shared)
+            
+            // Check if we need to refresh cost data on launch after UI is ready
+            // This ensures that when the app launches, it checks if an update is due
+            AWSManager.shared.checkForStartupRefresh()
         }
         
         // Hide the dock icon
