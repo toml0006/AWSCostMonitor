@@ -11,7 +11,8 @@ import Charts
 struct PopoverContentView: View {
     @EnvironmentObject var awsManager: AWSManager
     @Environment(\.theme) var theme
-    @State private var showAllServices = false
+    @State private var servicesExpanded = false
+    @State private var serviceContentHeight: CGFloat = 0
     @State private var helpButtonHovered = false
     @State private var quitButtonHovered = false
     @State private var refreshButtonHovered = false
@@ -332,53 +333,78 @@ struct PopoverContentView: View {
                         // Service breakdown with REAL histograms
                         if let cacheEntry = awsManager.costCache[cost.profileName],
                            !cacheEntry.serviceCosts.isEmpty {
+                            let services = cacheEntry.serviceCosts
+                            let estimatedHeight = CGFloat(services.count) * 36.0
+                            let maxServiceAreaHeight: CGFloat = 260
+                            let measuredHeight = serviceContentHeight > 0 ? serviceContentHeight : estimatedHeight
+                            let serviceAreaHeight = servicesExpanded ? min(measuredHeight, maxServiceAreaHeight) : 0
+                            
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Text("Services")
                                         .font(.system(size: 12, weight: .semibold))
                                     Spacer()
-                                    if cacheEntry.serviceCosts.count > 5 {
-                                        Button(showAllServices ? "Show Top 5" : "Show All (\(cacheEntry.serviceCosts.count))") {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                showAllServices.toggle()
-                                            }
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            servicesExpanded.toggle()
                                         }
-                                        .buttonStyle(.plain)
-                                        .font(.system(size: 10))
+                                    }) {
+                                        HStack(spacing: 3) {
+                                            Text(servicesExpanded ? "Hide" : "Show")
+                                                .font(.system(size: 10, weight: .medium))
+                                            Image(systemName: servicesExpanded ? "chevron.up" : "chevron.down")
+                                                .font(.system(size: 10, weight: .semibold))
+                                        }
                                         .foregroundColor(.blue)
                                     }
+                                    .buttonStyle(.plain)
                                 }
                                 .padding(.horizontal)
                                 
-                                let servicesToShow = showAllServices ? cacheEntry.serviceCosts : Array(cacheEntry.serviceCosts.prefix(5))
-                                
-                                ForEach(servicesToShow, id: \.serviceName) { service in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            Text(service.serviceName)
-                                                .font(.system(size: 11))
-                                                .textSelection(.enabled)
-                                            Spacer()
-                                            Text(awsManager.formatCurrency(service.amount))
-                                                .font(.system(size: 11, weight: .medium))
-                                                .textSelection(.enabled)
+                                if servicesExpanded {
+                                    ScrollView {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            ForEach(services, id: \.serviceName) { service in
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    HStack {
+                                                        Text(service.serviceName)
+                                                            .font(.system(size: 11))
+                                                            .textSelection(.enabled)
+                                                        Spacer()
+                                                        Text(awsManager.formatCurrency(service.amount))
+                                                            .font(.system(size: 11, weight: .medium))
+                                                            .textSelection(.enabled)
+                                                    }
+                                                    
+                                                    if let dailyServiceCosts = awsManager.dailyServiceCostsByProfile[cost.profileName],
+                                                       !dailyServiceCosts.isEmpty {
+                                                        RealHistogramView(
+                                                            dailyServiceCosts: dailyServiceCosts,
+                                                            serviceName: service.serviceName,
+                                                            selectedDayDetail: $selectedDayDetail
+                                                        )
+                                                        .environmentObject(awsManager)
+                                                    }
+                                                }
+                                                .padding(.horizontal)
+                                                .padding(.vertical, 4)
+                                                .background(Color.gray.opacity(0.05))
+                                                .cornerRadius(4)
+                                            }
                                         }
-                                        
-                                        // REAL HISTOGRAM with Rectangles!
-                                        if let dailyServiceCosts = awsManager.dailyServiceCostsByProfile[cost.profileName],
-                                           !dailyServiceCosts.isEmpty {
-                                            RealHistogramView(
-                                                dailyServiceCosts: dailyServiceCosts,
-                                                serviceName: service.serviceName,
-                                                selectedDayDetail: $selectedDayDetail
-                                            )
-                                            .environmentObject(awsManager)
-                                        }
+                                        .background(
+                                            GeometryReader { proxy in
+                                                Color.clear
+                                                    .preference(key: ServiceListHeightPreferenceKey.self, value: proxy.size.height)
+                                            }
+                                        )
                                     }
+                                    .frame(maxHeight: serviceAreaHeight)
                                     .padding(.horizontal)
-                                    .padding(.vertical, 4)
-                                    .background(Color.gray.opacity(0.05))
-                                    .cornerRadius(4)
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                                    .onPreferenceChange(ServiceListHeightPreferenceKey.self) { newValue in
+                                        serviceContentHeight = newValue
+                                    }
                                 }
                             }
                         }
@@ -652,10 +678,18 @@ struct PopoverContentView: View {
         }
         .frame(width: 360, height: {
             #if DEBUG
-                return 600
+            let baseHeight: CGFloat = 600
             #else
-                return 500
+            let baseHeight: CGFloat = 500
             #endif
+            let serviceCount = awsManager.selectedProfile.flatMap { profile in
+                awsManager.costCache[profile.name]?.serviceCosts.count
+            } ?? 0
+            let estimatedHeight = CGFloat(serviceCount) * 36.0
+            let measuredHeight = serviceContentHeight > 0 ? serviceContentHeight : estimatedHeight
+            let maxAdditionalHeight: CGFloat = 260
+            let additionalHeight = servicesExpanded ? min(measuredHeight, maxAdditionalHeight) : 0
+            return baseHeight + additionalHeight
         }())
         .sheet(item: $selectedDayDetail) { detail in
             DayDetailView(
@@ -665,7 +699,9 @@ struct PopoverContentView: View {
                 currencyFormatter: detail.currencyFormatter,
                 apiCalls: detail.apiCalls,
                 highlightedService: detail.highlightedService,
-                onNavigateToDate: nil  // No navigation in popover
+                onNavigateToDate: { newDate in
+                    handleDayDetailNavigation(currentDetail: detail, targetDate: newDate)
+                }
             )
         }
         .onAppear {
@@ -708,6 +744,10 @@ struct PopoverContentView: View {
             // Update current time every minute to refresh "minutes ago" display
             currentTime = Date()
         }
+        .onChange(of: awsManager.selectedProfile?.name) { _ in
+            servicesExpanded = false
+            serviceContentHeight = 0
+        }
     }
     
     private var timeOnlyFormatter: DateFormatter {
@@ -717,16 +757,113 @@ struct PopoverContentView: View {
         return formatter
     }
     
+    private func handleDayDetailNavigation(currentDetail: DayDetailData, targetDate: Date) {
+        guard let profileName = awsManager.selectedProfile?.name else { return }
+        
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let normalizedTarget = calendar.startOfDay(for: targetDate)
+        
+        // Do not allow navigation into the future
+        guard normalizedTarget <= today else { return }
+        
+        // Prevent navigating past earliest available day
+        if let earliest = earliestAvailableDate(for: profileName),
+           normalizedTarget < calendar.startOfDay(for: earliest) {
+            return
+        }
+        
+        guard let updatedDetail = buildDayDetail(for: normalizedTarget, highlightedService: currentDetail.highlightedService) else {
+            return
+        }
+        
+        selectedDayDetail = updatedDetail
+    }
+    
+    private func buildDayDetail(for date: Date, highlightedService: String) -> DayDetailData? {
+        guard let profileName = awsManager.selectedProfile?.name else { return nil }
+        let calendar = Calendar.current
+        
+        let dailyCosts = awsManager.dailyCostsByProfile[profileName] ?? []
+        let dailyServices = awsManager.dailyServiceCostsByProfile[profileName] ?? []
+        
+        let normalizedDate = calendar.startOfDay(for: date)
+        let dailyCost = dailyCosts.first { calendar.isDate($0.date, inSameDayAs: normalizedDate) }
+        
+        let serviceBreakdown = dailyServices
+            .filter { calendar.isDate($0.date, inSameDayAs: normalizedDate) }
+            .reduce(into: [String: Decimal]()) { result, entry in
+                result[entry.serviceName, default: 0] += entry.amount
+            }
+            .map { ServiceCost(serviceName: $0.key, amount: $0.value, currency: "USD") }
+            .sorted()
+        
+        if dailyCost == nil && serviceBreakdown.isEmpty {
+            return nil
+        }
+        
+        let currency = dailyCost?.currency ?? serviceBreakdown.first?.currency ?? "USD"
+        let totalAmount = serviceBreakdown.reduce(Decimal(0)) { $0 + $1.amount }
+        let resolvedDailyCost = dailyCost ?? DailyCost(date: normalizedDate, amount: totalAmount, currency: currency)
+        
+        let detail = DayDetailData(
+            date: normalizedDate,
+            dailyCost: resolvedDailyCost,
+            services: serviceBreakdown,
+            currencyFormatter: dayDetailCurrencyFormatter(),
+            apiCalls: apiCalls(for: normalizedDate, profileName: profileName),
+            highlightedService: highlightedService
+        )
+        return detail
+    }
+    
+    private func dayDetailCurrencyFormatter() -> NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        return formatter
+    }
+    
+    private func apiCalls(for date: Date, profileName: String) -> [APIRequestRecord] {
+        let calendar = Calendar.current
+        return awsManager.apiRequestRecords
+            .filter { record in
+                record.profileName == profileName &&
+                calendar.isDate(record.timestamp, inSameDayAs: date)
+            }
+            .sorted { $0.timestamp > $1.timestamp }
+    }
+    
+    private func earliestAvailableDate(for profileName: String) -> Date? {
+        let calendar = Calendar.current
+        let dailyDates = (awsManager.dailyCostsByProfile[profileName] ?? [])
+            .map { calendar.startOfDay(for: $0.date) }
+        let serviceDates = (awsManager.dailyServiceCostsByProfile[profileName] ?? [])
+            .map { calendar.startOfDay(for: $0.date) }
+        return (dailyDates + serviceDates).min()
+    }
+    
     private func budgetColor(for cost: CostData) -> Color {
-        // First check if costs are trending better than last month
-        if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
-           lastMonthCost.amount > 0 {
+        // Prefer month-to-date comparison with last month if available
+        if let lastMonthMTD = awsManager.lastMonthMTDData[cost.profileName],
+           lastMonthMTD.amount > 0 {
+            let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
+            let lastAmount = NSDecimalNumber(decimal: lastMonthMTD.amount).doubleValue
+            
+            if currentAmount > lastAmount {
+                return .red
+            } else if currentAmount < lastAmount {
+                return .green
+            }
+        } else if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
+                  lastMonthCost.amount > 0 {
+            // Fall back to full month comparison when MTD data is unavailable
             let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
             let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
-            let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
-            
-            // If significantly lower than last month, show green regardless of budget
-            if percentChange < -20 {
+            if currentAmount > lastAmount {
+                return .red
+            } else if currentAmount < lastAmount {
                 return .green
             }
         }
@@ -760,5 +897,13 @@ struct DayDetailData: Identifiable {
     let highlightedService: String
 }
 
-// MARK: - Real Histogram View with Full Graphics
+private struct ServiceListHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        value = max(value, next)
+    }
+}
 
+// MARK: - Real Histogram View with Full Graphics
