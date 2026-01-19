@@ -62,7 +62,7 @@ func showExportWindow(awsManager: AWSManager) {
 var globalSettingsWindow: NSWindow?
 
 // Helper function to show settings window
-func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "Profiles") {
+func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "General") {
     // Use async dispatch to ensure proper window management after transitions
     DispatchQueue.main.async {
         if let window = globalSettingsWindow, window.isVisible {
@@ -110,15 +110,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Close any windows that may have opened during launch
+        // This is important because WindowGroup can create windows automatically
+        for window in NSApp.windows {
+            window.close()
+        }
+
         // Initialize the status bar controller with a small delay to ensure proper setup
         DispatchQueue.main.async { [weak self] in
             self?.statusBarController = StatusBarController(awsManager: AWSManager.shared, themeManager: ThemeManager.shared)
-            
+
             // Check if we need to refresh cost data on launch after UI is ready
             // This ensures that when the app launches, it checks if an update is due
             AWSManager.shared.checkForStartupRefresh()
         }
-        
+
         // Hide the dock icon
         NSApp.setActivationPolicy(.accessory)
     }

@@ -236,20 +236,24 @@ struct AWSCostMonitorApp: App {
     }
     
     var body: some Scene {
-        // Note: AWS config access window is now shown programmatically via AppDelegate
-        // when needed, not as a WindowGroup (which always shows a window at launch)
-        
-        // Use Settings scene for the app
-        Settings {
-            SettingsView()
-                .environmentObject(awsManager)
+        // Note: We use WindowGroup with a hidden window to enable keyboard shortcuts
+        // and menu commands. The Settings window is shown programmatically when needed.
+        // This prevents any window from appearing at launch.
+
+        WindowGroup {
+            // Empty view - this window will never be shown
+            EmptyView()
+                .frame(width: 0, height: 0)
+                .hidden()
         }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 0, height: 0)
         .commands {
             // Remove the default menu items we don't need
             CommandGroup(replacing: .newItem) { }
             CommandGroup(replacing: .pasteboard) { }
             CommandGroup(replacing: .undoRedo) { }
-            
+
             // Add custom keyboard shortcuts
             CommandGroup(after: .appInfo) {
                 Button("Refresh Cost Data") {
@@ -258,15 +262,15 @@ struct AWSCostMonitorApp: App {
                     }
                 }
                 .keyboardShortcut("r", modifiers: .command)
-                
+
                 Button("Show Calendar View") {
                     CalendarWindowController.showCalendarWindow(awsManager: awsManager)
                 }
                 .keyboardShortcut("k", modifiers: .command)
-                
+
                 Divider()
             }
-            
+
             // Add profile switching shortcuts (1-9)
             CommandGroup(after: .toolbar) {
                 ForEach(1...9, id: \.self) { index in

@@ -95,6 +95,8 @@ struct RealHistogramView: View {
                                         pressedIndex = index
                                     }
                                     
+                                    CalendarWindowController.showCalendarWindow(awsManager: awsManager, highlightedService: serviceName)
+                                    
                                     // Create the day detail data
                                     selectedDayDetail = DayDetailData(
                                         date: day.date,
@@ -105,7 +107,7 @@ struct RealHistogramView: View {
                                         ),
                                         services: getAllServicesForDay(day.date),
                                         currencyFormatter: currencyFormatter,
-                                        apiCalls: [],
+                                        apiCalls: getAPICalls(for: day.date),
                                         highlightedService: serviceName
                                     )
                                     
@@ -160,6 +162,10 @@ struct RealHistogramView: View {
         }
         .frame(minWidth: 220, idealWidth: 250, maxWidth: 280)  // Give histogram more space
         .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .simultaneousGesture(TapGesture().onEnded {
+            CalendarWindowController.showCalendarWindow(awsManager: awsManager, highlightedService: serviceName)
+        })
     }
     
     private var dateFormatter: DateFormatter {
@@ -308,7 +314,18 @@ struct RealHistogramView: View {
         return dayServices.map { ServiceCost(serviceName: $0.key, amount: $0.value, currency: "USD") }
             .sorted()
     }
+    
+    private func getAPICalls(for date: Date) -> [APIRequestRecord] {
+        guard let profileName = awsManager.selectedProfile?.name else { return [] }
+        let calendar = Calendar.current
+        return awsManager.apiRequestRecords
+            .filter { record in
+                record.profileName == profileName &&
+                calendar.isDate(record.timestamp, inSameDayAs: date) &&
+                record.endpoint.contains("GetCostAndUsage")
+            }
+            .sorted { $0.timestamp > $1.timestamp }
+    }
 }
 
 // MARK: - SwiftUI View
-

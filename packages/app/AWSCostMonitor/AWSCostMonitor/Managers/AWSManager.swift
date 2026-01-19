@@ -2711,8 +2711,7 @@ class AWSManager: ObservableObject {
                 await MainActor.run { [cacheEntry, dailyCosts, dailyServiceCosts] in
                     // Store in cache
                     self.costCache[profile.name] = cacheEntry
-                    self.dailyCostsByProfile[profile.name] = dailyCosts
-                    self.dailyServiceCostsByProfile[profile.name] = dailyServiceCosts
+                    self.mergeDailyData(for: profile.name, dailyCosts: dailyCosts, dailyServiceCosts: dailyServiceCosts)
                     self.cacheStatus[profile.name] = Date()
                 }
                 
@@ -3476,6 +3475,13 @@ class AWSManager: ObservableObject {
 
                 // Also fetch MTD comparison and service breakdown for last month
                 await fetchLastMonthMTDData(for: profileName, client: client, calendar: calendar, formatter: formatter)
+
+                // Persist daily history for last month if we don't already have it
+                if force || !hasDailyData(for: profileName, inMonth: startOfLastMonth) {
+                    await fetchHistoricalDailyData(for: profileName, client: client, startDate: startOfLastMonth, endDate: endOfLastMonth)
+                }
+
+                // Also fetch service breakdown for last month
                 await fetchLastMonthServiceBreakdown(for: profileName, client: client, startDate: startOfLastMonth, endDate: endOfLastMonth)
             }
             
@@ -3607,6 +3613,149 @@ class AWSManager: ObservableObject {
         }
     }
     
+    private func fetchHistoricalDailyData(for profileName: String, client: CostExplorerClient, startDate: Date, endDate: Date) async {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        let input = GetCostAndUsageInput(
+            granularity: .daily,
+            groupBy: [.init(key: "SERVICE", type: .dimension)],
+            metrics: ["AmortizedCost"],
+            timePeriod: .init(
+                end: formatter.string(from: endDate),
+                start: formatter.string(from: startDate)
+            )
+        )
+        
+        do {
+            let response = try await client.getCostAndUsage(input: input)
+            var dailyCosts: [DailyCost] = []
+            var dailyServiceCosts: [DailyServiceCost] = []
+            var currency = "USD"
+            
+            if let resultsByTime = response.resultsByTime {
+                for result in resultsByTime {
+                    guard let timeString = result.timePeriod?.start,
+                          let date = formatter.date(from: timeString) else { continue }
+                    
+                    var dailyTotal = Decimal(0)
+                    
+                    if let groups = result.groups {
+                        for group in groups {
+                            guard let serviceName = group.keys?.first,
+                                  let metrics = group.metrics,
+                                  let amortizedCost = metrics["AmortizedCost"],
+                                  let amountString = amortizedCost.amount,
+                                  let amountDecimal = Decimal(string: amountString) else {
+                                continue
+                            }
+                            
+                            currency = amortizedCost.unit ?? currency
+                            dailyTotal += amountDecimal
+                            
+                            if amountDecimal > 0 {
+                                dailyServiceCosts.append(DailyServiceCost(
+                                    date: date,
+                                    serviceName: serviceName,
+                                    amount: amountDecimal,
+                                    currency: amortizedCost.unit ?? "USD"
+                                ))
+                            }
+                        }
+                    }
+                    
+                    if dailyTotal > 0 {
+                        dailyCosts.append(DailyCost(
+                            date: date,
+                            amount: dailyTotal,
+                            currency: currency
+                        ))
+                    }
+                }
+            }
+            
+            await MainActor.run {
+                self.mergeDailyData(for: profileName, dailyCosts: dailyCosts, dailyServiceCosts: dailyServiceCosts)
+                self.saveCostCache()
+            }
+        } catch {
+            log(.error, category: "API", "Error fetching historical daily data for \(profileName): \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Daily Data Consolidation
+    
+    @MainActor
+    private func mergeDailyData(for profileName: String, dailyCosts: [DailyCost], dailyServiceCosts: [DailyServiceCost]) {
+        if dailyCosts.isEmpty && dailyServiceCosts.isEmpty { return }
+        
+        let calendar = Calendar.current
+        
+        var mergedDailyCosts: [Date: DailyCost] = [:]
+        if let existing = dailyCostsByProfile[profileName] {
+            for entry in existing {
+                let key = calendar.startOfDay(for: entry.date)
+                mergedDailyCosts[key] = DailyCost(date: key, amount: entry.amount, currency: entry.currency)
+            }
+        }
+        for entry in dailyCosts {
+            let key = calendar.startOfDay(for: entry.date)
+            mergedDailyCosts[key] = DailyCost(date: key, amount: entry.amount, currency: entry.currency)
+        }
+        dailyCostsByProfile[profileName] = mergedDailyCosts.values.sorted { $0.date < $1.date }
+        
+        var mergedDailyServiceCosts: [DailyServiceKey: DailyServiceCost] = [:]
+        if let existingService = dailyServiceCostsByProfile[profileName] {
+            for entry in existingService {
+                let key = DailyServiceKey(date: calendar.startOfDay(for: entry.date), serviceName: entry.serviceName)
+                mergedDailyServiceCosts[key] = DailyServiceCost(
+                    date: key.date,
+                    serviceName: entry.serviceName,
+                    amount: entry.amount,
+                    currency: entry.currency
+                )
+            }
+        }
+        for entry in dailyServiceCosts {
+            let key = DailyServiceKey(date: calendar.startOfDay(for: entry.date), serviceName: entry.serviceName)
+            mergedDailyServiceCosts[key] = DailyServiceCost(
+                date: key.date,
+                serviceName: entry.serviceName,
+                amount: entry.amount,
+                currency: entry.currency
+            )
+        }
+        dailyServiceCostsByProfile[profileName] = mergedDailyServiceCosts
+            .values
+            .sorted {
+                if $0.date == $1.date {
+                    return $0.serviceName < $1.serviceName
+                }
+                return $0.date < $1.date
+            }
+    }
+    
+    private struct DailyServiceKey: Hashable {
+        let date: Date
+        let serviceName: String
+    }
+    
+    private func hasDailyData(for profileName: String, inMonth monthStart: Date) -> Bool {
+        let calendar = Calendar.current
+        
+        if let daily = dailyCostsByProfile[profileName],
+           daily.contains(where: { calendar.isDate($0.date, equalTo: monthStart, toGranularity: .month) }) {
+            return true
+        }
+        
+        if let services = dailyServiceCostsByProfile[profileName],
+           services.contains(where: { calendar.isDate($0.date, equalTo: monthStart, toGranularity: .month) }) {
+            return true
+        }
+        
+        return false
+    }
+    
     // MARK: - Enhanced Cache Management
     
     // Load data from cache
@@ -3623,8 +3772,8 @@ class AWSManager: ObservableObject {
             // Update service costs
             self.serviceCosts = cacheEntry.serviceCosts
             
-            // Store daily costs
-            self.dailyCostsByProfile[cacheEntry.profileName] = cacheEntry.dailyCosts
+            // Merge cached daily totals without disturbing existing history
+            self.mergeDailyData(for: cacheEntry.profileName, dailyCosts: cacheEntry.dailyCosts, dailyServiceCosts: [])
             
             // Update projections and trends
             self.projectedMonthlyTotal = self.calculateEnhancedProjection(dailyCosts: cacheEntry.dailyCosts)
