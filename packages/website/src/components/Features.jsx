@@ -1,30 +1,41 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { 
-  DollarSign, 
-  TrendingDown, 
-  Bell, 
-  Shield, 
-  Zap, 
+import {
+  DollarSign,
+  TrendingDown,
+  Bell,
+  Shield,
+  Zap,
   Eye,
   Users,
   RefreshCw,
   BarChart3,
   Lock,
   Calendar,
-  PieChart
+  PieChart,
+  Palette
 } from 'lucide-react'
 
 const features = [
-  // v1.3.2 - Latest (new release!)
+  // v1.4.0 - Latest (new release!)
+  {
+    icon: Palette,
+    title: 'UI Theme Selector',
+    description: 'Personalize your experience with multiple color schemes, collapsible services, and dynamic layouts',
+    color: 'primary',
+    badge: 'v1.4.0',
+    version: '1.4.0',
+    badgeColor: 'primary' // new release color
+  },
+  // v1.3.2
   {
     icon: Users,
     title: 'Team Remote Caching',
     description: 'Share cost data across your team using S3 to dramatically reduce API calls and costs for organizations',
-    color: 'primary',
+    color: 'secondary',
     badge: 'v1.3.2',
     version: '1.3.2',
-    badgeColor: 'primary' // new release color
+    badgeColor: 'secondary'
   },
   // v1.3.0 - (secondary color from changelog)
   {
