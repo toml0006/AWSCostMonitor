@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { 
+import {
   Calendar,
   Sparkles,
   Bug,
@@ -16,10 +16,54 @@ import {
   MousePointer,
   Palette,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
+  History,
+  Layers
 } from 'lucide-react'
 
 const releases = [
+  {
+    version: '1.4.0',
+    date: 'January 19, 2026',
+    title: 'Theme Selector & Enhanced Data Views',
+    icon: Palette,
+    color: 'primary',
+    highlights: [
+      'UI theme selector with multiple color schemes',
+      'Collapsible services section for cleaner interface',
+      'Automatic historical data fetching for better trends',
+      'Dynamic popover height based on content'
+    ],
+    features: [
+      {
+        icon: Palette,
+        title: 'UI Theme Selector',
+        description: 'Personalize your experience with multiple color schemes to match your style or system preferences'
+      },
+      {
+        icon: ChevronDown,
+        title: 'Collapsible Services Section',
+        description: 'Expand or collapse the services breakdown to view all AWS services at a glance without clutter'
+      },
+      {
+        icon: History,
+        title: 'Historical Data Fetching',
+        description: 'Automatically fetches previous month\'s daily spending for better trend analysis and comparisons'
+      },
+      {
+        icon: Layers,
+        title: 'Dynamic Popover Height',
+        description: 'Smart popover that adjusts its height based on content for an optimized viewing experience'
+      }
+    ],
+    improvements: [
+      'Enhanced popover with dynamic height adjustment based on expanded state',
+      'Improved daily data merging for seamless month transitions',
+      'Better visual hierarchy in the services breakdown',
+      'Performance optimizations throughout the app'
+    ]
+  },
   {
     version: '1.3.2',
     date: 'August 19, 2025',
