@@ -99,7 +99,7 @@ struct NewProfilesAlert: View {
             }
         }
         .padding()
-        .frame(maxWidth: 500)
+        .frame(width: 450, height: 400)
         .onAppear {
             // Select all profiles by default
             selectedProfiles = Set(newProfiles.map { $0.name })
@@ -235,7 +235,7 @@ struct RemovedProfilesAlert: View {
             }
         }
         .padding()
-        .frame(maxWidth: 600)
+        .frame(width: 550, height: 500)
         .onAppear {
             // Default to keeping profiles
             for profile in removedProfiles {
@@ -257,7 +257,8 @@ class ProfileChangeWindowController: NSWindowController {
         
         let hostingController = NSHostingController(rootView: contentView)
         let window = NSWindow(contentViewController: hostingController)
-        
+        window.setContentSize(NSSize(width: 450, height: 400))
+
         window.title = "New Profiles Detected"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
@@ -286,7 +287,8 @@ class ProfileChangeWindowController: NSWindowController {
         
         let hostingController = NSHostingController(rootView: contentView)
         let window = NSWindow(contentViewController: hostingController)
-        
+        window.setContentSize(NSSize(width: 550, height: 500))
+
         window.title = "Profiles Removed"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
