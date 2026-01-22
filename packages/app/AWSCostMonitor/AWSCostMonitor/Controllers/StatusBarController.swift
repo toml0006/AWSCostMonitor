@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import AppKit
 import Combine
+import QuartzCore
 
 // MARK: - Custom Status Bar Implementation with Popover
 
@@ -19,6 +20,7 @@ class StatusBarController: NSObject {
     private var themeManager: ThemeManager
     private var eventMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
+    private var pillBackgroundLayer: CALayer?
     
     init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared) {
         self.awsManager = awsManager
@@ -215,6 +217,55 @@ class StatusBarController: NSObject {
             )
         }
         #endif
+
+        // Apply pill background if enabled
+        updatePillBackground(for: button)
+    }
+
+    private func updatePillBackground(for button: NSStatusBarButton) {
+        let theme = themeManager.currentTheme
+        let showPill = UserDefaults.standard.bool(forKey: "ShowMenuBarPillBackground")
+                       || theme.menuBarBackgroundStyle == .pill
+
+        // Remove existing pill layer
+        pillBackgroundLayer?.removeFromSuperlayer()
+        pillBackgroundLayer = nil
+
+        guard showPill else { return }
+
+        // Ensure button is layer-backed
+        button.wantsLayer = true
+        guard let buttonLayer = button.layer else { return }
+
+        // Create pill background layer
+        let pillLayer = CALayer()
+
+        // Determine background color based on menu bar appearance
+        let isDarkMenu = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let bgColor: NSColor
+        if isDarkMenu {
+            bgColor = NSColor.white.withAlphaComponent(0.12)
+        } else {
+            bgColor = NSColor.black.withAlphaComponent(0.06)
+        }
+        pillLayer.backgroundColor = bgColor.cgColor
+        pillLayer.cornerRadius = theme.menuBarPillCornerRadius
+
+        // Calculate frame with padding
+        let horizontalPadding: CGFloat = 6
+        let verticalPadding: CGFloat = 2
+        let buttonBounds = button.bounds
+
+        pillLayer.frame = CGRect(
+            x: -horizontalPadding,
+            y: verticalPadding,
+            width: buttonBounds.width + (horizontalPadding * 2),
+            height: buttonBounds.height - (verticalPadding * 2)
+        )
+
+        // Insert below text
+        buttonLayer.insertSublayer(pillLayer, at: 0)
+        pillBackgroundLayer = pillLayer
     }
     
     // Legacy color method replaced by theme-aware ThemedMenuBarDisplay.getStatus()

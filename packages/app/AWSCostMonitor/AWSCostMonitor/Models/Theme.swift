@@ -8,6 +8,13 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Menu Bar Background Style
+
+enum MenuBarBackgroundStyle {
+    case none
+    case pill
+}
+
 // MARK: - Theme Protocol
 
 protocol Theme {
@@ -36,7 +43,12 @@ protocol Theme {
     // Layout Density
     var paddingScale: CGFloat { get }
     var spacingMultiplier: CGFloat { get }
-    
+
+    // Menu Bar Background Styling
+    var menuBarBackgroundStyle: MenuBarBackgroundStyle { get }
+    var menuBarBackgroundColor: Color { get }
+    var menuBarPillCornerRadius: CGFloat { get }
+
     // Theme-specific colors for different states
     func menuBarTextColor(isActive: Bool) -> Color
     func chartColor(for index: Int) -> Color
@@ -46,6 +58,11 @@ protocol Theme {
 // MARK: - Default Theme Implementation
 
 extension Theme {
+    // Default menu bar background properties
+    var menuBarBackgroundStyle: MenuBarBackgroundStyle { .none }
+    var menuBarBackgroundColor: Color { Color.gray.opacity(0.2) }
+    var menuBarPillCornerRadius: CGFloat { 6 }
+
     func menuBarTextColor(isActive: Bool) -> Color {
         return isActive ? textColor : secondaryColor
     }
@@ -273,4 +290,50 @@ struct ProfessionalTheme: Theme {
     // Layout Density - Balanced
     let paddingScale: CGFloat = 1.1
     let spacingMultiplier: CGFloat = 1.2
+}
+
+// MARK: - Memphis Theme
+
+struct MemphisTheme: Theme {
+    let name = "Memphis"
+    let description = "Playful 80s-inspired design with bold colors and geometric shapes"
+    let identifier = "memphis"
+
+    // Colors - Bold Memphis palette (pink, teal, yellow, purple)
+    let primaryColor = Color(red: 0.95, green: 0.26, blue: 0.50)  // Hot pink
+    let secondaryColor = Color(red: 0.10, green: 0.74, blue: 0.74)  // Teal
+    let accentColor = Color(red: 1.0, green: 0.84, blue: 0.0)  // Yellow
+    let backgroundColor = Color(red: 0.98, green: 0.96, blue: 0.93)  // Cream
+    let textColor = Color(red: 0.20, green: 0.20, blue: 0.30)  // Dark gray
+    let errorColor = Color(red: 1.0, green: 0.30, blue: 0.30)
+    let warningColor = Color(red: 1.0, green: 0.60, blue: 0.0)
+    let successColor = Color(red: 0.10, green: 0.74, blue: 0.74)
+
+    // Text Formatting - Bold, playful
+    let smallFontSize: CGFloat = 12
+    let regularFontSize: CGFloat = 14
+    let largeFontSize: CGFloat = 17
+    let primaryFontWeight = Font.Weight.bold
+    let secondaryFontWeight = Font.Weight.semibold
+
+    // Layout Density - Spacious
+    let paddingScale: CGFloat = 1.2
+    let spacingMultiplier: CGFloat = 1.3
+
+    // Memphis uses pill background by default
+    var menuBarBackgroundStyle: MenuBarBackgroundStyle { .pill }
+    var menuBarBackgroundColor: Color { Color(red: 0.95, green: 0.26, blue: 0.50).opacity(0.15) }
+    var menuBarPillCornerRadius: CGFloat { 8 }
+
+    // Custom chart colors - Memphis palette
+    func chartColor(for index: Int) -> Color {
+        let colors = [
+            Color(red: 0.95, green: 0.26, blue: 0.50),  // Hot pink
+            Color(red: 0.10, green: 0.74, blue: 0.74),  // Teal
+            Color(red: 1.0, green: 0.84, blue: 0.0),    // Yellow
+            Color(red: 0.55, green: 0.35, blue: 0.90),  // Purple
+            Color(red: 0.98, green: 0.50, blue: 0.45)   // Coral
+        ]
+        return colors[index % colors.count]
+    }
 }

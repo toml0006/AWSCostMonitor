@@ -30,7 +30,8 @@ class ThemeManager: ObservableObject {
         CompactTheme(),
         ComfortableTheme(),
         TerminalTheme(),
-        ProfessionalTheme()
+        ProfessionalTheme(),
+        MemphisTheme()
     ]
     
     private var appearanceObserver: NSObjectProtocol?

@@ -30,14 +30,36 @@ struct AppearanceSettingsTab: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("System Integration")
                     .font(.headline)
-                
+
                 Toggle("Sync with System Appearance", isOn: Binding(
                     get: { themeManager.syncWithSystemAppearance },
                     set: { themeManager.setSyncWithSystemAppearance($0) }
                 ))
                 .toggleStyle(SwitchToggleStyle())
-                
+
                 Text("Automatically switch themes when macOS changes between light and dark mode.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 4)
+            }
+
+            Divider()
+
+            // Menu Bar Style
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Menu Bar Style")
+                    .font(.headline)
+
+                Toggle("Show Pill Background", isOn: Binding(
+                    get: { UserDefaults.standard.bool(forKey: "ShowMenuBarPillBackground") },
+                    set: {
+                        UserDefaults.standard.set($0, forKey: "ShowMenuBarPillBackground")
+                        NotificationCenter.default.post(name: UserDefaults.didChangeNotification, object: nil)
+                    }
+                ))
+                .toggleStyle(SwitchToggleStyle())
+
+                Text("Add a subtle pill-shaped background behind the cost display in the menu bar. Some themes enable this by default.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.leading, 4)
