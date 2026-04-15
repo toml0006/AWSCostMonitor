@@ -6,17 +6,24 @@
 
 ## Summary
 
-Replace the app's eight competing themes with a single opinionated design language called **Ledger**. Dark-and-light first-class, warm graphite + warm cream surfaces, one saturated accent (amber `#F5B454`), SF Mono figures with tabular numerals, and a dense "Command"-style popover inspired by trading terminals. Red and green appear only as *meaningful* signal — never decoration.
+Replace the app's eight competing themes with a single opinionated design language called **Ledger**. Dark-and-light first-class, warm graphite + warm cream surfaces, SF Mono figures with tabular numerals, and a dense "Command"-style popover inspired by trading terminals. Red and green appear only as *meaningful* signal — never decoration.
 
-Ledger becomes the default and only shipping theme. The existing multi-theme picker is removed; the "Appearance" settings tab collapses to Ledger-specific controls.
+Ledger is the only identity, but exposes three orthogonal appearance axes so users can personalize without fragmenting the look:
+
+- **Accent:** Amber (default) · Mint · Plasma · Bone
+- **Density:** Comfortable (default) · Compact
+- **Contrast:** Standard (default) · AAA (WCAG AAA across all text pairings)
+
+Appearance-scheme (light / dark / system) is a fourth independent axis. The eight legacy themes are removed; upgrading users are migrated to a best-fit combination of the axes above.
 
 ## Goals
 
 1. Functional value first: faster cost awareness, clearer hierarchy, fewer taps to the thing that matters.
 2. A single opinionated visual identity that the app can be recognized by in a screenshot.
 3. Full light/dark parity that follows the system setting.
-4. No hardcoded colors or font sizes in views — everything reads from `LedgerTokens` / a single `Theme` struct.
+4. No hardcoded colors or font sizes in views — everything reads from `LedgerTokens`, parameterized by (colorScheme, accent, density, contrast).
 5. Consistent application across app icon, menu bar, popover, all secondary windows, onboarding, and the marketing website.
+6. Preserve accessibility and density choice that the legacy themes offered (HighContrast → AAA toggle, Compact → Compact density).
 
 ## Non-goals
 
@@ -27,6 +34,29 @@ Ledger becomes the default and only shipping theme. The existing multi-theme pic
 - Retaining the previous theme catalog (Classic, Modern, High Contrast, Compact, Comfortable, Terminal, Professional, Memphis) — they are removed.
 
 ## Section 1 — Brand posture
+
+### Appearance axes
+
+Ledger exposes four orthogonal axes, each with a default and one or more alternates. All axes compose: any combination is valid and renders correctly.
+
+| Axis | Default | Alternates |
+| --- | --- | --- |
+| Color scheme | Follow system | Always light · Always dark |
+| Accent | Amber `#F5B454` (dark) / `#8A5A14` (light) | Mint · Plasma · Bone |
+| Density | Comfortable (8pt base) | Compact (6pt base) |
+| Contrast | Standard | AAA (WCAG AAA) |
+
+**Accent alternates** (dark / light hex pairs):
+- Amber *(default)*: `#F5B454` / `#8A5A14`
+- Mint: `#4AD6A3` / `#1C7A57`
+- Plasma: `#5AD9FF` / `#0B6A90`
+- Bone: `#E7E2D2` / `#4A443A` *(monochrome — red/green become the only color on screen)*
+
+**Density tokens** drive padding, row height, and spacing multipliers across all views:
+- Comfortable: base unit 8pt, hero 34pt, row 32pt
+- Compact: base unit 6pt, hero 28pt, row 26pt
+
+**Contrast mode** swaps `ink/secondary` and `ink/tertiary` for higher-contrast values and promotes amber-on-surface pairings to WCAG AAA (≥7:1 for body, ≥4.5:1 for labels). Sparkline and bar-chart fills also gain a 1pt stroke when AAA is active so amber-on-graphite reaches AAA non-text contrast.
 
 ### Palette
 
@@ -162,8 +192,14 @@ All secondary windows keep their current sizes (set during the v1.4.2 crash fix)
 - Sidebar: 160pt, category list, selected row gets amber 2pt left-border accent.
 - Right pane: grouped sections, SF Pro Text labels, SF Mono for numeric inputs.
 - Primary actions amber; destructive red.
-- New **Appearance** section contains: menu-bar preset, hide-cents, show-delta, auto-abbreviate, light/dark override (`System` / `Always light` / `Always dark`).
-- Theme picker is removed.
+- New **Appearance** section contains, in order:
+  1. Color scheme: `System` / `Always light` / `Always dark`
+  2. Accent: Amber / Mint / Plasma / Bone (shown as clickable swatches)
+  3. Density: Comfortable / Compact (live preview chip)
+  4. Contrast: Standard / AAA toggle
+  5. Menu-bar preset: A / B / C / D (shown as rendered previews)
+  6. Menu-bar toggles: Hide cents · Show delta · Auto-abbreviate above $10k
+- Legacy theme picker is removed.
 
 ### Calendar window (900 × 700)
 - Inherits chrome: header bar with month navigation, summary strip (MTD · Forecast · Peak · Avg), amber hero figure.
@@ -215,27 +251,45 @@ Located in `packages/web/` (existing marketing site).
 
 ### Token layer
 
-New `Managers/LedgerTokens.swift`:
+New `Managers/LedgerTokens.swift` is parameterized by the full `LedgerAppearance` tuple — `(colorScheme, accent, density, contrast)`. Views receive the resolved appearance through the SwiftUI environment and never inspect it directly; they ask the tokens.
 
 ```swift
+enum LedgerAccent: String, CaseIterable, Codable { case amber, mint, plasma, bone }
+enum LedgerDensity: String, CaseIterable, Codable { case comfortable, compact }
+enum LedgerContrast: String, CaseIterable, Codable { case standard, aaa }
+
+struct LedgerAppearance: Equatable {
+    var colorScheme: ColorScheme   // resolved from system or user override
+    var accent: LedgerAccent
+    var density: LedgerDensity
+    var contrast: LedgerContrast
+}
+
 enum LedgerTokens {
     enum Color {
-        static func surfaceWindow(_ scheme: ColorScheme) -> SwiftUI.Color { … }
-        static func accent(_ scheme: ColorScheme) -> SwiftUI.Color { … }
-        static func signalOver(_ scheme: ColorScheme) -> SwiftUI.Color { … }
+        static func surfaceWindow(_ a: LedgerAppearance) -> SwiftUI.Color { … }
+        static func accent(_ a: LedgerAppearance) -> SwiftUI.Color { … }
+        static func inkPrimary(_ a: LedgerAppearance) -> SwiftUI.Color { … }
+        static func signalOver(_ a: LedgerAppearance) -> SwiftUI.Color { … }
         // …
     }
     enum Typography {
-        static let hero = Font.system(size: 34, weight: .light, design: .monospaced)
-        static let statValue = Font.system(size: 14, weight: .medium, design: .monospaced)
-        static let label = Font.system(size: 10, weight: .semibold).leading(.tight)
+        static func hero(_ a: LedgerAppearance) -> Font { … }       // 34pt / 28pt by density
+        static func statValue(_ a: LedgerAppearance) -> Font { … }
+        static func label(_ a: LedgerAppearance) -> Font { … }
         // …
     }
-    enum Layout { … }
+    enum Layout {
+        static func unit(_ a: LedgerAppearance) -> CGFloat { … }     // 8 / 6
+        static func rowHeight(_ a: LedgerAppearance) -> CGFloat { … }
+        // …
+    }
 }
 ```
 
-Views consume tokens through a `.ledger()` view modifier and `@Environment(\.colorScheme)` — no manual switches in view code.
+`LedgerAppearance` is injected through `@Environment(\.ledgerAppearance)`. An `AppearanceManager` singleton owns the user preferences, observes `NSApp.effectiveAppearance`, and publishes the resolved `LedgerAppearance`.
+
+Views consume tokens through convenience view modifiers — `.ledgerHero()`, `.ledgerLabel()`, `.ledgerSurface(.elevated)` — not raw tokens. No manual scheme/density/contrast switches in view code.
 
 ### Existing theme system
 
@@ -278,8 +332,22 @@ All views read `@Environment(\.colorScheme)`. Tokens compute per-scheme values. 
 
 - Ships as app version **1.5.0**.
 - In-app "What's New" dialog on first launch of 1.5 explains the redesign and points at the Appearance settings.
-- User's previous selected theme is silently discarded; new installs and upgrades both land on Ledger with preset B (Icon + figure).
 - Existing budget, profile, team-cache, and export settings are preserved untouched.
+- Legacy theme selection is migrated to the best-fit appearance tuple:
+
+| Legacy theme | Accent | Density | Contrast |
+| --- | --- | --- | --- |
+| Classic (default) | Amber | Comfortable | Standard |
+| Modern | Amber | Comfortable | Standard |
+| HighContrast | Amber | Comfortable | AAA |
+| Compact | Amber | Compact | Standard |
+| Comfortable | Amber | Comfortable | Standard |
+| Terminal | Mint | Compact | Standard |
+| Professional | Bone | Comfortable | Standard |
+| Memphis | Amber | Comfortable | Standard |
+
+- Menu-bar preset defaults to **B (Icon + figure)** for all migrating users.
+- Migration runs once on first launch of 1.5.0 and writes a `ledgerMigratedFromTheme_<id>` marker into UserDefaults.
 
 ## Open follow-ups (out of scope here)
 
