@@ -27,7 +27,7 @@ class StatusBarController: NSObject {
     private var options = MenuBarOptions()
     
     convenience init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared) {
-        self.init(awsManager: awsManager, themeManager: themeManager, appearance: AppearanceManager())
+        self.init(awsManager: awsManager, themeManager: themeManager, appearance: AppearanceManager.shared)
     }
 
     init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared, appearance: AppearanceManager) {
@@ -111,6 +111,14 @@ class StatusBarController: NSObject {
         appearance.$appearance
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.renderStatusItem() }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .menuBarOptionsChanged)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.options = MenuBarOptions()
+                self?.renderStatusItem()
+            }
             .store(in: &cancellables)
         
         // Monitor for clicks outside popover

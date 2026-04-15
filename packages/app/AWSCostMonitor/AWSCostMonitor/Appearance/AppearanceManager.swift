@@ -4,6 +4,8 @@ import Combine
 
 @MainActor
 final class AppearanceManager: ObservableObject {
+    static let shared = AppearanceManager()
+
     @Published private(set) var appearance: LedgerAppearance
 
     private let defaults: UserDefaults
