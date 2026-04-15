@@ -73,3 +73,17 @@ final class AppearanceManager: ObservableObject {
         }
     }
 }
+
+extension AppearanceManager {
+    /// Migrates the user's previously-selected legacy theme id to the new axis tuple.
+    /// Runs once; subsequent calls are no-ops.
+    func runLegacyMigrationIfNeeded() {
+        guard !defaults.bool(forKey: "ledger.migrated") else { return }
+        let legacy = defaults.string(forKey: "selectedTheme")
+        let mapped = LegacyThemeMigration.migrate(themeId: legacy)
+        setAccent(mapped.accent)
+        setDensity(mapped.density)
+        setContrast(mapped.contrast)
+        defaults.set(true, forKey: "ledger.migrated")
+    }
+}

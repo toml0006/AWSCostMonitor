@@ -62,4 +62,22 @@ final class AppearanceManagerTests: XCTestCase {
         mgr.systemAppearanceDidChange()
         XCTAssertEqual(mgr.appearance.colorScheme, .light)
     }
+
+    func testMigratesLegacyTerminalThemeOnce() {
+        defaults.set("terminal", forKey: "selectedTheme")
+        let a = AppearanceManager(defaults: defaults, systemIsDark: { true })
+        a.runLegacyMigrationIfNeeded()
+        XCTAssertEqual(a.appearance.accent, .mint)
+        XCTAssertEqual(a.appearance.density, .compact)
+        XCTAssertTrue(defaults.bool(forKey: "ledger.migrated"))
+    }
+
+    func testMigrationIsIdempotent() {
+        defaults.set("terminal", forKey: "selectedTheme")
+        let a = AppearanceManager(defaults: defaults, systemIsDark: { true })
+        a.runLegacyMigrationIfNeeded()
+        a.setAccent(.bone)                  // user changes accent after migration
+        a.runLegacyMigrationIfNeeded()      // should NOT re-run
+        XCTAssertEqual(a.appearance.accent, .bone)
+    }
 }
