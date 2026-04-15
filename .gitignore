@@ -75,3 +75,6 @@ marketing-materials/
 
 # Superpowers brainstorming scratch (local only)
 .superpowers/
+
+# Git worktrees (local only)
+.worktrees/
