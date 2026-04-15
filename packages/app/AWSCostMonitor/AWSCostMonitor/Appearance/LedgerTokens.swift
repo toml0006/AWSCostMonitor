@@ -23,6 +23,24 @@ enum LedgerTokens {
             case (.bone,   .light): return .hex(0x4A443A)
             }
         }
+        static func signalOver(_ a: LedgerAppearance) -> SwiftUI.Color {
+            a.colorScheme == .dark ? .hex(0xFF7A7A) : .hex(0xB02020)
+        }
+        static func signalUnder(_ a: LedgerAppearance) -> SwiftUI.Color {
+            a.colorScheme == .dark ? .hex(0x4AD6A3) : .hex(0x2F9E6B)
+        }
+        static func inkPrimary(_ a: LedgerAppearance) -> SwiftUI.Color {
+            a.colorScheme == .dark ? .hex(0xE7E9EC) : .hex(0x1B1A17)
+        }
+        static func inkSecondary(_ a: LedgerAppearance) -> SwiftUI.Color {
+            a.colorScheme == .dark ? .hex(0xA8B1BD) : .hex(0x3A3731)
+        }
+        static func inkTertiary(_ a: LedgerAppearance) -> SwiftUI.Color {
+            if a.contrast == .aaa {
+                return inkSecondary(a)
+            }
+            return a.colorScheme == .dark ? .hex(0x7F8A99) : .hex(0x8A7F6C)
+        }
     }
 }
 

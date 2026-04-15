@@ -58,6 +58,31 @@ final class LedgerTokensTests: XCTestCase {
         XCTAssertEqual(LedgerTokens.Color.accent(d).nsHex, "E7E2D2")
         XCTAssertEqual(LedgerTokens.Color.accent(l).nsHex, "4A443A")
     }
+
+    func testSignalsAndInkDark() {
+        let a = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.signalOver(a).nsHex,  "FF7A7A")
+        XCTAssertEqual(LedgerTokens.Color.signalUnder(a).nsHex, "4AD6A3")
+        XCTAssertEqual(LedgerTokens.Color.inkPrimary(a).nsHex,   "E7E9EC")
+        XCTAssertEqual(LedgerTokens.Color.inkSecondary(a).nsHex, "A8B1BD")
+        XCTAssertEqual(LedgerTokens.Color.inkTertiary(a).nsHex,  "7F8A99")
+    }
+
+    func testSignalsAndInkLight() {
+        let a = LedgerAppearance(colorScheme: .light, accent: .amber, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.signalOver(a).nsHex,  "B02020")
+        XCTAssertEqual(LedgerTokens.Color.signalUnder(a).nsHex, "2F9E6B")
+        XCTAssertEqual(LedgerTokens.Color.inkPrimary(a).nsHex,   "1B1A17")
+        XCTAssertEqual(LedgerTokens.Color.inkSecondary(a).nsHex, "3A3731")
+        XCTAssertEqual(LedgerTokens.Color.inkTertiary(a).nsHex,  "8A7F6C")
+    }
+
+    func testAAAContrastPromotesInkTertiary() {
+        let std = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .comfortable, contrast: .standard)
+        let aaa = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .comfortable, contrast: .aaa)
+        XCTAssertEqual(LedgerTokens.Color.inkTertiary(aaa).nsHex, "A8B1BD")
+        XCTAssertEqual(LedgerTokens.Color.inkTertiary(std).nsHex, "7F8A99")
+    }
 }
 
 import AppKit
