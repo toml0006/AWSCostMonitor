@@ -72,6 +72,17 @@ enum LedgerTokens {
             .system(size: metaPointSize(a), weight: .regular, design: .default)
         }
     }
+
+    enum Layout {
+        static let cornerRadius: CGFloat = 10
+        static func unit(_ a: LedgerAppearance) -> CGFloat {
+            a.density == .comfortable ? 8 : 6
+        }
+        static func rowHeight(_ a: LedgerAppearance) -> CGFloat {
+            a.density == .comfortable ? 32 : 26
+        }
+        static func hairlineWidth(_ a: LedgerAppearance) -> CGFloat { 1 }
+    }
 }
 
 extension SwiftUI.Color {

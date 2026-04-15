@@ -104,6 +104,17 @@ final class LedgerTokensTests: XCTestCase {
         XCTAssertEqual(LedgerTokens.Typography.labelPointSize(comfort), 10)
         XCTAssertEqual(LedgerTokens.Typography.labelPointSize(compact), 10)
     }
+
+    func testLayoutUnitByDensity() {
+        let comfort = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .comfortable, contrast: .standard)
+        let compact = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .compact, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Layout.unit(comfort), 8)
+        XCTAssertEqual(LedgerTokens.Layout.unit(compact), 6)
+        XCTAssertEqual(LedgerTokens.Layout.rowHeight(comfort), 32)
+        XCTAssertEqual(LedgerTokens.Layout.rowHeight(compact), 26)
+        XCTAssertEqual(LedgerTokens.Layout.hairlineWidth(comfort), 1)
+        XCTAssertEqual(LedgerTokens.Layout.cornerRadius, 10)
+    }
 }
 
 import AppKit
