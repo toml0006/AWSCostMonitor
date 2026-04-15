@@ -30,6 +30,34 @@ final class LedgerTokensTests: XCTestCase {
         XCTAssertEqual(LedgerTokens.Color.surfaceElevated(a).nsHex, "F1ECE1")
         XCTAssertEqual(LedgerTokens.Color.surfaceHairline(a).nsHex, "E5DDC9")
     }
+
+    func testAccentAmberBothSchemes() {
+        let d = LedgerAppearance(colorScheme: .dark,  accent: .amber, density: .comfortable, contrast: .standard)
+        let l = LedgerAppearance(colorScheme: .light, accent: .amber, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.accent(d).nsHex, "F5B454")
+        XCTAssertEqual(LedgerTokens.Color.accent(l).nsHex, "8A5A14")
+    }
+
+    func testAccentMintBothSchemes() {
+        let d = LedgerAppearance(colorScheme: .dark,  accent: .mint, density: .comfortable, contrast: .standard)
+        let l = LedgerAppearance(colorScheme: .light, accent: .mint, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.accent(d).nsHex, "4AD6A3")
+        XCTAssertEqual(LedgerTokens.Color.accent(l).nsHex, "1C7A57")
+    }
+
+    func testAccentPlasmaBothSchemes() {
+        let d = LedgerAppearance(colorScheme: .dark,  accent: .plasma, density: .comfortable, contrast: .standard)
+        let l = LedgerAppearance(colorScheme: .light, accent: .plasma, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.accent(d).nsHex, "5AD9FF")
+        XCTAssertEqual(LedgerTokens.Color.accent(l).nsHex, "0B6A90")
+    }
+
+    func testAccentBoneBothSchemes() {
+        let d = LedgerAppearance(colorScheme: .dark,  accent: .bone, density: .comfortable, contrast: .standard)
+        let l = LedgerAppearance(colorScheme: .light, accent: .bone, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.accent(d).nsHex, "E7E2D2")
+        XCTAssertEqual(LedgerTokens.Color.accent(l).nsHex, "4A443A")
+    }
 }
 
 import AppKit

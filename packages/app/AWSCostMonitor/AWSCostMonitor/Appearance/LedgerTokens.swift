@@ -11,6 +11,18 @@ enum LedgerTokens {
         static func surfaceHairline(_ a: LedgerAppearance) -> SwiftUI.Color {
             a.colorScheme == .dark ? .hex(0x1C2026) : .hex(0xE5DDC9)
         }
+        static func accent(_ a: LedgerAppearance) -> SwiftUI.Color {
+            switch (a.accent, a.colorScheme) {
+            case (.amber,  .dark):  return .hex(0xF5B454)
+            case (.amber,  .light): return .hex(0x8A5A14)
+            case (.mint,   .dark):  return .hex(0x4AD6A3)
+            case (.mint,   .light): return .hex(0x1C7A57)
+            case (.plasma, .dark):  return .hex(0x5AD9FF)
+            case (.plasma, .light): return .hex(0x0B6A90)
+            case (.bone,   .dark):  return .hex(0xE7E2D2)
+            case (.bone,   .light): return .hex(0x4A443A)
+            }
+        }
     }
 }
 
