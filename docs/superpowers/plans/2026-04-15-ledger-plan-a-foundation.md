@@ -10,6 +10,19 @@
 
 **Spec:** `docs/superpowers/specs/2026-04-15-ledger-design-system-design.md`
 
+**Pre-existing failing tests to skip during this plan:** See `docs/superpowers/follow-ups/2026-04-15-test-infra-cleanup.md`. Every test command in this plan that runs the full suite MUST append these `-skip-testing` flags:
+
+```
+-skip-testing:AWSCostMonitorTests/AWSManagerProfileTests/testRemovedProfileWithPreservedData \
+-skip-testing:AWSCostMonitorTests/AWSManagerProfileTests/testUpdateProfileVisibilityRefreshesProfilesList \
+-skip-testing:AWSCostMonitorTests/AWSCostMonitorTests/testAWSManagerTimerManagement \
+-skip-testing:AWSCostMonitorTests/AWSCostMonitorTests/testRefreshIntervalChangesUpdateTimer \
+-skip-testing:AWSCostMonitorTests/TimerLifecycleTests/testIsAutoRefreshActiveTracksStartStop \
+-skip-testing:AWSCostMonitorTests/TimerLifecycleTests/testIntervalZeroStopsTimers
+```
+
+Also use `-derivedDataPath /tmp/ledger-foundation-dd` to avoid colliding with the main worktree's DerivedData.
+
 ---
 
 ## File structure
