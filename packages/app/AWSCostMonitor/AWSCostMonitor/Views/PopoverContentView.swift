@@ -1,887 +1,125 @@
-//
-//  PopoverContentView.swift
-//  AWSCostMonitor
-//
-//  Main popover content view
-//
-
 import SwiftUI
 import Charts
 
 struct PopoverContentView: View {
     @EnvironmentObject var awsManager: AWSManager
-    @Environment(\.theme) var theme
-    @State private var servicesExpanded = false
-    @State private var serviceContentHeight: CGFloat = 0
-    @State private var helpButtonHovered = false
-    @State private var quitButtonHovered = false
-    @State private var refreshButtonHovered = false
-    @State private var settingsButtonHovered = false
-    @State private var consoleButtonHovered = false
-    @State private var calendarButtonHovered = false
-    @State private var selectedDayDetail: DayDetailData? = nil
-    @State private var currentTime = Date()
-    
-    // Timer to update the "minutes ago" display every minute
-    let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-    
-    var body: some View {
-        let _ = print("[DEBUG PopoverContentView] Rendering with \(awsManager.profiles.count) profiles: \(awsManager.profiles.map { $0.name })")  // Debug logging
-        return VStack(alignment: .leading, spacing: 8) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("AWSCostMonitor")
-                        .themeFont(theme, size: .large, weight: .secondary)
-                        .foregroundColor(theme.textColor)
-                    #if DEBUG
-                    Text("DEBUG BUILD")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(theme.errorColor)
-                    #endif
-                }
-                Spacer()
-                
-                // Help button
-                Button(action: {
-                    showHelpWindow()
-                }) {
-                    Image(systemName: "questionmark.circle")
-                        .themeFont(theme, size: .regular)
-                        .foregroundColor(helpButtonHovered ? theme.accentColor : theme.secondaryColor)
-                }
-                .buttonStyle(.plain)
-                .onHover { isHovered in
-                    helpButtonHovered = isHovered
-                    if isHovered {
-                        NSCursor.pointingHand.set()
-                    } else {
-                        NSCursor.arrow.set()
-                    }
-                }
-                
-                // Quit button
-                Button(action: {
-                    NSApplication.shared.terminate(nil)
-                }) {
-                    Image(systemName: "xmark.circle")
-                        .font(.system(size: 14))
-                        .foregroundColor(quitButtonHovered ? .red : .secondary)
-                }
-                .buttonStyle(.plain)
-                .onHover { isHovered in
-                    quitButtonHovered = isHovered
-                    if isHovered {
-                        NSCursor.pointingHand.set()
-                    } else {
-                        NSCursor.arrow.set()
-                    }
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top)
-            
-            Divider()
-            
-            // Profile Selection
-            if !awsManager.profiles.isEmpty {
-                HStack {
-                    Text("Profile:")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    
-                    // Team Cache Status Indicator
-                    #if !OPENSOURCE
-                    if let profile = awsManager.selectedProfile {
-                        let settings = awsManager.getTeamCacheSettings(for: profile.name)
-                        
-                        if settings.teamCacheEnabled {
-                            HStack(spacing: 3) {
-                                Circle()
-                                    .fill(Color.blue)
-                                    .frame(width: 6, height: 6)
-                                Text("Team")
-                                    .font(.system(size: 9, weight: .medium))
-                                    .foregroundColor(.blue)
-                            }
-                            .help("Team cache enabled")
-                        }
-                    }
-                    #endif
-                    
-                    Picker("", selection: $awsManager.selectedProfile) {
-                        ForEach(awsManager.profiles, id: \.self) { profile in
-                            if profile.name == "acme" {
-                                Text("\(profile.name) (Demo)").tag(Optional(profile))
-                            } else {
-                                Text(profile.name).tag(Optional(profile))
-                            }
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                    .labelsHidden()
-                    .frame(maxWidth: 150)
-                    .id(awsManager.profiles.map { $0.name }.joined()) // Force refresh when profiles change
-                    .onChange(of: awsManager.selectedProfile) { oldProfile, newProfile in
-                        if let profile = newProfile {
-                            // Save the selected profile, which will handle everything:
-                            // - Clear previous data
-                            // - Load cache if available
-                            // - Fetch new data if needed
-                            // - Update refresh timer
-                            awsManager.saveSelectedProfile(profile: profile)
-                        }
-                    }
-                }
-                .padding(.horizontal)
-            }
-            
-            Divider()
-            
-            // DEBUG: Force Refresh Button (only in debug builds)
-            #if DEBUG
-            if let profile = awsManager.selectedProfile,
-               let cachedData = awsManager.costCache[profile.name] {
-                let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-                if Int(cacheAge/60) > 30 {
-                    Button(action: {
-                        print("DEBUG: Manual force refresh button clicked")
-                        Task {
-                            await awsManager.fetchCostForSelectedProfile(force: true)
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.red)
-                            Text("Data is \(Int(cacheAge/60)) min old - Click to Force Refresh")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.red)
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
-                    .padding(.horizontal)
-                    
-                    Divider()
-                }
-            }
-            #endif
-            
-            // Cost Display with Proper Histograms
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    if awsManager.isLoading {
-                        HStack {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Loading...")
-                                .themeFont(theme, size: .small)
-                                .foregroundColor(theme.secondaryColor)
-                        }
-                        .themePadding(theme)
-                    } else if let errorMessage = awsManager.errorMessage {
-                        // Error state
-                        VStack(spacing: 8 * theme.spacingMultiplier) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(theme.warningColor)
-                            Text("Error Loading Profile")
-                                .themeFont(theme, size: .regular, weight: .secondary)
-                                .foregroundColor(theme.textColor)
-                            Text(errorMessage)
-                                .themeFont(theme, size: .small)
-                                .foregroundColor(theme.secondaryColor)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(3)
-                            
-                            // Add permissions guidance for common errors
-                            if errorMessage.contains("AccessDenied") || errorMessage.contains("UnauthorizedOperation") || errorMessage.contains("InvalidUserID.NotFound") {
-                                VStack(spacing: 4) {
-                                    Text("This profile may be missing Cost Explorer permissions.")
-                                        .font(.system(size: 10, weight: .medium))
-                                        .foregroundColor(.orange)
-                                        .multilineTextAlignment(.center)
-                                    Text("Required: ce:GetCostAndUsage, ce:GetUsageReport")
-                                        .font(.system(size: 9))
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                }
-                                .padding(.top, 4)
-                            }
-                            
-                            Button("Retry") {
-                                Task {
-                                    await awsManager.fetchCostForSelectedProfile(force: true)
-                                }
-                            }
-                            .buttonStyle(.borderless)
-                            .foregroundColor(.blue)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                    } else if let cost = awsManager.costData.first {
-                        // Main cost display
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Month-to-Date")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                // Update time display - clickable to open refresh settings
-                                if let selectedProfile = awsManager.selectedProfile,
-                                   let cacheEntry = awsManager.costCache[selectedProfile.name] {
-                                    let budget = awsManager.getBudget(for: selectedProfile.name)
-                                    let nextUpdateTime = cacheEntry.fetchDate.addingTimeInterval(TimeInterval(budget.refreshIntervalMinutes * 60))
-                                    
-                                    Button(action: {
-                                        showRefreshSettingsForApp(awsManager: awsManager)
-                                    }) {
-                                        VStack(alignment: .trailing, spacing: 2) {
-                                            Text("Updated \(cacheEntry.fetchDate, formatter: timeOnlyFormatter)")
-                                                .font(.system(size: 9))
-                                                .foregroundColor(.secondary)
-                                            Text("Next Update \(nextUpdateTime, formatter: timeOnlyFormatter)")
-                                                .font(.system(size: 9, weight: .bold))
-                                                .foregroundColor(.blue)
-                                            
-                                            // Team cache sync status
-                                            // TODO: Check if team cache is enabled and show last sync
-                                            let teamCacheEnabled = false // This should be loaded from profile settings
-                                            if teamCacheEnabled {
-                                                HStack(spacing: 3) {
-                                                    Circle()
-                                                        .fill(Color.blue)
-                                                        .frame(width: 4, height: 4)
-                                                    Text("Team synced")
-                                                        .font(.system(size: 8))
-                                                        .foregroundColor(.blue)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            HStack(alignment: .top) {
-                                Text(awsManager.formatCurrency(cost.amount))
-                                    .font(.system(size: 24, weight: .medium))
-                                    .foregroundColor(budgetColor(for: cost))
-                                    .textSelection(.enabled)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    // Percentage comparison to last month (same day)
-                                    if let lastMonthMTD = awsManager.lastMonthMTDData[cost.profileName],
-                                       lastMonthMTD.amount > 0 {
-                                        let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
-                                        let lastAmount = NSDecimalNumber(decimal: lastMonthMTD.amount).doubleValue
-                                        let percentChange = ((currentAmount - lastAmount) / lastAmount) * 100
-                                        let isPositive = percentChange > 0
-                                        let textColor = isPositive ? Color.red : Color.green
-                                        let iconName = isPositive ? "arrow.up" : "arrow.down"
+    @EnvironmentObject var appearance: AppearanceManager
 
-                                        HStack(spacing: 2) {
-                                            Image(systemName: iconName)
-                                                .foregroundColor(textColor)
-                                                .font(.system(size: 10))
-                                            Text(String(format: "%+.1f%% vs last month", percentChange))
-                                                .font(.system(size: 10))
-                                                .foregroundColor(textColor)
-                                        }
-                                    }
-                                }
-                                
-                                Spacer()
-                            }
-                            
-                            // Month-end projection
-                            let calendar = Calendar.current
-                            let now = Date()
-                            let daysInMonth = calendar.range(of: .day, in: .month, for: now)?.count ?? 30
-                            let dayOfMonth = calendar.component(.day, from: now)
-                            let dailyAverage = NSDecimalNumber(decimal: cost.amount).doubleValue / Double(dayOfMonth)
-                            let projection = dailyAverage * Double(daysInMonth)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Projected Month-End")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                HStack {
-                                    Text(awsManager.formatCurrency(Decimal(projection)))
-                                        .font(.system(size: 14, weight: .medium))
-                                        .textSelection(.enabled)
-                                    Text("(at current rate)")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            // Last month comparison
-                            if let lastMonthCost = awsManager.lastMonthData[cost.profileName] {
-                                HStack {
-                                    Text("Last Month Total:")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.secondary)
-                                    Text(awsManager.formatCurrency(lastMonthCost.amount))
-                                        .font(.system(size: 10, weight: .medium))
-                                        .textSelection(.enabled)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        // Service breakdown with REAL histograms
-                        if let cacheEntry = awsManager.costCache[cost.profileName],
-                           !cacheEntry.serviceCosts.isEmpty {
-                            let services = cacheEntry.serviceCosts
-                            let estimatedHeight = CGFloat(services.count) * 36.0
-                            let maxServiceAreaHeight: CGFloat = 260
-                            let measuredHeight = serviceContentHeight > 0 ? serviceContentHeight : estimatedHeight
-                            let serviceAreaHeight = servicesExpanded ? min(measuredHeight, maxServiceAreaHeight) : 0
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("Services")
-                                        .font(.system(size: 12, weight: .semibold))
-                                    Spacer()
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            servicesExpanded.toggle()
-                                        }
-                                    }) {
-                                        HStack(spacing: 3) {
-                                            Text(servicesExpanded ? "Hide" : "Show")
-                                                .font(.system(size: 10, weight: .medium))
-                                            Image(systemName: servicesExpanded ? "chevron.up" : "chevron.down")
-                                                .font(.system(size: 10, weight: .semibold))
-                                        }
-                                        .foregroundColor(.blue)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                                .padding(.horizontal)
-                                
-                                if servicesExpanded {
-                                    ScrollView {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            ForEach(services, id: \.serviceName) { service in
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    HStack {
-                                                        Text(service.serviceName)
-                                                            .font(.system(size: 11))
-                                                            .textSelection(.enabled)
-                                                        Spacer()
-                                                        Text(awsManager.formatCurrency(service.amount))
-                                                            .font(.system(size: 11, weight: .medium))
-                                                            .textSelection(.enabled)
-                                                    }
-                                                    
-                                                    if let dailyServiceCosts = awsManager.dailyServiceCostsByProfile[cost.profileName],
-                                                       !dailyServiceCosts.isEmpty {
-                                                        RealHistogramView(
-                                                            dailyServiceCosts: dailyServiceCosts,
-                                                            serviceName: service.serviceName,
-                                                            selectedDayDetail: $selectedDayDetail
-                                                        )
-                                                        .environmentObject(awsManager)
-                                                    }
-                                                }
-                                                .padding(.horizontal)
-                                                .padding(.vertical, 4)
-                                                .background(Color.gray.opacity(0.05))
-                                                .cornerRadius(4)
-                                            }
-                                        }
-                                        .background(
-                                            GeometryReader { proxy in
-                                                Color.clear
-                                                    .preference(key: ServiceListHeightPreferenceKey.self, value: proxy.size.height)
-                                            }
-                                        )
-                                    }
-                                    .frame(maxHeight: serviceAreaHeight)
-                                    .padding(.horizontal)
-                                    .transition(.move(edge: .top).combined(with: .opacity))
-                                    .onPreferenceChange(ServiceListHeightPreferenceKey.self) { newValue in
-                                        serviceContentHeight = newValue
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Text("No cost data available")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                            .padding()
-                    }
-                }
-            }
-            
-            // Team Cache Status (if enabled)
-            if let profile = awsManager.selectedProfile,
-               let controller = awsManager.teamCacheController {
-                let settings = awsManager.getTeamCacheSettings(for: profile.name)
-                if settings.teamCacheEnabled {
-                    Divider()
-                    
-                    TeamCacheStatusView(
-                        teamCacheController: controller,
-                        profileName: profile.name
-                    )
-                    .padding(.horizontal)
-                    .padding(.vertical, 4)
-                }
-            }
-            
-            Divider()
-            
-            // Bottom buttons - arranged in two rows to fit better
-            VStack(spacing: 8) {
-                // Top row: Refresh and Settings
-                HStack {
-                    // Regular refresh button
-                    Button(action: {
-                        Task {
-                            await awsManager.fetchCostForSelectedProfile(force: true)
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 11))
-                                .foregroundColor(refreshButtonHovered ? .blue : .primary)
-                            Text("Refresh")
-                                .foregroundColor(refreshButtonHovered ? .blue : .primary)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(refreshButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { isHovered in
-                        refreshButtonHovered = isHovered
-                        if isHovered {
-                            NSCursor.pointingHand.set()
-                        } else {
-                            NSCursor.arrow.set()
-                        }
-                    }
-                    
-                    // Team cache force refresh (when enabled)
-                    if let profile = awsManager.selectedProfile {
-                        // TODO: Check if team cache is enabled for this profile
-                        let teamCacheEnabled = false // This should be loaded from profile settings
-                        
-                        if teamCacheEnabled {
-                            Button(action: {
-                                Task {
-                                    // TODO: Implement team cache force refresh
-                                    await awsManager.fetchCostForSelectedProfile(force: true)
-                                    awsManager.log(.info, category: "TeamCache", "Team cache force refresh initiated from menu")
-                                }
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "externaldrive.connected.to.line.below")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.blue)
-                                    Text("Team")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .help("Force refresh team cache")
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        showSettingsWindowForApp(awsManager: awsManager)
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "gear")
-                                .font(.system(size: 11))
-                                .foregroundColor(settingsButtonHovered ? .blue : .primary)
-                            Text("Settings")
-                                .foregroundColor(settingsButtonHovered ? .blue : .primary)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(settingsButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { isHovered in
-                        settingsButtonHovered = isHovered
-                        if isHovered {
-                            NSCursor.pointingHand.set()
-                        } else {
-                            NSCursor.arrow.set()
-                        }
-                    }
-                }
-                // Bottom row: Calendar and AWS Console
-                HStack {
-                    Button(action: {
-                        CalendarWindowController.showCalendarWindow(awsManager: awsManager)
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 11))
-                                .foregroundColor(calendarButtonHovered ? .blue : .primary)
-                            Text("Calendar")
-                                .foregroundColor(calendarButtonHovered ? .blue : .primary)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(calendarButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { isHovered in
-                        calendarButtonHovered = isHovered
-                        if isHovered {
-                            NSCursor.pointingHand.set()
-                        } else {
-                            NSCursor.arrow.set()
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        if let profile = awsManager.selectedProfile {
-                            let region = profile.region ?? "us-east-1"
-                            let urlString = "https://\(region).console.aws.amazon.com/billing/home"
-                            if let url = URL(string: urlString) {
-                                NSWorkspace.shared.open(url)
-                            }
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "globe")
-                                .font(.system(size: 11))
-                                .foregroundColor(consoleButtonHovered ? .blue : .primary)
-                            Text("AWS Console")
-                                .foregroundColor(consoleButtonHovered ? .blue : .primary)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(consoleButtonHovered ? Color.blue.opacity(0.1) : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { isHovered in
-                        consoleButtonHovered = isHovered
-                        if isHovered {
-                            NSCursor.pointingHand.set()
-                        } else {
-                            NSCursor.arrow.set()
-                        }
-                    }
-                }
-                
-                // Debug controls only in DEBUG builds
-                #if DEBUG
-                    Divider()
-                        .padding(.vertical, 4)
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Debug Timer Test")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        
-                        Text(awsManager.debugTimerMessage)
-                            .font(.system(size: 10))
-                            .foregroundColor(.orange)
-                        
-                        if let lastUpdate = awsManager.debugLastUpdate {
-                            Text("Last: \(lastUpdate, style: .relative)")
-                                .font(.system(size: 9))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        HStack(spacing: 8) {
-                            Button(action: {
-                                awsManager.startDebugTimer()
-                            }) {
-                                Text("Start Debug")
-                                    .font(.system(size: 10))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.green.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(awsManager.debugTimer != nil)
-                            
-                            Button(action: {
-                                awsManager.stopDebugTimer()
-                            }) {
-                                Text("Stop Debug")
-                                    .font(.system(size: 10))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.red.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(awsManager.debugTimer == nil)
-                        }
-                        
-                        HStack(spacing: 8) {
-                            Button(action: {
-                                awsManager.startAutomaticRefresh()
-                            }) {
-                                Text("Start Auto")
-                                    .font(.system(size: 10))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.blue.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(awsManager.isAutoRefreshActive)
-                            
-                            Button(action: {
-                                awsManager.stopAutomaticRefresh()
-                            }) {
-                                Text("Stop Auto")
-                                    .font(.system(size: 10))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.red.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(!awsManager.isAutoRefreshActive)
-                        }
-                        
-                        Text("Debug: \(awsManager.debugTimer != nil ? "✓" : "✗") | Auto: \(awsManager.isAutoRefreshActive ? "✓" : "✗")")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
-                    }
-                #endif
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-        }
-        .frame(width: 360, height: {
-            #if DEBUG
-            let baseHeight: CGFloat = 600
-            #else
-            let baseHeight: CGFloat = 500
-            #endif
-            let serviceCount = awsManager.selectedProfile.flatMap { profile in
-                awsManager.costCache[profile.name]?.serviceCosts.count
-            } ?? 0
-            let estimatedHeight = CGFloat(serviceCount) * 36.0
-            let measuredHeight = serviceContentHeight > 0 ? serviceContentHeight : estimatedHeight
-            let maxAdditionalHeight: CGFloat = 260
-            let additionalHeight = servicesExpanded ? min(measuredHeight, maxAdditionalHeight) : 0
-            return baseHeight + additionalHeight
-        }())
-        .sheet(item: $selectedDayDetail) { detail in
-            DayDetailView(
-                date: detail.date,
-                dailyCost: detail.dailyCost,
-                services: detail.services,
-                currencyFormatter: detail.currencyFormatter,
-                apiCalls: detail.apiCalls,
-                highlightedService: detail.highlightedService,
-                onNavigateToDate: { newDate in
-                    handleDayDetailNavigation(currentDetail: detail, targetDate: newDate)
+    var body: some View {
+        VStack(spacing: 0) {
+            ProfileRow(teamCacheOn: teamCacheEnabled)
+
+            LedgerHairlineDivider()
+
+            HeroSplit(
+                mtd: mtd,
+                sparkline: awsManager.dailyTotalsForSelectedProfile ?? [],
+                rows: heroRows
+            )
+
+            LedgerHairlineDivider()
+
+            ServiceList(
+                services: serviceCosts,
+                total: mtd,
+                onSelect: { service in
+                    CalendarWindowController.showCalendarWindow(awsManager: awsManager, highlightedService: service)
                 }
             )
+
+            LedgerHairlineDivider()
+
+            FooterActions(
+                onRefresh: { Task { await awsManager.fetchCostForSelectedProfile(force: true) } },
+                onCalendar: { CalendarWindowController.showCalendarWindow(awsManager: awsManager) },
+                onConsole: { openConsole() },
+                onOverflow: { openOverflowMenu() }
+            )
         }
-        .onAppear {
-            // SUPER AGGRESSIVE DEBUG CHECK - Force refresh if > 30 minutes old
-            if let profile = awsManager.selectedProfile {
-                if let cachedData = awsManager.costCache[profile.name] {
-                    let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-                    let cacheAgeMinutes = Int(cacheAge/60)
-                    
-                    print("DEBUG: PopoverContentView.onAppear - Cache is \(cacheAgeMinutes) minutes old")
-                    awsManager.log(.warning, category: "UI", "DEBUG: Popover opened - Cache age: \(cacheAgeMinutes) min")
-                    
-                    // FORCE REFRESH if older than 30 minutes
-                    if cacheAgeMinutes > 30 && !awsManager.isLoading {
-                        print("DEBUG: FORCING REFRESH - Cache is \(cacheAgeMinutes) minutes old (> 30 min threshold)")
-                        awsManager.log(.error, category: "UI", "FORCING REFRESH - Cache is \(cacheAgeMinutes) min old")
-                        
-                        // Single async call to prevent race conditions
-                        Task { @MainActor in
-                            await awsManager.fetchCostForSelectedProfile(force: true)
-                        }
-                    }
-                } else if !awsManager.isLoading {
-                    // No cache data at all, fetch immediately
-                    print("DEBUG: NO CACHE - Fetching immediately")
-                    awsManager.log(.error, category: "UI", "NO CACHE - Fetching immediately")
-                    Task { @MainActor in
-                        await awsManager.fetchCostForSelectedProfile(force: true)
-                    }
-                }
-            } else {
-                print("DEBUG: No selected profile in onAppear")
-            }
+        .frame(width: 360, height: 440)
+        .ledgerSurface(.window)
+        .environment(\.ledgerAppearance, appearance.appearance)
+    }
+
+    // MARK: - Derived
+
+    private var mtd: Double {
+        guard let c = awsManager.costData.first else { return 0 }
+        return NSDecimalNumber(decimal: c.amount).doubleValue
+    }
+
+    private var serviceCosts: [ServiceCost] {
+        guard let profile = awsManager.selectedProfile,
+              let entry = awsManager.costCache[profile.name] else { return [] }
+        return entry.serviceCosts.sorted { $0.amount > $1.amount }
+    }
+
+    private var teamCacheEnabled: Bool {
+        #if !OPENSOURCE
+        guard let p = awsManager.selectedProfile else { return false }
+        return awsManager.getTeamCacheSettings(for: p.name).teamCacheEnabled
+        #else
+        return false
+        #endif
+    }
+
+    private var heroRows: [HeroSplit.KV] {
+        var out: [HeroSplit.KV] = []
+        if let delta = awsManager.deltaFractionVsLastMonth {
+            let sign = delta >= 0 ? "▲" : "▼"
+            out.append(.init(
+                label: "Δ vs last",
+                value: "\(sign) \(String(format: "%.1f", abs(delta * 100)))%",
+                color: delta >= 0 ? .over : .under
+            ))
         }
-        .onDisappear {
-            // Dismiss any open day detail sheet when popover disappears
-            selectedDayDetail = nil
+        if let f = awsManager.projectedMonthlyTotal {
+            let nf = NumberFormatter(); nf.numberStyle = .currency; nf.currencyCode = "USD"
+            nf.maximumFractionDigits = 0
+            let str = nf.string(from: NSDecimalNumber(decimal: f)) ?? ""
+            out.append(.init(label: "Forecast", value: str, color: .accent))
         }
-        .onReceive(timer) { _ in
-            // Update current time every minute to refresh "minutes ago" display
-            currentTime = Date()
+        if let p = awsManager.selectedProfile, let last = awsManager.lastMonthData[p.name] {
+            let nf = NumberFormatter(); nf.numberStyle = .currency; nf.currencyCode = "USD"
+            nf.maximumFractionDigits = 0
+            out.append(.init(label: "Last mo", value: nf.string(from: NSDecimalNumber(decimal: last.amount)) ?? "", color: .ink))
         }
-        .onChange(of: awsManager.selectedProfile?.name) { _ in
-            servicesExpanded = false
-            serviceContentHeight = 0
+        if let daily = awsManager.dailyTotalsForSelectedProfile, !daily.isEmpty {
+            let burn = daily.reduce(0, +) / Double(daily.count)
+            out.append(.init(label: "Burn / day", value: String(format: "$%.2f", burn), color: .ink))
+        }
+        if let f = awsManager.budgetFraction {
+            out.append(.init(
+                label: "Budget",
+                value: String(format: "%.0f%%", f * 100),
+                color: f > 1.0 ? .over : .ink
+            ))
+        }
+        if let p = awsManager.selectedProfile, let entry = awsManager.costCache[p.name] {
+            let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
+            out.append(.init(label: "Updated", value: fmt.string(from: entry.fetchDate), color: .ink))
+        }
+        return out
+    }
+
+    private func openConsole() {
+        guard let p = awsManager.selectedProfile else { return }
+        let region = p.region ?? "us-east-1"
+        if let url = URL(string: "https://\(region).console.aws.amazon.com/billing/home") {
+            NSWorkspace.shared.open(url)
         }
     }
-    
-    private var timeOnlyFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter
-    }
-    
-    private func handleDayDetailNavigation(currentDetail: DayDetailData, targetDate: Date) {
-        guard let profileName = awsManager.selectedProfile?.name else { return }
-        
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let normalizedTarget = calendar.startOfDay(for: targetDate)
-        
-        // Do not allow navigation into the future
-        guard normalizedTarget <= today else { return }
-        
-        // Prevent navigating past earliest available day
-        if let earliest = earliestAvailableDate(for: profileName),
-           normalizedTarget < calendar.startOfDay(for: earliest) {
-            return
+
+    private func openOverflowMenu() {
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Settings", action: #selector(NSApp.sendAction(_:to:from:)), keyEquivalent: ",")
+        menu.addItem(withTitle: "Help",     action: nil, keyEquivalent: "?")
+        menu.addItem(withTitle: "Export",   action: nil, keyEquivalent: "e")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Quit",     action: #selector(NSApp.terminate(_:)), keyEquivalent: "q")
+        if let event = NSApp.currentEvent {
+            NSMenu.popUpContextMenu(menu, with: event, for: NSApp.keyWindow?.contentView ?? NSView())
         }
-        
-        guard let updatedDetail = buildDayDetail(for: normalizedTarget, highlightedService: currentDetail.highlightedService) else {
-            return
-        }
-        
-        selectedDayDetail = updatedDetail
-    }
-    
-    private func buildDayDetail(for date: Date, highlightedService: String) -> DayDetailData? {
-        guard let profileName = awsManager.selectedProfile?.name else { return nil }
-        let calendar = Calendar.current
-        
-        let dailyCosts = awsManager.dailyCostsByProfile[profileName] ?? []
-        let dailyServices = awsManager.dailyServiceCostsByProfile[profileName] ?? []
-        
-        let normalizedDate = calendar.startOfDay(for: date)
-        let dailyCost = dailyCosts.first { calendar.isDate($0.date, inSameDayAs: normalizedDate) }
-        
-        let serviceBreakdown = dailyServices
-            .filter { calendar.isDate($0.date, inSameDayAs: normalizedDate) }
-            .reduce(into: [String: Decimal]()) { result, entry in
-                result[entry.serviceName, default: 0] += entry.amount
-            }
-            .map { ServiceCost(serviceName: $0.key, amount: $0.value, currency: "USD") }
-            .sorted()
-        
-        if dailyCost == nil && serviceBreakdown.isEmpty {
-            return nil
-        }
-        
-        let currency = dailyCost?.currency ?? serviceBreakdown.first?.currency ?? "USD"
-        let totalAmount = serviceBreakdown.reduce(Decimal(0)) { $0 + $1.amount }
-        let resolvedDailyCost = dailyCost ?? DailyCost(date: normalizedDate, amount: totalAmount, currency: currency)
-        
-        let detail = DayDetailData(
-            date: normalizedDate,
-            dailyCost: resolvedDailyCost,
-            services: serviceBreakdown,
-            currencyFormatter: dayDetailCurrencyFormatter(),
-            apiCalls: apiCalls(for: normalizedDate, profileName: profileName),
-            highlightedService: highlightedService
-        )
-        return detail
-    }
-    
-    private func dayDetailCurrencyFormatter() -> NumberFormatter {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.maximumFractionDigits = 2
-        formatter.minimumFractionDigits = 2
-        return formatter
-    }
-    
-    private func apiCalls(for date: Date, profileName: String) -> [APIRequestRecord] {
-        let calendar = Calendar.current
-        return awsManager.apiRequestRecords
-            .filter { record in
-                record.profileName == profileName &&
-                calendar.isDate(record.timestamp, inSameDayAs: date)
-            }
-            .sorted { $0.timestamp > $1.timestamp }
-    }
-    
-    private func earliestAvailableDate(for profileName: String) -> Date? {
-        let calendar = Calendar.current
-        let dailyDates = (awsManager.dailyCostsByProfile[profileName] ?? [])
-            .map { calendar.startOfDay(for: $0.date) }
-        let serviceDates = (awsManager.dailyServiceCostsByProfile[profileName] ?? [])
-            .map { calendar.startOfDay(for: $0.date) }
-        return (dailyDates + serviceDates).min()
-    }
-    
-    private func budgetColor(for cost: CostData) -> Color {
-        // Prefer month-to-date comparison with last month if available
-        if let lastMonthMTD = awsManager.lastMonthMTDData[cost.profileName],
-           lastMonthMTD.amount > 0 {
-            let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let lastAmount = NSDecimalNumber(decimal: lastMonthMTD.amount).doubleValue
-            
-            if currentAmount > lastAmount {
-                return .red
-            } else if currentAmount < lastAmount {
-                return .green
-            }
-        } else if let lastMonthCost = awsManager.lastMonthData[cost.profileName],
-                  lastMonthCost.amount > 0 {
-            // Fall back to full month comparison when MTD data is unavailable
-            let currentAmount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let lastAmount = NSDecimalNumber(decimal: lastMonthCost.amount).doubleValue
-            if currentAmount > lastAmount {
-                return .red
-            } else if currentAmount < lastAmount {
-                return .green
-            }
-        }
-        
-        // Otherwise use budget-based coloring
-        let budget = awsManager.getBudget(for: cost.profileName)
-        if let monthlyBudget = budget.monthlyBudget {
-            let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
-            let percentUsed = (amount / NSDecimalNumber(decimal: monthlyBudget).doubleValue) * 100
-            if percentUsed >= 100 {
-                return .red
-            } else if percentUsed >= 80 {
-                return .orange
-            } else {
-                return .green
-            }
-        }
-        return .primary
     }
 }
 
