@@ -3,8 +3,6 @@ import SwiftUI
 struct AppearanceSettingsTab: View {
     @ObservedObject private var appearance = AppearanceManager.shared
 
-    init(themeManager: ThemeManager = .shared) {}
-
     var body: some View {
         AppearanceSettingsContent()
             .environmentObject(appearance)

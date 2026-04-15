@@ -9,7 +9,6 @@ import Foundation
 import SwiftUI
 import AppKit
 import Combine
-import QuartzCore
 
 // MARK: - Custom Status Bar Implementation with Popover
 
@@ -18,21 +17,14 @@ class StatusBarController: NSObject {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var awsManager: AWSManager
-    private var themeManager: ThemeManager
     private var eventMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
-    private var pillBackgroundLayer: CALayer?
     private let presenter: MenuBarPresenter
     let appearance: AppearanceManager
     private var options = MenuBarOptions()
-    
-    convenience init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared) {
-        self.init(awsManager: awsManager, themeManager: themeManager, appearance: AppearanceManager.shared)
-    }
 
-    init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared, appearance: AppearanceManager) {
+    init(awsManager: AWSManager, appearance: AppearanceManager) {
         self.awsManager = awsManager
-        self.themeManager = themeManager
         self.appearance = appearance
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem = statusItem
@@ -48,7 +40,8 @@ class StatusBarController: NSObject {
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(awsManager)
-                .themed(themeManager)
+                .environmentObject(appearance)
+                .environment(\.ledgerAppearance, appearance.appearance)
         )
         
         updateStatusItemView()
@@ -79,13 +72,6 @@ class StatusBarController: NSObject {
             .store(in: &cancellables)
         
         awsManager.$selectedProfile
-            .sink { [weak self] _ in
-                self?.updateStatusItemView()
-            }
-            .store(in: &cancellables)
-        
-        // Subscribe to theme changes
-        themeManager.$currentTheme
             .sink { [weak self] _ in
                 self?.updateStatusItemView()
             }
@@ -138,54 +124,6 @@ class StatusBarController: NSObject {
     func updateStatusItemView(flash: Bool = false) {
         renderStatusItem()
     }
-
-    private func updatePillBackground(for button: NSStatusBarButton) {
-        let theme = themeManager.currentTheme
-        let showPill = UserDefaults.standard.bool(forKey: "ShowMenuBarPillBackground")
-                       || theme.menuBarBackgroundStyle == .pill
-
-        // Remove existing pill layer
-        pillBackgroundLayer?.removeFromSuperlayer()
-        pillBackgroundLayer = nil
-
-        guard showPill else { return }
-
-        // Ensure button is layer-backed
-        button.wantsLayer = true
-        guard let buttonLayer = button.layer else { return }
-
-        // Create pill background layer
-        let pillLayer = CALayer()
-
-        // Determine background color based on menu bar appearance
-        let isDarkMenu = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let bgColor: NSColor
-        if isDarkMenu {
-            bgColor = NSColor.white.withAlphaComponent(0.12)
-        } else {
-            bgColor = NSColor.black.withAlphaComponent(0.06)
-        }
-        pillLayer.backgroundColor = bgColor.cgColor
-        pillLayer.cornerRadius = theme.menuBarPillCornerRadius
-
-        // Calculate frame with padding
-        let horizontalPadding: CGFloat = 6
-        let verticalPadding: CGFloat = 2
-        let buttonBounds = button.bounds
-
-        pillLayer.frame = CGRect(
-            x: -horizontalPadding,
-            y: verticalPadding,
-            width: buttonBounds.width + (horizontalPadding * 2),
-            height: buttonBounds.height - (verticalPadding * 2)
-        )
-
-        // Insert below text
-        buttonLayer.insertSublayer(pillLayer, at: 0)
-        pillBackgroundLayer = pillLayer
-    }
-    
-    // Legacy color method replaced by theme-aware ThemedMenuBarDisplay.getStatus()
 
     private func renderStatusItem() {
         let a = appearance.appearance

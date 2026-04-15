@@ -125,7 +125,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.statusBarController = StatusBarController(
                 awsManager: AWSManager.shared,
-                themeManager: ThemeManager.shared,
                 appearance: AppearanceManager.shared
             )
 

@@ -15,7 +15,7 @@ struct MenuButton: View {
     @Binding var hoveredItem: String?
     @Binding var pressedItem: String?
     let itemId: String
-    @Environment(\.theme) var theme
+    @Environment(\.ledgerAppearance) private var a
     
     var body: some View {
         Button(action: {
@@ -34,21 +34,23 @@ struct MenuButton: View {
         }) {
             HStack {
                 Label(label, systemImage: systemImage)
-                    .themeFont(theme, size: .regular, weight: .primary)
-                    .foregroundColor(hoveredItem == itemId ? theme.accentColor : theme.textColor)
+                    .ledgerBody()
+                    .foregroundColor(hoveredItem == itemId ? LedgerTokens.Color.accent(a) : LedgerTokens.Color.inkPrimary(a))
                 Spacer()
                 if let shortcut = shortcut {
                     Text(shortcut)
-                        .themeFont(theme, size: .small, weight: .secondary)
-                        .foregroundColor(theme.secondaryColor)
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 }
             }
-            .themePadding(theme, .horizontal, 8)
-            .themePadding(theme, .vertical, 4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(pressedItem == itemId ? theme.accentColor.opacity(0.2) :
-                          (hoveredItem == itemId ? theme.accentColor.opacity(0.1) : Color.clear))
+                    .fill(
+                        pressedItem == itemId ? LedgerTokens.Color.accent(a).opacity(0.2) :
+                        (hoveredItem == itemId ? LedgerTokens.Color.accent(a).opacity(0.1) : Color.clear)
+                    )
                     .animation(.easeInOut(duration: 0.1), value: hoveredItem)
                     .animation(.easeInOut(duration: 0.1), value: pressedItem)
             )

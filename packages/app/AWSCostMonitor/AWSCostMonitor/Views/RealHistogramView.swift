@@ -13,7 +13,7 @@ struct RealHistogramView: View {
     let dailyServiceCosts: [DailyServiceCost]
     let serviceName: String
     @EnvironmentObject var awsManager: AWSManager
-    @ObservedObject var themeManager = ThemeManager.shared
+    @Environment(\.ledgerAppearance) private var a
     @Binding var selectedDayDetail: DayDetailData?
     @State private var hoveredIndex: Int? = nil
     @State private var pressedIndex: Int? = nil
@@ -56,7 +56,7 @@ struct RealHistogramView: View {
                                 .overlay(
                                     Rectangle()
                                         .stroke(
-                                            hoveredIndex == index ? themeManager.currentTheme.textColor.opacity(0.6) : Color.clear,
+                                            hoveredIndex == index ? LedgerTokens.Color.inkPrimary(a).opacity(0.6) : Color.clear,
                                             lineWidth: hoveredIndex == index ? 1 : 0
                                         )
                                         .cornerRadius(1)
@@ -72,13 +72,13 @@ struct RealHistogramView: View {
                         .background(
                             Rectangle()
                                 .fill(
-                                    pressedIndex == index ? themeManager.currentTheme.accentColor.opacity(0.3) :
-                                    (hoveredIndex == index ? themeManager.currentTheme.accentColor.opacity(0.15) : Color.clear)
+                                    pressedIndex == index ? LedgerTokens.Color.accent(a).opacity(0.3) :
+                                    (hoveredIndex == index ? LedgerTokens.Color.accent(a).opacity(0.15) : Color.clear)
                                 )
                                 .cornerRadius(2)
                         )
                         .scaleEffect(pressedIndex == index ? 1.02 : (hoveredIndex == index ? 1.01 : 1.0))
-                        .shadow(color: pressedIndex == index ? themeManager.currentTheme.accentColor.opacity(0.4) : Color.clear, radius: pressedIndex == index ? 2 : 0)
+                        .shadow(color: pressedIndex == index ? LedgerTokens.Color.accent(a).opacity(0.4) : Color.clear, radius: pressedIndex == index ? 2 : 0)
                         .animation(.easeInOut(duration: 0.1), value: pressedIndex)
                         .animation(.easeInOut(duration: 0.15), value: hoveredIndex)
                         .contentShape(Rectangle())
@@ -147,11 +147,11 @@ struct RealHistogramView: View {
                     let xPosition = CGFloat(hoveredIndex) * (barWidth + 1) + barWidth / 2 - 30
                     
                     Text("\(day.date, formatter: dateFormatter): \(awsManager.formatCurrency(day.amount))")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.textColor)
-                        .themePadding(themeManager.currentTheme, .horizontal, 6)
-                        .themePadding(themeManager.currentTheme, .vertical, 3)
-                        .background(themeManager.currentTheme.secondaryColor.opacity(0.1))
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(LedgerTokens.Color.inkSecondary(a).opacity(0.1))
                         .cornerRadius(4)
                         .shadow(radius: 2)
                         .offset(x: xPosition, y: -8)  // Position above the hovered bar
@@ -183,7 +183,7 @@ struct RealHistogramView: View {
     
     private func barColor(amount: Double, lastMonthAvg: Double, isPressed: Bool = false, isHovered: Bool = false) -> Color {
         if amount == 0 {
-            return themeManager.currentTheme.secondaryColor.opacity(isPressed ? 0.8 : (isHovered ? 0.4 : 0.2))
+            return LedgerTokens.Color.inkSecondary(a).opacity(isPressed ? 0.8 : (isHovered ? 0.4 : 0.2))
         }
         
         var baseColor: Color
@@ -193,17 +193,17 @@ struct RealHistogramView: View {
             let percentDiff = ((amount - lastMonthAvg) / lastMonthAvg) * 100
             if percentDiff > 10 {
                 // More than 10% above last month's average - use error color
-                baseColor = themeManager.currentTheme.errorColor
+                baseColor = LedgerTokens.Color.signalOver(a)
             } else if percentDiff < -10 {
                 // More than 10% below last month's average - use success color
-                baseColor = themeManager.currentTheme.successColor
+                baseColor = LedgerTokens.Color.signalUnder(a)
             } else {
                 // Within normal range - use accent color
-                baseColor = themeManager.currentTheme.accentColor
+                baseColor = LedgerTokens.Color.accent(a)
             }
         } else {
             // Within normal range - use accent color
-            baseColor = themeManager.currentTheme.accentColor
+            baseColor = LedgerTokens.Color.accent(a)
         }
         
         if isPressed {

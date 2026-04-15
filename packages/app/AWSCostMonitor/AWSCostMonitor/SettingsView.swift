@@ -165,7 +165,7 @@ struct SettingsView: View {
                 )
             )
         case "Appearance":
-            AppearanceSettingsTab(themeManager: ThemeManager.shared)
+            AppearanceSettingsTab()
         case "Accounts":
             AWSSettingsTab()
         case "Team Cache":
