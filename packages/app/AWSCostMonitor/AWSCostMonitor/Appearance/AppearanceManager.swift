@@ -9,7 +9,7 @@ final class AppearanceManager: ObservableObject {
     @Published private(set) var appearance: LedgerAppearance
 
     private let defaults: UserDefaults
-    private let systemIsDark: () -> Bool
+    private let systemIsDark: @MainActor () -> Bool
 
     private enum Keys {
         static let scheme   = "ledger.schemePreference"
@@ -20,8 +20,8 @@ final class AppearanceManager: ObservableObject {
 
     private(set) var schemePreference: LedgerSchemePreference
 
-    init(defaults: UserDefaults = .standard, systemIsDark: @escaping () -> Bool = {
-        NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    init(defaults: UserDefaults = .standard, systemIsDark: @escaping @MainActor () -> Bool = {
+        NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
     }) {
         self.defaults = defaults
         self.systemIsDark = systemIsDark
@@ -67,7 +67,10 @@ final class AppearanceManager: ObservableObject {
         appearance.colorScheme = Self.resolve(scheme: .system, systemIsDark: systemIsDark)
     }
 
-    private static func resolve(scheme: LedgerSchemePreference, systemIsDark: () -> Bool) -> ColorScheme {
+    private static func resolve(
+        scheme: LedgerSchemePreference,
+        systemIsDark: @MainActor () -> Bool
+    ) -> ColorScheme {
         switch scheme {
         case .system: return systemIsDark() ? .dark : .light
         case .light:  return .light

@@ -9,6 +9,7 @@ import Foundation
 import AppKit
 import SwiftUI
 import OSLog
+import Combine
 
 class WindowCloseDelegate: NSObject, NSWindowDelegate {
     private let onClose: () -> Void
@@ -73,6 +74,7 @@ func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "Gen
         
         let settingsView = SettingsView(initialSelectedCategory: selectedTab)
             .environmentObject(awsManager)
+            .environmentObject(AppearanceManager.shared)
         
         let controller = NSHostingController(rootView: settingsView)
         
@@ -108,6 +110,7 @@ func showRefreshSettingsForApp(awsManager: AWSManager) {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
+    private var cancellables = Set<AnyCancellable>()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Close any windows that may have opened during launch
@@ -116,9 +119,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.close()
         }
 
+        AppearanceManager.shared.runLegacyMigrationIfNeeded()
+
         // Initialize the status bar controller with a small delay to ensure proper setup
         DispatchQueue.main.async { [weak self] in
-            self?.statusBarController = StatusBarController(awsManager: AWSManager.shared, themeManager: ThemeManager.shared)
+            self?.statusBarController = StatusBarController(
+                awsManager: AWSManager.shared,
+                themeManager: ThemeManager.shared,
+                appearance: AppearanceManager.shared
+            )
 
             // Check if we need to refresh cost data on launch after UI is ready
             // This ensures that when the app launches, it checks if an update is due
@@ -127,5 +136,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Hide the dock icon
         NSApp.setActivationPolicy(.accessory)
+
+        NSApp.publisher(for: \.effectiveAppearance)
+            .receive(on: DispatchQueue.main)
+            .sink { _ in
+                AppearanceManager.shared.systemAppearanceDidChange()
+            }
+            .store(in: &cancellables)
     }
 }

@@ -2827,7 +2827,7 @@ struct GeneralSettingsTab: View {
             do {
                 let service = SMAppService.mainApp
                 if enabled {
-                    try await service.register()
+                    try service.register()
                 } else {
                     try await service.unregister()
                 }
