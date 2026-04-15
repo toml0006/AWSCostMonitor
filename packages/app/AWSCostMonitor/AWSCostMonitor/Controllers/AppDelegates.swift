@@ -11,6 +11,35 @@ import SwiftUI
 import OSLog
 import Combine
 
+// Store whats-new window reference
+var globalWhatsNewWindow: NSWindow?
+
+func showWhatsNewV15IfNeeded(appearance: AppearanceManager) {
+    let key = "shownWhatsNew.1.5.0"
+    guard !UserDefaults.standard.bool(forKey: key) else { return }
+    UserDefaults.standard.set(true, forKey: key)
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        let view = WhatsNewV15 {
+            globalWhatsNewWindow?.close()
+            globalWhatsNewWindow = nil
+        }
+        .environmentObject(appearance)
+        .environment(\.ledgerAppearance, appearance.appearance)
+
+        let controller = NSHostingController(rootView: view)
+        controller.sizingOptions = []
+        let window = NSWindow(contentViewController: controller)
+        window.title = "What's New"
+        window.styleMask = [.titled, .closable]
+        window.setContentSize(NSSize(width: 440, height: 340))
+        window.center()
+        globalWhatsNewWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
 class WindowCloseDelegate: NSObject, NSWindowDelegate {
     private let onClose: () -> Void
     
@@ -127,6 +156,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 awsManager: AWSManager.shared,
                 appearance: AppearanceManager.shared
             )
+            showWhatsNewV15IfNeeded(appearance: AppearanceManager.shared)
 
             // Check if we need to refresh cost data on launch after UI is ready
             // This ensures that when the app launches, it checks if an update is due
