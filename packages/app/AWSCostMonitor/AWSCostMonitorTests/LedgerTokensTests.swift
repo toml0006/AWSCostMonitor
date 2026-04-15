@@ -115,6 +115,11 @@ final class LedgerTokensTests: XCTestCase {
         XCTAssertEqual(LedgerTokens.Layout.hairlineWidth(comfort), 1)
         XCTAssertEqual(LedgerTokens.Layout.cornerRadius, 10)
     }
+
+    func testEnvironmentKeyDefault() {
+        let holder = EnvironmentValues()
+        XCTAssertEqual(holder.ledgerAppearance, LedgerAppearance.default)
+    }
 }
 
 import AppKit
