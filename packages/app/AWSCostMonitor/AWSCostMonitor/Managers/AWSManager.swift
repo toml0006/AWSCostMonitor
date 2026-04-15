@@ -4553,6 +4553,38 @@ class AWSManager: ObservableObject {
         }
     }
     #endif
+
+    // MARK: - Ledger menu bar derived values
+
+    var deltaFractionVsLastMonth: Double? {
+        guard let cost = costData.first,
+              let lastMTD = lastMonthMTDData[cost.profileName],
+              NSDecimalNumber(decimal: lastMTD.amount).doubleValue > 0 else { return nil }
+        let now = NSDecimalNumber(decimal: cost.amount).doubleValue
+        let prev = NSDecimalNumber(decimal: lastMTD.amount).doubleValue
+        return (now - prev) / prev
+    }
+
+    var budgetFraction: Double? {
+        guard let p = selectedProfile,
+              let cost = costData.first?.amount else { return nil }
+        let b = getBudget(for: p.name)
+        guard let monthlyBudget = b.monthlyBudget,
+              NSDecimalNumber(decimal: monthlyBudget).doubleValue > 0 else { return nil }
+        return NSDecimalNumber(decimal: cost).doubleValue / NSDecimalNumber(decimal: monthlyBudget).doubleValue
+    }
+
+    var dailyTotalsForSelectedProfile: [Double]? {
+        guard let p = selectedProfile,
+              let daily = dailyServiceCostsByProfile[p.name] else { return nil }
+        let grouped = Dictionary(grouping: daily, by: { $0.date })
+        let sorted = grouped.keys.sorted()
+        return sorted.map { day in
+            grouped[day]!
+                .map { NSDecimalNumber(decimal: $0.amount).doubleValue }
+                .reduce(0, +)
+        }
+    }
 }
 
 // Error enum for cost fetching

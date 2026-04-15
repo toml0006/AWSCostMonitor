@@ -13,6 +13,7 @@ import QuartzCore
 
 // MARK: - Custom Status Bar Implementation with Popover
 
+@MainActor
 class StatusBarController: NSObject {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
@@ -21,15 +22,24 @@ class StatusBarController: NSObject {
     private var eventMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
     private var pillBackgroundLayer: CALayer?
+    private let presenter: MenuBarPresenter
+    let appearance: AppearanceManager
+    private var options = MenuBarOptions()
     
-    init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared) {
+    convenience init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared) {
+        self.init(awsManager: awsManager, themeManager: themeManager, appearance: AppearanceManager())
+    }
+
+    init(awsManager: AWSManager, themeManager: ThemeManager = ThemeManager.shared, appearance: AppearanceManager) {
         self.awsManager = awsManager
         self.themeManager = themeManager
+        self.appearance = appearance
+        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        self.statusItem = statusItem
+        self.presenter = MenuBarPresenter(button: statusItem.button!)
         super.init()
         
         // Create status item
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
         // Create popover with SwiftUI content
         popover = NSPopover()
         popover.contentSize = NSSize(width: 360, height: 500)
@@ -97,6 +107,11 @@ class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
         #endif
+
+        appearance.$appearance
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.renderStatusItem() }
+            .store(in: &cancellables)
         
         // Monitor for clicks outside popover
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
@@ -113,113 +128,7 @@ class StatusBarController: NSObject {
     }
     
     func updateStatusItemView(flash: Bool = false) {
-        guard let button = statusItem.button else { return }
-        
-        // Get display settings with defaults
-        let displayFormat = UserDefaults.standard.string(forKey: "MenuBarDisplayFormat") ?? "full"
-        let showColors = UserDefaults.standard.object(forKey: "ShowMenuBarColors") as? Bool ?? true
-        let showCurrencySymbol = UserDefaults.standard.object(forKey: "ShowCurrencySymbol") as? Bool ?? true
-        let decimalPlaces = UserDefaults.standard.object(forKey: "DecimalPlaces") as? Int ?? 2
-        
-        // Force thousands separator to always be true for now
-        let useThousandsSeparator = true
-        
-        var titleString = ""
-        var costStatus: MenuBarCostStatus = .normal
-        
-        // Setup number formatter
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.usesGroupingSeparator = useThousandsSeparator
-        
-        // Determine cost status using theme-aware status calculation
-        if let cost = awsManager.costData.first {
-            let budget = awsManager.getBudget(for: cost.profileName)
-            costStatus = ThemedMenuBarDisplay.getStatus(
-                for: cost,
-                lastMonthData: awsManager.lastMonthData,
-                budget: budget
-            )
-        } else if awsManager.isLoading {
-            costStatus = .loading
-        }
-        
-        switch displayFormat {
-        case "abbreviated":
-            // No icon for abbreviated format
-            button.image = nil
-            if let cost = awsManager.costData.first {
-                let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
-                formatter.maximumFractionDigits = 0
-                let formattedAmount = formatter.string(from: NSNumber(value: amount)) ?? "0"
-                titleString = showCurrencySymbol ? "$\(formattedAmount)" : formattedAmount
-            } else if awsManager.isLoading {
-                titleString = "..."
-            } else {
-                titleString = "AW$"
-            }
-            
-        case "full":
-            // No icon for full format  
-            button.image = nil
-            if let cost = awsManager.costData.first {
-                let amount = NSDecimalNumber(decimal: cost.amount).doubleValue
-                formatter.minimumFractionDigits = decimalPlaces
-                formatter.maximumFractionDigits = decimalPlaces
-                let formattedAmount = formatter.string(from: NSNumber(value: amount)) ?? "0"
-                titleString = showCurrencySymbol ? "$\(formattedAmount)" : formattedAmount
-            } else if awsManager.isLoading {
-                titleString = "Loading..."
-            } else {
-                titleString = "AW$"
-            }
-            
-        case "iconOnly":
-            // Use theme-aware icon
-            button.image = themeManager.currentTheme.createMenuBarIcon(size: 18)
-            titleString = "" // No text when showing icon only
-        
-        default:
-            button.image = nil
-            titleString = "AW$"
-        }
-        
-        // Create themed attributed string
-        #if DEBUG
-        if flash {
-            // Flash with debug styling
-            button.attributedTitle = themeManager.createMenuBarAttributedString(
-                text: "⚡\(titleString)⚡",
-                status: costStatus,
-                isFlashing: true
-            )
-        } else if showColors {
-            button.attributedTitle = themeManager.createMenuBarAttributedString(
-                text: titleString,
-                status: costStatus
-            )
-        } else {
-            button.attributedTitle = themeManager.createMenuBarAttributedString(
-                text: titleString,
-                status: .normal
-            )
-        }
-        #else
-        if showColors {
-            button.attributedTitle = themeManager.createMenuBarAttributedString(
-                text: titleString,
-                status: costStatus
-            )
-        } else {
-            button.attributedTitle = themeManager.createMenuBarAttributedString(
-                text: titleString,
-                status: .normal
-            )
-        }
-        #endif
-
-        // Apply pill background if enabled
-        updatePillBackground(for: button)
+        renderStatusItem()
     }
 
     private func updatePillBackground(for button: NSStatusBarButton) {
@@ -269,6 +178,24 @@ class StatusBarController: NSObject {
     }
     
     // Legacy color method replaced by theme-aware ThemedMenuBarDisplay.getStatus()
+
+    private func renderStatusItem() {
+        let a = appearance.appearance
+        let accent = NSColor(LedgerTokens.Color.accent(a))
+        let overColor = NSColor(LedgerTokens.Color.signalOver(a))
+        let amount = awsManager.costData.first.map { NSDecimalNumber(decimal: $0.amount).doubleValue } ?? 0.0
+        let budgetUsed = awsManager.budgetFraction ?? 0.0
+        let sparkline = awsManager.dailyTotalsForSelectedProfile ?? []
+        presenter.render(
+            amount: amount,
+            delta: awsManager.deltaFractionVsLastMonth,
+            budgetUsed: budgetUsed,
+            sparkline: sparkline,
+            options: options,
+            accent: accent,
+            overBudget: overColor
+        )
+    }
     
     @objc func togglePopover() {
         if popover.isShown {
@@ -293,4 +220,3 @@ class StatusBarController: NSObject {
 }
 
 // MARK: - Popover Content View with Full Rendering
-
