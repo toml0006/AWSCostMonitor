@@ -72,3 +72,6 @@ announce-completion.sh
 
 # Marketing materials (keep separate from code)
 marketing-materials/
+
+# Superpowers brainstorming scratch (local only)
+.superpowers/
