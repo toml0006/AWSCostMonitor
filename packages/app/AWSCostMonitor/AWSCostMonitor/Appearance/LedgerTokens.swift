@@ -42,6 +42,36 @@ enum LedgerTokens {
             return a.colorScheme == .dark ? .hex(0x7F8A99) : .hex(0x8A7F6C)
         }
     }
+
+    enum Typography {
+        static func heroPointSize(_ a: LedgerAppearance) -> CGFloat {
+            a.density == .comfortable ? 34 : 28
+        }
+        static func statValuePointSize(_ a: LedgerAppearance) -> CGFloat {
+            a.density == .comfortable ? 14 : 12
+        }
+        static func labelPointSize(_ a: LedgerAppearance) -> CGFloat { 10 }
+        static func bodyPointSize(_ a: LedgerAppearance) -> CGFloat {
+            a.density == .comfortable ? 13 : 12
+        }
+        static func metaPointSize(_ a: LedgerAppearance) -> CGFloat { 11 }
+
+        static func hero(_ a: LedgerAppearance) -> Font {
+            .system(size: heroPointSize(a), weight: .light, design: .monospaced)
+        }
+        static func statValue(_ a: LedgerAppearance) -> Font {
+            .system(size: statValuePointSize(a), weight: .medium, design: .monospaced)
+        }
+        static func label(_ a: LedgerAppearance) -> Font {
+            .system(size: labelPointSize(a), weight: .semibold, design: .default)
+        }
+        static func body(_ a: LedgerAppearance) -> Font {
+            .system(size: bodyPointSize(a), weight: .regular, design: .default)
+        }
+        static func meta(_ a: LedgerAppearance) -> Font {
+            .system(size: metaPointSize(a), weight: .regular, design: .default)
+        }
+    }
 }
 
 extension SwiftUI.Color {

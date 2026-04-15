@@ -83,6 +83,27 @@ final class LedgerTokensTests: XCTestCase {
         XCTAssertEqual(LedgerTokens.Color.inkTertiary(aaa).nsHex, "A8B1BD")
         XCTAssertEqual(LedgerTokens.Color.inkTertiary(std).nsHex, "7F8A99")
     }
+
+    func testHeroFontSizeByDensity() {
+        let comfort = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .comfortable, contrast: .standard)
+        let compact = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .compact, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Typography.heroPointSize(comfort), 34)
+        XCTAssertEqual(LedgerTokens.Typography.heroPointSize(compact), 28)
+    }
+
+    func testStatValueFontSizeByDensity() {
+        let comfort = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .comfortable, contrast: .standard)
+        let compact = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .compact, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Typography.statValuePointSize(comfort), 14)
+        XCTAssertEqual(LedgerTokens.Typography.statValuePointSize(compact), 12)
+    }
+
+    func testLabelPointSizeConstantAcrossDensity() {
+        let comfort = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .comfortable, contrast: .standard)
+        let compact = LedgerAppearance(colorScheme: .dark, accent: .amber, density: .compact, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Typography.labelPointSize(comfort), 10)
+        XCTAssertEqual(LedgerTokens.Typography.labelPointSize(compact), 10)
+    }
 }
 
 import AppKit
