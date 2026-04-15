@@ -39,6 +39,17 @@ struct PopoverContentView: View {
         .frame(width: 360, height: 440)
         .ledgerSurface(.window)
         .environment(\.ledgerAppearance, appearance.appearance)
+        .onAppear {
+            guard let profile = awsManager.selectedProfile else { return }
+            if awsManager.costCache[profile.name] == nil, !awsManager.isLoading {
+                Task { await awsManager.fetchCostForSelectedProfile(force: true) }
+            }
+        }
+        .onChange(of: awsManager.selectedProfile) { _, newProfile in
+            if let profile = newProfile {
+                awsManager.saveSelectedProfile(profile: profile)
+            }
+        }
     }
 
     // MARK: - Derived
@@ -111,16 +122,33 @@ struct PopoverContentView: View {
     }
 
     private func openOverflowMenu() {
+        let handler = MenuActionHandler()
+        handler.onSettings = { showSettingsWindowForApp(awsManager: self.awsManager) }
+
+        let settingsItem = NSMenuItem(title: "Settings", action: #selector(MenuActionHandler.openSettings), keyEquivalent: ",")
+        settingsItem.target = handler
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApp.terminate(_:)), keyEquivalent: "q")
+
         let menu = NSMenu()
-        menu.addItem(withTitle: "Settings", action: #selector(NSApp.sendAction(_:to:from:)), keyEquivalent: ",")
-        menu.addItem(withTitle: "Help",     action: nil, keyEquivalent: "?")
-        menu.addItem(withTitle: "Export",   action: nil, keyEquivalent: "e")
+        menu.addItem(settingsItem)
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(withTitle: "Quit",     action: #selector(NSApp.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(quitItem)
+
+        // Retain handler for the menu's lifetime
+        objc_setAssociatedObject(menu, &MenuActionHandler.key, handler, .OBJC_ASSOCIATION_RETAIN)
+
         if let event = NSApp.currentEvent {
             NSMenu.popUpContextMenu(menu, with: event, for: NSApp.keyWindow?.contentView ?? NSView())
         }
     }
+}
+
+// MARK: - Menu Action Handler
+
+private final class MenuActionHandler: NSObject {
+    static var key = "MenuActionHandlerKey"
+    var onSettings: (() -> Void)?
+    @objc func openSettings() { onSettings?() }
 }
 
 // MARK: - Day Detail Data Structure
