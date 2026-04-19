@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 enum LedgerTokens {
     enum Color {
@@ -21,6 +22,7 @@ enum LedgerTokens {
             case (.plasma, .light): return .hex(0x0B6A90)
             case (.bone,   .dark):  return .hex(0xE7E2D2)
             case (.bone,   .light): return .hex(0x4A443A)
+            case (.system, _):      return SwiftUI.Color(nsColor: .controlAccentColor)
             }
         }
         static func signalOver(_ a: LedgerAppearance) -> SwiftUI.Color {

@@ -48,15 +48,74 @@ struct ProfileChanges {
 class ProfileManager {
     private let userDefaults = UserDefaults.standard
     private let settingsKey = "ProfileVisibilitySettings"
-    
-    // Load visibility settings
+    private let legacyMigrationKey = "LegacyProfileVisibilityMigrated"
+
+    // Load visibility settings. Runs a one-time merge from the legacy
+    // (pre-sandbox) preferences plist so profiles known before sandboxing
+    // aren't re-flagged as "new" every launch.
     func loadSettings() -> ProfileVisibilitySettings {
+        migrateFromLegacyPlistIfNeeded()
         guard let data = userDefaults.data(forKey: settingsKey),
               let settings = try? JSONDecoder().decode(ProfileVisibilitySettings.self, from: data) else {
-            // Return default settings with all profiles visible
             return ProfileVisibilitySettings()
         }
         return settings
+    }
+
+    // Merge the unsandboxed ~/Library/Preferences/<bundle-id>.plist
+    // ProfileVisibilitySettings into the sandbox-container defaults. Runs once.
+    // Best-effort: if the legacy plist is unreadable (sandbox denial, missing,
+    // corrupt), we silently flip the migration flag so startup can proceed.
+    private func migrateFromLegacyPlistIfNeeded() {
+        if userDefaults.bool(forKey: legacyMigrationKey) { return }
+        defer { userDefaults.set(true, forKey: legacyMigrationKey) }
+
+        let bundleID = Bundle.main.bundleIdentifier ?? "middleout.AWSCostMonitor"
+
+        // Resolve the real home even when sandboxed (NSHomeDirectory returns
+        // the container; we need the user's actual home).
+        let realHome: String
+        if let user = getpwuid(getuid()), let homeDir = user.pointee.pw_dir {
+            realHome = String(cString: homeDir)
+        } else {
+            realHome = NSHomeDirectory()
+        }
+        let legacyURL = URL(fileURLWithPath: realHome)
+            .appendingPathComponent("Library/Preferences/\(bundleID).plist")
+
+        guard FileManager.default.fileExists(atPath: legacyURL.path),
+              let plistData = try? Data(contentsOf: legacyURL),
+              let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
+              let legacyBlob = plist["ProfileVisibilitySettings"] as? Data,
+              let legacy = try? JSONDecoder().decode(ProfileVisibilitySettings.self, from: legacyBlob)
+        else { return }
+
+        var current: ProfileVisibilitySettings
+        if let data = userDefaults.data(forKey: settingsKey),
+           let decoded = try? JSONDecoder().decode(ProfileVisibilitySettings.self, from: data) {
+            current = decoded
+        } else {
+            current = ProfileVisibilitySettings()
+        }
+
+        // Merge: legacy-visible wins over unknown, but never unhide a profile
+        // the user has explicitly hidden in the current sandbox settings, and
+        // never resurrect a profile marked removed in the current settings.
+        for name in legacy.visibleProfiles
+            where !current.hiddenProfiles.contains(name)
+               && current.removedProfiles[name] == nil {
+            current.visibleProfiles.insert(name)
+        }
+        for name in legacy.hiddenProfiles
+            where !current.visibleProfiles.contains(name)
+               && current.removedProfiles[name] == nil {
+            current.hiddenProfiles.insert(name)
+        }
+        current.hasCompletedInitialSetup = true
+
+        if let encoded = try? JSONEncoder().encode(current) {
+            userDefaults.set(encoded, forKey: settingsKey)
+        }
     }
     
     // Save visibility settings

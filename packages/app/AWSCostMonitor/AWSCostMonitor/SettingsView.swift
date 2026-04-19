@@ -3,27 +3,21 @@ import ServiceManagement
 
 struct SettingsView: View {
     @EnvironmentObject var awsManager: AWSManager
-    @AppStorage("MenuBarDisplayFormat") private var displayFormat: String = MenuBarDisplayFormat.full.rawValue
     @AppStorage("RefreshIntervalMinutes") private var refreshInterval: Int = 5
     @AppStorage("SelectedAWSProfileName") private var selectedProfileName: String = ""
     @State private var selectedCategory: String = "Accounts"
     @State private var hoveredCategory: String? = nil
-    
+
     init(initialSelectedCategory: String = "General") {
         _selectedCategory = State(initialValue: initialSelectedCategory)
     }
-    
-    private var displayFormatEnum: MenuBarDisplayFormat {
-        MenuBarDisplayFormat(rawValue: displayFormat) ?? .full
-    }
-    
+
     var settingsCategories: [String] {
         return [
             "General",
             "Accounts",
             "Team Cache",
             "Refresh Rate",
-            "Display",
             "Appearance",
             "Alerts",
             "Notifications",
@@ -126,8 +120,6 @@ struct SettingsView: View {
             return "gear"
         case "Refresh Rate":
             return "arrow.clockwise"
-        case "Display":
-            return "textformat"
         case "Appearance":
             return "paintbrush"
         case "Accounts":
@@ -154,16 +146,6 @@ struct SettingsView: View {
             GeneralSettingsTab()
         case "Refresh Rate":
             RefreshRateTab()
-        case "Display":
-            DisplaySettingsTab(
-                displayFormat: Binding(
-                    get: { displayFormatEnum },
-                    set: { newFormat in
-                        displayFormat = newFormat.rawValue
-                        awsManager.saveDisplayFormat(newFormat)
-                    }
-                )
-            )
         case "Appearance":
             AppearanceSettingsTab()
         case "Accounts":
@@ -184,14 +166,9 @@ struct SettingsView: View {
     }
     
     private func syncSettingsWithManager() {
-        // Sync display format
-        if let format = MenuBarDisplayFormat(rawValue: displayFormat) {
-            awsManager.displayFormat = format
-        }
-        
         // Sync refresh interval
         awsManager.refreshInterval = refreshInterval
-        
+
         // Sync selected profile if available
         if !selectedProfileName.isEmpty {
             awsManager.selectedProfile = awsManager.profiles.first { $0.name == selectedProfileName }
@@ -199,74 +176,6 @@ struct SettingsView: View {
     }
 }
 
-struct DisplaySettingsTab: View {
-    @Binding var displayFormat: MenuBarDisplayFormat
-    @AppStorage("ShowCurrencySymbol") private var showCurrencySymbol: Bool = true
-    @AppStorage("DecimalPlaces") private var decimalPlaces: Int = 2
-    @AppStorage("UseThousandsSeparator") private var useThousandsSeparator: Bool = true
-    @AppStorage("ShowMenuBarColors") private var showMenuBarColors: Bool = true
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Menu Bar Display Format")
-                .font(.headline)
-            
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(MenuBarDisplayFormat.allCases, id: \.self) { format in
-                    HStack {
-                        Button(action: {
-                            displayFormat = format
-                        }) {
-                            HStack {
-                                Image(systemName: displayFormat == format ? "largecircle.fill.circle" : "circle")
-                                    .foregroundColor(.accentColor)
-                                VStack(alignment: .leading) {
-                                    Text(format.displayName)
-                                        .foregroundColor(.primary)
-                                    Text("Preview: \(CostDisplayFormatter.previewText(for: format))")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            
-            Divider()
-            
-            // Additional Format Options
-            Text("Format Options")
-                .font(.headline)
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle("Show currency symbol", isOn: $showCurrencySymbol)
-                
-                Toggle("Use thousands separator", isOn: $useThousandsSeparator)
-                
-                Toggle("Show trend colors in menu bar", isOn: $showMenuBarColors)
-                    .help("Green when lower than last month, red when higher")
-                
-                if displayFormat != .abbreviated {
-                    HStack {
-                        Text("Decimal places:")
-                        Picker("", selection: $decimalPlaces) {
-                            Text("0").tag(0)
-                            Text("1").tag(1)
-                            Text("2").tag(2)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 120)
-                    }
-                }
-            }
-            
-            Spacer()
-        }
-    }
-}
 
 struct RefreshSettingsTab: View {
     @Binding var refreshInterval: Int
@@ -839,7 +748,7 @@ struct RefreshProfileRow: View {
                 }
                 
                 // Cost estimation
-                Text("Estimated monthly cost: $\(String(format: "%.2f", estimatedMonthlyCost)) (\(estimatedCallsPerMonth) API calls)")
+                Text("Estimated monthly cost: \(CurrencyFormatter.format(estimatedMonthlyCost)) (\(estimatedCallsPerMonth) API calls)")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }

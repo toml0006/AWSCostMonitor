@@ -13,19 +13,39 @@ import {
   Lock,
   Calendar,
   PieChart,
-  Palette
+  Palette,
+  Activity,
+  Sliders
 } from 'lucide-react'
 
 const features = [
-  // v1.4.0 - Latest (new release!)
+  // v1.5.0 - Latest (Ledger redesign)
   {
     icon: Palette,
-    title: 'UI Theme Selector',
-    description: 'Personalize your experience with multiple color schemes, collapsible services, and dynamic layouts',
+    title: 'Ledger Design System',
+    description: 'A refreshed visual identity with four orthogonal controls — accent, density, contrast, and color scheme — tuned for the menu bar',
     color: 'primary',
-    badge: 'v1.4.0',
-    version: '1.4.0',
-    badgeColor: 'primary' // new release color
+    badge: 'v1.5.0',
+    version: '1.5.0',
+    badgeColor: 'primary'
+  },
+  {
+    icon: Activity,
+    title: 'Pill Menu Bar with Sparkline',
+    description: 'An optional accent-colored pill renders MTD with a luminance-aware ink color and a 14-day spend sparkline next to the total',
+    color: 'accent',
+    badge: 'v1.5.0',
+    version: '1.5.0',
+    badgeColor: 'primary'
+  },
+  {
+    icon: Sliders,
+    title: 'WCAG AAA Contrast Mode',
+    description: 'Flip contrast to AAA for sharper typography and stronger separators — ideal for bright rooms and external displays',
+    color: 'secondary',
+    badge: 'v1.5.0',
+    version: '1.5.0',
+    badgeColor: 'primary'
   },
   // v1.3.2
   {

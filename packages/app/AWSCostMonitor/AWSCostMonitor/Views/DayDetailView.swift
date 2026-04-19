@@ -108,7 +108,7 @@ struct DayDetailView: View {
                     .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
                 if let cost = dailyCost {
-                    Text("Total: \(currencyFormatter.string(from: NSDecimalNumber(decimal: cost.amount)) ?? "$0.00")")
+                    Text("Total: \(CurrencyFormatter.format(cost.amount))")
                         .ledgerBody()
                         .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 } else {
@@ -219,7 +219,7 @@ struct DayDetailView: View {
                     .multilineTextAlignment(.center)
                     .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
-                Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
+                Text(CurrencyFormatter.format(service.amount))
                     .ledgerStatValue()
                     .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
@@ -233,7 +233,7 @@ struct DayDetailView: View {
                     .ledgerMeta()
                     .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 
-                Text(currencyFormatter.string(from: NSDecimalNumber(decimal: totalAmount)) ?? "$0")
+                Text(CurrencyFormatter.format(totalAmount))
                     .ledgerStatValue()
                     .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
@@ -290,7 +290,7 @@ struct DayDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundColor(LedgerTokens.Color.inkPrimary(a))
             
-            Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
+            Text(CurrencyFormatter.format(service.amount))
                 .ledgerMeta()
                 .foregroundColor(
                     service.amount > 10
@@ -360,16 +360,21 @@ struct DayDetailView: View {
     }
     
     private func colorForService(_ serviceName: String) -> Color {
-        let serviceNames = processedServices.map { $0.name }
-        if let index = serviceNames.firstIndex(of: serviceName) {
-            _ = index
-            return LedgerTokens.Color.accent(a)
+        // Distribute hues evenly across all segments so adjacent slices
+        // always differ by a meaningful amount, regardless of count.
+        let names = processedServices.map { $0.name }
+        if let index = names.firstIndex(of: serviceName) {
+            let total = max(names.count, 1)
+            let baseHue: Double = 0.10 // start in the amber range to match the brand
+            let hue = (baseHue + Double(index) / Double(total)).truncatingRemainder(dividingBy: 1.0)
+            // Alternate saturation/brightness slightly so similar hues still read apart
+            let saturation = index.isMultiple(of: 2) ? 0.78 : 0.62
+            let brightness = index.isMultiple(of: 2) ? 0.92 : 0.78
+            return Color(hue: hue, saturation: saturation, brightness: brightness)
         }
-        
-        // Generate a consistent color based on the service name
         let hash = serviceName.hashValue
         let hue = Double(abs(hash) % 360) / 360.0
-        return Color(hue: hue, saturation: 0.7, brightness: 0.8)
+        return Color(hue: hue, saturation: 0.7, brightness: 0.85)
     }
     
     // MARK: - API Calls Section

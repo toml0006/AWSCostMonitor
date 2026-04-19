@@ -248,13 +248,22 @@ struct RemovedProfilesAlert: View {
 // MARK: - Profile Change Window Controller
 
 class ProfileChangeWindowController: NSWindowController {
+    // Retain active alert window controllers so the launch-time close-all-windows
+    // loop in AppDelegate can't race with us and tear them down mid-present.
+    private static var activeControllers: [ProfileChangeWindowController] = []
+    // Gate so either alert only ever shows once per app session.
+    private static var didShowThisSession = false
+
     static func showNewProfilesAlert(newProfiles: [AWSProfile], onAdd: @escaping ([String]) -> Void, onDismiss: @escaping () -> Void) {
+        guard !didShowThisSession else { return }
+        didShowThisSession = true
+
         let contentView = NewProfilesAlert(
             newProfiles: newProfiles,
             onAdd: onAdd,
             onDismiss: onDismiss
         )
-        
+
         let hostingController = NSHostingController(rootView: contentView)
         let window = NSWindow(contentViewController: hostingController)
         window.setContentSize(NSSize(width: 450, height: 400))
@@ -262,29 +271,34 @@ class ProfileChangeWindowController: NSWindowController {
         window.title = "New Profiles Detected"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
+        window.isRestorable = false
         window.center()
         window.level = .modalPanel
-        
+
         let controller = ProfileChangeWindowController(window: window)
         window.delegate = controller
-        
+        activeControllers.append(controller)
+
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    
+
     static func showRemovedProfilesAlert(
         removedProfiles: [String],
         onRemove: @escaping ([String]) -> Void,
         onKeep: @escaping ([String]) -> Void,
         onDismiss: @escaping () -> Void
     ) {
+        guard !didShowThisSession else { return }
+        didShowThisSession = true
+
         let contentView = RemovedProfilesAlert(
             removedProfiles: removedProfiles,
             onRemove: onRemove,
             onKeep: onKeep,
             onDismiss: onDismiss
         )
-        
+
         let hostingController = NSHostingController(rootView: contentView)
         let window = NSWindow(contentViewController: hostingController)
         window.setContentSize(NSSize(width: 550, height: 500))
@@ -292,19 +306,25 @@ class ProfileChangeWindowController: NSWindowController {
         window.title = "Profiles Removed"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
+        window.isRestorable = false
         window.center()
         window.level = .modalPanel
-        
+
         let controller = ProfileChangeWindowController(window: window)
         window.delegate = controller
-        
+        activeControllers.append(controller)
+
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    fileprivate static func release(_ controller: ProfileChangeWindowController) {
+        activeControllers.removeAll { $0 === controller }
     }
 }
 
 extension ProfileChangeWindowController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
-        // Clean up the window controller
+        ProfileChangeWindowController.release(self)
     }
 }

@@ -11,18 +11,23 @@ import AppKit
 class CalendarWindowController {
     private static var windowController: NSWindowController?
     
-    static func showCalendarWindow(awsManager: AWSManager, highlightedService: String? = nil) {
+    static func showCalendarWindow(awsManager: AWSManager, highlightedService: String? = nil, initialDate: Date? = nil) {
         // Use async dispatch to ensure proper window management after transitions
         DispatchQueue.main.async {
-            // If window already exists, bring it to front
+            // If window already exists: recreate it when a specific date was requested so
+            // the calendar jumps to that date; otherwise just bring the existing one forward.
             if let existingWindow = windowController?.window, existingWindow.isVisible {
-                existingWindow.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
-                return
+                if initialDate == nil {
+                    existingWindow.makeKeyAndOrderFront(nil)
+                    NSApp.activate(ignoringOtherApps: true)
+                    return
+                }
+                existingWindow.close()
+                windowController = nil
             }
-            
+
             // Create new window
-            let calendarView = CalendarView(highlightedService: highlightedService)
+            let calendarView = CalendarView(highlightedService: highlightedService, initialDate: initialDate)
                 .environmentObject(awsManager)
             
             let hostingController = NSHostingController(rootView: calendarView)

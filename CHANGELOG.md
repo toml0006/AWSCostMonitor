@@ -2,6 +2,34 @@
 
 All notable changes to AWS Cost Monitor will be documented in this file.
 
+## [1.5.0] - 2026-04-19
+
+### What's New
+
+**Ledger — a refreshed visual identity.**
+
+v1.5 introduces Ledger, a ground-up redesign centered on making the menu bar readable, tunable, and at home on any display. One opinionated identity, four orthogonal controls.
+
+### Features Added
+
+- **Ledger Design System** — Accent (Amber · Mint · Plasma · Bone · System), Density (Comfortable · Compact), Contrast (Standard · WCAG AAA), and Color Scheme (System · Light · Dark) are independent axes
+- **Pill Menu Bar with Sparkline** — Optional accent-colored pill renders MTD with a 14-day sparkline and luminance-aware ink that stays legible on any accent
+- **WCAG AAA Contrast Mode** — One toggle for sharper type, stronger separators, and AAA-grade pairings
+- **HeroSplit Popover** — Large MTD hero number paired with a detail column, plus a sparkline range toggle and per-service sparklines rendered inline
+- **"What's New in Ledger" window** — One-time welcome on first launch points to Settings → Appearance
+
+### Improvements
+
+- Per-service sparklines (14-day, 0.22 opacity) now appear inline in the service list
+- Settings → Appearance consolidates accent, density, contrast, and color scheme into a single tab
+- Legacy theme preferences from pre-1.5 installs migrate on first launch
+
+### Bug Fixes
+
+- Fixed a profile-change alert that could flash briefly on every launch after adopting the App Sandbox
+- New AWS profiles are now added silently to the dropdown instead of re-prompting each time the config file changes
+- Pre-sandbox profile visibility settings now migrate forward so already-known profiles aren't re-flagged as "new"
+
 ## [1.3.2] - 2025-08-19
 
 ### 🎉 What's New

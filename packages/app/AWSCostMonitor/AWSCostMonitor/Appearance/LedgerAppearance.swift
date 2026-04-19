@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum LedgerAccent: String, CaseIterable, Codable, Identifiable {
-    case amber, mint, plasma, bone
+    case amber, mint, plasma, bone, system
     var id: String { rawValue }
     var displayName: String {
         switch self {
@@ -9,6 +9,7 @@ enum LedgerAccent: String, CaseIterable, Codable, Identifiable {
         case .mint:   return "Mint"
         case .plasma: return "Plasma"
         case .bone:   return "Bone"
+        case .system: return "System"
         }
     }
 }

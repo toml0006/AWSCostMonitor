@@ -142,9 +142,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Close any windows that may have opened during launch
-        // This is important because WindowGroup can create windows automatically
-        for window in NSApp.windows {
+        // Close any WindowGroup-spawned windows that may have opened during launch.
+        // Preserve explicitly-presented windows (onboarding, profile-change alerts,
+        // what's-new) so we don't race with them and make them flash closed.
+        let preservedTitles: Set<String> = [
+            "Welcome to AWSCostMonitor",
+            "New Profiles Detected",
+            "Profiles Removed",
+            "What's New"
+        ]
+        for window in NSApp.windows where !preservedTitles.contains(window.title) {
             window.close()
         }
 

@@ -15,19 +15,19 @@ const Hero = () => {
             className="hero-text"
           >
             <div className="hero-badge">
-              <span className="badge-primary">NEW</span>
-              <span>Never get surprised by AWS bills again</span>
+              <span className="badge-primary">v1.5</span>
+              <span>Ledger — a refreshed visual identity</span>
             </div>
-            
+
             <h1 className="hero-title">
-              Keep Your AWS Costs
-              <span className="text-gradient"> Under Control</span>
+              Your AWS Spend,
+              <span className="text-gradient"> in the Menu Bar</span>
             </h1>
-            
+
             <p className="hero-description">
-              AWSCostMonitor by MiddleOut lives in your macOS menu bar, providing real-time visibility 
-              into your cloud spending. Track multiple AWS accounts, get smart alerts, 
-              and prevent bill shock — all with zero setup complexity.
+              AWSCostMonitor by MiddleOut pins your month-to-date spend to the macOS menu bar
+              with an optional sparkline pill. Track multiple AWS profiles, tune four appearance axes,
+              and stay ahead of bill shock — all with zero accounts and zero telemetry.
             </p>
             
             <div className="hero-cta">

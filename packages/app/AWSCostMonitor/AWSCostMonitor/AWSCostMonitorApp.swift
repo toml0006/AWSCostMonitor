@@ -19,10 +19,6 @@ struct AWSCostMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var awsManager = AWSManager.shared
     @StateObject private var configAccessManager = AWSConfigAccessManager.shared
-    @AppStorage("ShowCurrencySymbol") private var showCurrencySymbol: Bool = true
-    @AppStorage("DecimalPlaces") private var decimalPlaces: Int = 2
-    @AppStorage("UseThousandsSeparator") private var useThousandsSeparator: Bool = true
-    @AppStorage("ShowMenuBarColors") private var showMenuBarColors: Bool = true
     
     init() {
         // MARK: - Telemetry Opt-Out Configuration
@@ -100,141 +96,6 @@ struct AWSCostMonitorApp: App {
         }
     }
     
-    var menuBarTitle: String {
-        // Handle various states with appropriate messages
-        if awsManager.isLoading {
-            // Show loading state (optionally with profile name)
-            if let profile = awsManager.selectedProfile {
-                return "Loading \(profile.name)..."
-            }
-            return "Loading..."
-        } else if awsManager.isRateLimited {
-            // Show rate limited indicator
-            return "Rate Limited"
-        } else if awsManager.errorMessage != nil {
-            // Show error indicator
-            return "Error"
-        } else if let cost = awsManager.costData.first {
-            // Normal cost display
-            let formattedCost = CostDisplayFormatter.format(
-                amount: cost.amount,
-                currency: cost.currency,
-                format: awsManager.displayFormat,
-                showCurrencySymbol: showCurrencySymbol,
-                decimalPlaces: decimalPlaces,
-                useThousandsSeparator: useThousandsSeparator
-            )
-            return formattedCost
-        } else if awsManager.profiles.isEmpty {
-            // No profiles configured
-            return "No Profiles"
-        } else {
-            // No data yet
-            return "No Data"
-        }
-    }
-    
-    var menuBarIcon: String {
-        // Priority order for status indicators:
-        // 1. Error states (highest priority)
-        // 2. Loading state
-        // 3. Rate limited state
-        // 4. Normal cost display with trend
-        
-        if awsManager.errorMessage != nil {
-            return "exclamationmark.triangle.fill"
-        } else if awsManager.isLoading {
-            return "arrow.clockwise.circle.fill"
-        } else if awsManager.isRateLimited {
-            return "clock.badge.exclamationmark.fill"
-        } else if awsManager.displayFormat == .iconOnly {
-            // In icon-only mode, show dollar sign or trend
-            switch awsManager.costTrend {
-            case .up:
-                return "arrow.up.circle.fill"
-            case .down:
-                return "arrow.down.circle.fill"
-            case .stable:
-                return "dollarsign.circle.fill"
-            }
-        } else if awsManager.costData.isEmpty {
-            return "dollarsign.circle.fill"
-        } else {
-            // Show trend icon when we have cost data and not in icon-only mode
-            switch awsManager.costTrend {
-            case .up:
-                return "arrow.up.circle.fill"
-            case .down:
-                return "arrow.down.circle.fill"
-            case .stable:
-                return "minus.circle.fill" // Show minus for stable
-            }
-        }
-    }
-    
-    var menuBarColor: Color? {
-        // Check if user has color option enabled
-        guard showMenuBarColors else {
-            return nil
-        }
-        
-        // Priority order for color indicators:
-        // 1. Error states (yellow/orange)
-        // 2. Rate limited (orange)
-        // 3. Loading (subtle animation via nil)
-        // 4. Budget status (red if over)
-        // 5. Cost trend (green/red based on comparison)
-        
-        if awsManager.errorMessage != nil {
-            return .orange
-        }
-        
-        if awsManager.isRateLimited {
-            return .orange
-        }
-        
-        if awsManager.isLoading {
-            return nil // Use default color while loading
-        }
-        
-        guard let profile = awsManager.selectedProfile,
-              let cost = awsManager.costData.first else {
-            return nil
-        }
-        
-        let budget = awsManager.getBudget(for: profile.name)
-        let status = awsManager.calculateBudgetStatus(cost: cost.amount, budget: budget)
-        
-        // Check budget status
-        if status.isOverBudget {
-            return .red
-        } else if status.percentage > 0.9 {
-            // Over 90% of budget - warning
-            return .orange
-        } else if status.percentage > 0.75 {
-            // Over 75% of budget - caution
-            return .yellow
-        }
-        
-        // Then check trend - simple green/red based on last month comparison
-        switch awsManager.costTrend {
-        case .up:
-            // Only show red if increase is significant (>10%)
-            if let lastMonth = awsManager.lastMonthData[profile.name],
-               lastMonth.amount > 0 {
-                let percentChange = ((cost.amount - lastMonth.amount) / lastMonth.amount) * 100
-                if percentChange > 10 {
-                    return .red
-                }
-            }
-            return nil
-        case .down:
-            return .green
-        case .stable:
-            return nil // Default color (white/black based on system theme)
-        }
-    }
-    
     var body: some Scene {
         // Note: We use WindowGroup with a hidden window to enable keyboard shortcuts
         // and menu commands. The Settings window is shown programmatically when needed.
@@ -286,23 +147,4 @@ struct AWSCostMonitorApp: App {
         }
     }
     
-    // Helper properties
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter
-    }
-    
-    private func timeSince(_ date: Date) -> String {
-        let interval = Date().timeIntervalSince(date)
-        let minutes = Int(interval / 60)
-        if minutes < 1 {
-            return "just now"
-        } else if minutes < 60 {
-            return "\(minutes)m ago"
-        } else {
-            let hours = minutes / 60
-            return "\(hours)h ago"
-        }
-    }
 }

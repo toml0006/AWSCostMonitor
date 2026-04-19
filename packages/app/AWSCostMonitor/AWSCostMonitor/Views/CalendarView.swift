@@ -11,15 +11,17 @@ struct CalendarView: View {
     @EnvironmentObject var awsManager: AWSManager
     @Environment(\.ledgerAppearance) private var a
     let highlightedService: String?
+    private let initialDate: Date?
     @State private var selectedDate: Date = Date()
     @State private var currentMonth: Date = Date()
     @State private var showingDayDetail = false
     @State private var selectedDayData: DailyCost?
     @State private var selectedDayServices: [ServiceCost] = []
     @State private var hoveredDate: Date?
-    
-    init(highlightedService: String? = nil) {
+
+    init(highlightedService: String? = nil, initialDate: Date? = nil) {
         self.highlightedService = highlightedService
+        self.initialDate = initialDate
     }
     
     private let calendar = Calendar.current
@@ -239,6 +241,11 @@ struct CalendarView: View {
                     await awsManager.fetchCostForSelectedProfile()
                 }
             }
+
+            if let target = initialDate {
+                currentMonth = target
+                selectDay(target)
+            }
         }
     }
     
@@ -321,7 +328,7 @@ struct CalendarView: View {
     }
     
     private func formatCurrency(_ amount: Decimal) -> String {
-        currencyFormatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
+        CurrencyFormatter.format(amount)
     }
     
     private func previousMonth() {
@@ -472,13 +479,7 @@ struct DayCell: View {
     }
     
     private func formatAmount(_ amount: Decimal) -> String {
-        if amount < 1 {
-            return String(format: "$%.2f", NSDecimalNumber(decimal: amount).doubleValue)
-        } else if amount < 100 {
-            return String(format: "$%.1f", NSDecimalNumber(decimal: amount).doubleValue)
-        } else {
-            return currencyFormatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0"
-        }
+        CurrencyFormatter.format(amount)
     }
     
     private func costColor(_ amount: Decimal) -> Color {

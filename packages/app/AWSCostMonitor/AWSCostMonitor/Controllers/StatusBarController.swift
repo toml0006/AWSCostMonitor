@@ -35,7 +35,11 @@ class StatusBarController: NSObject {
         // Create popover with SwiftUI content
         popover = NSPopover()
         popover.contentSize = NSSize(width: 360, height: 500)
-        popover.behavior = .transient
+        // `.transient` closes the popover the moment any element outside its bounds
+        // receives a mouseDown — including the NSMenu spawned by SwiftUI's Picker.
+        // That killed the first profile-switch click. We dismiss via the global
+        // event monitor (outside-app clicks) and explicit togglePopover instead.
+        popover.behavior = .applicationDefined
         popover.animates = true
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView()
@@ -131,12 +135,15 @@ class StatusBarController: NSObject {
         let overColor = NSColor(LedgerTokens.Color.signalOver(a))
         let amount = awsManager.costData.first.map { NSDecimalNumber(decimal: $0.amount).doubleValue } ?? 0.0
         let budgetUsed = awsManager.budgetFraction ?? 0.0
-        let sparkline = awsManager.dailyTotalsForSelectedProfile ?? []
+        let rangeRaw = UserDefaults.standard.string(forKey: "SparklineRange") ?? SparklineRange.monthRolling.rawValue
+        let range = SparklineRange(rawValue: rangeRaw) ?? .monthRolling
+        let series = range.series(from: awsManager.dailyPointsForSelectedProfile ?? [])
         presenter.render(
             amount: amount,
             delta: awsManager.deltaFractionVsLastMonth,
             budgetUsed: budgetUsed,
-            sparkline: sparkline,
+            sparkline: series.values,
+            sparklineHighlightIndex: series.todayIndex,
             options: options,
             accent: accent,
             overBudget: overColor

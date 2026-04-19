@@ -38,11 +38,7 @@ struct CheckAWSCostIntent: AppIntent {
         
         // Get cost data for the profile
         if let costData = manager.costData.first(where: { $0.profileName == targetProfile }) {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
-            formatter.currencyCode = costData.currency
-            
-            let formattedAmount = formatter.string(from: NSDecimalNumber(decimal: costData.amount)) ?? "$0.00"
+            let formattedAmount = CurrencyFormatter.format(costData.amount, currencyCode: costData.currency)
             
             // Check budget status
             let budget = manager.getBudget(for: targetProfile)
@@ -193,14 +189,11 @@ struct GetAllProfilesCostIntent: AppIntent {
         let totalCost = manager.costData.reduce(Decimal(0)) { $0 + $1.amount }
         let profileCount = manager.costData.count
         
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = manager.costData.first?.currency ?? "USD"
-        
-        let formattedTotal = formatter.string(from: NSDecimalNumber(decimal: totalCost)) ?? "$0.00"
-        
+        let defaultCurrency = manager.costData.first?.currency ?? "USD"
+        let formattedTotal = CurrencyFormatter.format(totalCost, currencyCode: defaultCurrency)
+
         let profileSummary = manager.costData.map { costData in
-            let amount = formatter.string(from: NSDecimalNumber(decimal: costData.amount)) ?? "$0.00"
+            let amount = CurrencyFormatter.format(costData.amount, currencyCode: costData.currency)
             return "\(costData.profileName): \(amount)"
         }.joined(separator: ", ")
         
