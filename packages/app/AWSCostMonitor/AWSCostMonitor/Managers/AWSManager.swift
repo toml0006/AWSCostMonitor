@@ -23,7 +23,20 @@ class AWSManager: ObservableObject {
     @Published var realProfiles: [AWSProfile] = []
     @Published var demoProfiles: [AWSProfile] = []
     @Published var isDemoMode: Bool = false
-    @Published var selectedProfile: AWSProfile?
+    @Published var selectedProfile: AWSProfile? {
+        didSet {
+            guard selectedProfile != oldValue else { return }
+
+            // Always persist immediately so any code path that sets selectedProfile is covered
+            if let profile = selectedProfile {
+                userDefaults.set(profile.name, forKey: selectedProfileKey)
+            } else {
+                userDefaults.removeObject(forKey: selectedProfileKey)
+            }
+
+            applySelectedProfileState()
+        }
+    }
     @Published var costData: [CostData] = [] {
         didSet {
             saveCostData()
@@ -31,7 +44,6 @@ class AWSManager: ObservableObject {
     }
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var displayFormat: MenuBarDisplayFormat = .full
     @Published var profileBudgets: [String: ProfileBudget] = [:]
     @Published var lastAPICallTime: Date?
     @Published var isRateLimited: Bool = false
@@ -61,9 +73,7 @@ class AWSManager: ObservableObject {
     
     // Computed property to check if auto-refresh is active
     var isAutoRefreshActive: Bool {
-        // Consider Dispatch timer presence OR an async Task that hasn't been cancelled
-        let asyncActive = (refreshTask != nil) && (!(refreshTask?.isCancelled ?? true))
-        return (refreshTimer != nil) || asyncActive
+        return refreshTimer != nil
     }
 
     // User-selected breakdown preference
@@ -148,7 +158,6 @@ class AWSManager: ObservableObject {
     
     // Keys for UserDefaults (legacy - will be replaced with @AppStorage)
     private let selectedProfileKey = "SelectedAWSProfileName"
-    private let displayFormatKey = "MenuBarDisplayFormat"
     private let historicalDataKey = "HistoricalCostData"
     private let apiRequestRecordsKey = "APIRequestRecords"
     
@@ -207,29 +216,9 @@ class AWSManager: ObservableObject {
         return formatter
     }
     
-    // Helper method to format currency with proper localization
+    // Helper method to format currency with user preferences applied
     func formatCurrency(_ amount: Decimal, showDecimals: Bool = true) -> String {
-        let nsNumber = NSDecimalNumber(decimal: amount)
-        let doubleValue = nsNumber.doubleValue
-        
-        // Manual formatting with FORCED commas
-        let wholePart = Int(doubleValue)
-        let fractionalPart = Int((doubleValue - Double(wholePart)) * 100)
-        
-        // Format the whole part with commas
-        let numberFormatter = NumberFormatter()
-        numberFormatter.numberStyle = .decimal
-        numberFormatter.groupingSeparator = ","
-        numberFormatter.usesGroupingSeparator = true
-        numberFormatter.groupingSize = 3
-        
-        let formattedWhole = numberFormatter.string(from: NSNumber(value: wholePart)) ?? "\(wholePart)"
-        
-        if showDecimals {
-            return String(format: "$%@.%02d", formattedWhole, fractionalPart)
-        } else {
-            return "$\(formattedWhole)"
-        }
+        CurrencyFormatter.format(amount)
     }
     
     // Helper method to format decimal numbers with proper localization
@@ -345,8 +334,6 @@ class AWSManager: ObservableObject {
         // Load profiles on initialization
         loadProfiles()
         // Note: loadSelectedProfile() is now called after profiles are loaded in loadProfiles()
-        // Load the display format preference
-        loadDisplayFormat()
         // Load profile budgets
         loadBudgets()
         // Load historical data
@@ -462,14 +449,12 @@ class AWSManager: ObservableObject {
                 startAutomaticRefresh()
             }
 
-            // Catch-up: if auto-refresh is enabled and data appears stale, trigger an immediate refresh
-            if autoRefreshEnabled {
-                // Use existing staleness logic
-                if checkIfRefreshNeeded() {
-                    log(.info, category: "Refresh", "Catch-up refresh after becoming active/unlocked")
-                    Task { @MainActor in
-                        await self.fetchCostForSelectedProfile()
-                    }
+            // Catch-up: if auto-refresh is enabled and data is stale by wall-clock,
+            // force a refresh. Non-forced fetches re-check screen state and can bail.
+            if autoRefreshEnabled, isStaleByInterval() {
+                log(.info, category: "Refresh", "Catch-up force-refresh after becoming active/unlocked")
+                Task { @MainActor in
+                    await self.fetchCostForSelectedProfile(force: true)
                 }
             }
         } else {
@@ -489,21 +474,19 @@ class AWSManager: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
                 guard let self = self else { return }
                 
-                // Check if both timer types are still valid
-                let hasDispatchTimer = self.refreshTimer != nil
-                let hasAsyncTimer = self.refreshTask != nil && !(self.refreshTask?.isCancelled ?? true)
-                
-                self.log(.info, category: "Refresh", "After system wake - DispatchTimer: \(hasDispatchTimer), AsyncTimer: \(hasAsyncTimer)")
-                
-                if hasDispatchTimer || hasAsyncTimer {
-                    // At least one timer is still running, trigger an immediate refresh
-                    self.log(.info, category: "Refresh", "At least one timer is still valid after system wake")
-                    Task {
-                        await self.fetchCostForSelectedProfile()
+                let hasHeartbeat = self.refreshTimer != nil
+                self.log(.info, category: "Refresh", "After system wake - Heartbeat: \(hasHeartbeat)")
+
+                if hasHeartbeat {
+                    // Heartbeat survived sleep; force-refresh if data is actually stale
+                    if self.isStaleByInterval() {
+                        self.log(.info, category: "Refresh", "Post-wake force-refresh (stale by interval)")
+                        Task {
+                            await self.fetchCostForSelectedProfile(force: true)
+                        }
                     }
                 } else {
-                    // Both timers are invalid, restart them
-                    self.log(.warning, category: "Refresh", "Both timers invalid after system wake - restarting automatic refresh")
+                    self.log(.warning, category: "Refresh", "Heartbeat invalid after system wake - restarting automatic refresh")
                     self.startAutomaticRefresh()
                 }
 
@@ -894,23 +877,17 @@ class AWSManager: ObservableObject {
             print("DEBUG: NO PROFILE SELECTED - Cannot perform startup refresh check")
         }
         
-        // Handle new profiles (only show alerts after first launch)
+        // Handle new profiles: silently add them as visible. Alerting on every
+        // ~/.aws/config edit is the wrong UX — users discover new profiles in
+        // the picker. Removed profiles still get a confirmation dialog below
+        // because that's a destructive-ish event worth acknowledging.
         if !changes.newProfiles.isEmpty {
-            log(.info, category: "ProfileManagement", "Showing alert for \(changes.newProfiles.count) new profiles: \(changes.newProfiles.map { $0.name })")
-            
-            DispatchQueue.main.async {
-                ProfileChangeWindowController.showNewProfilesAlert(
-                    newProfiles: changes.newProfiles,
-                    onAdd: { [weak self] selectedProfileNames in
-                        self?.profileManager.addNewProfiles(selectedProfileNames)
-                        // Refresh the visible profiles list
-                        self?.profiles = self?.profileManager.getVisibleProfiles(from: currentProfiles) ?? currentProfiles
-                        self?.log(.info, category: "ProfileManagement", "Added \(selectedProfileNames.count) new profiles")
-                    },
-                    onDismiss: {
-                        // User skipped adding new profiles - they remain hidden
-                    }
-                )
+            let names = changes.newProfiles.map { $0.name }
+            log(.info, category: "ProfileManagement", "Silently adding \(names.count) new profiles: \(names)")
+            profileManager.addNewProfiles(names)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.profiles = self.profileManager.getVisibleProfiles(from: currentProfiles)
             }
         }
         
@@ -980,57 +957,75 @@ class AWSManager: ObservableObject {
         // Note: Fallback to first profile is handled in loadProfiles() after this function is called
     }
     
-    // Saves the selected profile name to UserDefaults.
-    func saveSelectedProfile(profile: AWSProfile) {
-        userDefaults.set(profile.name, forKey: selectedProfileKey)
-        
-        // Clear ALL previous data when switching profiles
-        self.costData = []
-        self.serviceCosts = []
-        self.errorMessage = nil
-        self.isRateLimited = false
-        self.isLoading = false
-        
-        // Load profile-specific refresh settings
+    // Keep the visible state synchronized with the selected profile immediately,
+    // even before an async refresh completes.
+    private func applySelectedProfileState() {
+        guard let profile = selectedProfile else {
+            costData = []
+            serviceCosts = []
+            projectedMonthlyTotal = nil
+            anomalies = []
+            costTrend = .stable
+            isLoading = false
+            isLoadingServices = false
+            errorMessage = nil
+            isRateLimited = false
+            return
+        }
+
+        errorMessage = nil
+        isRateLimited = false
+
         let budget = getBudget(for: profile.name)
-        self.refreshInterval = budget.refreshIntervalMinutes
-        
-        // Restart refresh timers if they are active, or start them if auto-refresh is enabled
-        let timersActive = isAutoRefreshActive
-        if timersActive {
-            stopAutomaticRefresh()
-            startAutomaticRefresh()
-        } else if autoRefreshEnabled {
+        let timersWereActive = isAutoRefreshActive
+        refreshInterval = budget.refreshIntervalMinutes
+
+        if autoRefreshEnabled && !timersWereActive && !isAutoRefreshActive {
             startAutomaticRefresh()
         }
-        
-        // Check if we have cached data for this profile
+
         if let cachedData = costCache[profile.name] {
-            // Load cached data immediately
-            let costDataItem = CostData(
-                profileName: cachedData.profileName,
-                amount: cachedData.mtdTotal,
-                currency: cachedData.currency
-            )
-            self.costData = [costDataItem]
-            self.serviceCosts = cachedData.serviceCosts
-            
-            // Check if cache is stale
-            let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-            let refreshIntervalSeconds = TimeInterval(budget.refreshIntervalMinutes * 60)
-            
-            if cacheAge > refreshIntervalSeconds {
-                // Cache is stale, fetch new data
-                Task {
-                    await fetchCostForSelectedProfile()
-                }
-            }
+            applyCacheEntryToVisibleState(cachedData)
         } else {
-            // No cache, fetch data immediately
-            Task {
-                await fetchCostForSelectedProfile()
-            }
+            costData = []
+            serviceCosts = []
+            projectedMonthlyTotal = nil
+            anomalies = []
+            costTrend = .stable
+            isLoading = false
+            isLoadingServices = false
         }
+    }
+
+    private func applyCacheEntryToVisibleState(_ cacheEntry: CostCacheEntry) {
+        costData = [CostData(
+            profileName: cacheEntry.profileName,
+            amount: cacheEntry.mtdTotal,
+            currency: cacheEntry.currency
+        )]
+        serviceCosts = cacheEntry.serviceCosts
+
+        // Merge cached daily totals without disturbing existing history.
+        // selectedProfile.didSet always fires on the main thread, so we're
+        // safe to hop onto the MainActor synchronously here.
+        MainActor.assumeIsolated {
+            mergeDailyData(for: cacheEntry.profileName, dailyCosts: cacheEntry.dailyCosts, dailyServiceCosts: [])
+            applyProjection(forecastTotal: cacheEntry.forecastTotal, dailyCosts: cacheEntry.dailyCosts)
+        }
+
+        updateCostTrend(for: cacheEntry.profileName)
+        isLoading = false
+        isLoadingServices = false
+    }
+
+    // Legacy helper retained for callers that still invoke it explicitly.
+    func saveSelectedProfile(profile: AWSProfile) {
+        if selectedProfile != profile {
+            selectedProfile = profile
+            return
+        }
+
+        userDefaults.set(profile.name, forKey: selectedProfileKey)
     }
     
     // Public access to ProfileManager for settings integration
@@ -1061,23 +1056,6 @@ class AWSManager: ObservableObject {
                 }
             }
         }
-    }
-    
-    // Loads the display format preference from UserDefaults.
-    func loadDisplayFormat() {
-        if let storedFormat = userDefaults.string(forKey: displayFormatKey),
-           let format = MenuBarDisplayFormat(rawValue: storedFormat) {
-            self.displayFormat = format
-        } else {
-            // Default to full format if not set
-            self.displayFormat = .full
-        }
-    }
-    
-    // Saves the display format preference to UserDefaults.
-    func saveDisplayFormat(_ format: MenuBarDisplayFormat) {
-        userDefaults.set(format.rawValue, forKey: displayFormatKey)
-        self.displayFormat = format
     }
     
     // MARK: - Budget Management
@@ -1808,18 +1786,25 @@ class AWSManager: ObservableObject {
             Task {
                 await fetchCostForSelectedProfile()
                 await MainActor.run {
-                    // Start both timer implementations for redundancy
-                    self.scheduleNextRefresh() // Legacy DispatchSource timer
-                    self.startAsyncRefreshTimer() // Modern async timer
+                    self.scheduleNextRefresh()
                 }
             }
         } else {
-            // Start both timer implementations for redundancy
-            scheduleNextRefresh() // Legacy DispatchSource timer
-            startAsyncRefreshTimer() // Modern async timer
+            scheduleNextRefresh()
         }
     }
     
+    // Wall-clock staleness check against the profile's configured refresh interval.
+    // Used by catch-up paths (wake, screen-on) to decide whether to force a fetch
+    // that bypasses the ScreenStateMonitor gate.
+    private func isStaleByInterval() -> Bool {
+        guard let profile = selectedProfile else { return false }
+        let intervalSeconds = TimeInterval(getBudget(for: profile.name).refreshIntervalMinutes * 60)
+        let lastFetch = lastAPICallTime ?? costCache[profile.name]?.fetchDate
+        guard let last = lastFetch else { return true }
+        return Date().timeIntervalSince(last) >= intervalSeconds
+    }
+
     // Helper to check if immediate refresh is needed
     private func checkIfRefreshNeeded() -> Bool {
         // If we don't have a next refresh time, we need to refresh
@@ -1872,91 +1857,71 @@ class AWSManager: ObservableObject {
         return false
     }
     
-    // Helper to schedule the next refresh
+    // Heartbeat interval for the refresh timer. A short tick + wall-clock age check
+    // avoids macOS timer coalescing of long-duration timers, which silently skipped
+    // hour-plus refreshes under App Nap.
+    private static let refreshHeartbeatSeconds: TimeInterval = 60
+
+    // Schedule a 60s heartbeat that fetches when wall-clock age exceeds the
+    // profile's refresh interval.
     private func scheduleNextRefresh() {
-        // Use the profile's configured refresh interval, not the smart interval
         guard let profile = selectedProfile else {
             log(.warning, category: "Refresh", "No profile selected, cannot schedule refresh")
             return
         }
-        
-        let budget = getBudget(for: profile.name)
-        let intervalMinutes = budget.refreshIntervalMinutes
-        let interval = TimeInterval(intervalMinutes * 60) // Convert minutes to seconds
-        
-        log(.info, category: "Refresh", "Scheduling next refresh in \(intervalMinutes) minutes for profile: \(profile.name)")
-        
-        // Calculate and store next refresh time
-        nextRefreshTime = Date().addingTimeInterval(interval)
-        
-        // Create a DispatchSourceTimer for more precise timing
+
+        let intervalMinutes = getBudget(for: profile.name).refreshIntervalMinutes
+        let interval = TimeInterval(intervalMinutes * 60)
+
+        log(.info, category: "Refresh", "Heartbeat scheduling: \(intervalMinutes)min interval for profile \(profile.name)")
+
+        // Display target derived from last successful fetch (or now if none yet)
+        nextRefreshTime = (lastAPICallTime ?? Date()).addingTimeInterval(interval)
+
         let timer = DispatchSource.makeTimerSource(queue: timerQueue)
         refreshTimer = timer
-        
-        // Configure the timer to fire at the specified interval
-        timer.schedule(deadline: .now() + interval, repeating: interval)
-        
-        // Set the event handler for when the timer fires
+
+        let heartbeat = AWSManager.refreshHeartbeatSeconds
+        timer.schedule(deadline: .now() + heartbeat, repeating: heartbeat)
+
         timer.setEventHandler { [weak self] in
             guard let self = self else { return }
-            
-            self.log(.warning, category: "RefreshTimer", "🔄 Refresh timer FIRED at \(Date())")
-            
-            #if DEBUG
-            self.log(.debug, category: "RefreshTimer", "Refresh timer fired at \(Date())")
-            #endif
-            
-            // Update next refresh time for display on main queue
-            DispatchQueue.main.async {
-                self.nextRefreshTime = Date().addingTimeInterval(interval)
-            }
-            
             Task { @MainActor in
-                // AGGRESSIVE STALENESS CHECK: Force refresh if cache data is older than 2 hours
-                var forceRefreshDueToStaleCache = false
-                if let profile = self.selectedProfile,
-                   let cachedData = self.costCache[profile.name] {
-                    let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-                    let twoHours: TimeInterval = 2 * 60 * 60 // 2 hours
-                    if cacheAge > twoHours {
-                        forceRefreshDueToStaleCache = true
-                        self.log(.warning, category: "Refresh", "AGGRESSIVE: Cache is \(Int(cacheAge/3600)) hours old, forcing refresh")
-                    }
-                }
-                
-                // Check if data is stale and force refresh if needed
-                if self.checkIfRefreshNeeded() || forceRefreshDueToStaleCache {
-                    let reason = forceRefreshDueToStaleCache ? "AGGRESSIVE cache staleness check" : "Standard staleness check"
-                    self.log(.info, category: "Refresh", "Data is stale (\(reason)), forcing refresh regardless of screen state")
-                    await self.fetchCostForSelectedProfile(force: true)
-                } else if ScreenStateMonitor.shared.shouldAllowRefresh() {
-                    self.log(.info, category: "Refresh", "Screen is active, performing refresh")
-                    await self.fetchCostForSelectedProfile()
-                } else {
-                    self.log(.info, category: "Refresh", "Skipped scheduled refresh: screen off or locked")
-                }
+                await self.heartbeatTick()
             }
         }
-        
-        // Set cancellation handler for cleanup
+
         timer.setCancelHandler { [weak self] in
-            self?.log(.info, category: "Refresh", "Refresh timer cancelled")
+            self?.log(.info, category: "Refresh", "Refresh heartbeat cancelled")
         }
-        
-        // Start the timer
+
         timer.resume()
-        
-        // Validate timer was created successfully
-        if refreshTimer != nil {
-            log(.info, category: "Refresh", "DispatchSourceTimer scheduled successfully. Next refresh at: \(nextRefreshTime!)")
-            
-            // Start validation timer if not already running
-            if timerValidationTimer == nil {
-                startTimerValidation()
-            }
-        } else {
-            log(.error, category: "Refresh", "⚠️ Failed to create refresh timer!")
+
+        log(.info, category: "Refresh", "Heartbeat started (60s tick, \(intervalMinutes)min interval). Next target: \(nextRefreshTime!)")
+
+        if timerValidationTimer == nil {
+            startTimerValidation()
         }
+    }
+
+    // One heartbeat tick: refresh if wall-clock age exceeds the configured interval.
+    @MainActor
+    private func heartbeatTick() async {
+        guard autoRefreshEnabled, let profile = selectedProfile else { return }
+
+        let intervalMinutes = getBudget(for: profile.name).refreshIntervalMinutes
+        let interval = TimeInterval(intervalMinutes * 60)
+        let lastFetch = lastAPICallTime ?? .distantPast
+        let age = Date().timeIntervalSince(lastFetch)
+
+        if age >= interval {
+            log(.info, category: "Refresh", "Heartbeat due: \(Int(age/60))min since last fetch (interval \(intervalMinutes)min), refreshing")
+            await fetchCostForSelectedProfile(force: true)
+        }
+
+        // Keep display target in sync with the last fetch time (updated by fetch on success)
+        let anchor = lastAPICallTime ?? Date()
+        nextRefreshTime = anchor.addingTimeInterval(interval)
     }
     
     // Start a periodic timer to validate the main refresh timer (failsafe)
@@ -2120,24 +2085,14 @@ class AWSManager: ObservableObject {
         }
     }
     
-    // Validates that the timer is still running (failsafe)
+    // Validates that the heartbeat timer is still running. The heartbeat itself
+    // handles pacing, so overdue detection on `nextRefreshTime` is left to the
+    // separate health check (>5min tolerance).
     func validateRefreshTimer() {
         guard autoRefreshEnabled else { return }
-        
-        if refreshTimer != nil {
-            // Timer is valid, check if next refresh time makes sense
-            if let nextTime = nextRefreshTime {
-                let timeUntilNext = nextTime.timeIntervalSinceNow
-                if timeUntilNext < -60 { // More than 1 minute overdue
-                    log(.warning, category: "Refresh", "Timer is overdue by \(Int(-timeUntilNext)) seconds, restarting")
-                    DispatchQueue.main.async { [weak self] in
-                        self?.startAutomaticRefresh()
-                    }
-                }
-            }
-        } else {
-            // Timer is invalid or nil but should be running
-            log(.warning, category: "Refresh", "Timer validation failed - restarting automatic refresh")
+
+        if refreshTimer == nil {
+            log(.warning, category: "Refresh", "Heartbeat missing - restarting automatic refresh")
             DispatchQueue.main.async { [weak self] in
                 self?.startAutomaticRefresh()
             }
@@ -2155,129 +2110,19 @@ class AWSManager: ObservableObject {
         }
     }
     
-    // MARK: - Modern Async Timer Implementation (More Robust)
-    
-    // Start modern async timer using Task for better reliability
-    private func startAsyncRefreshTimer() {
-        // Cancel existing async tasks
-        refreshTask?.cancel()
-        timerValidationTask?.cancel()
-        
-        // Get interval - use profile-specific or fallback to global
-        let intervalMinutes: Int
-        if let profile = selectedProfile {
-            let budget = getBudget(for: profile.name)
-            intervalMinutes = budget.refreshIntervalMinutes
-        } else {
-            intervalMinutes = refreshInterval
-            log(.warning, category: "AsyncRefresh", "No profile selected, using global interval: \(intervalMinutes) minutes")
-        }
-        
-        let interval = TimeInterval(intervalMinutes * 60)
-        
-        log(.info, category: "AsyncRefresh", "Starting modern async refresh timer for profile: \(selectedProfile?.name ?? "none"), interval: \(intervalMinutes) minutes")
-        
-        // Set next refresh time
-        nextRefreshTime = Date().addingTimeInterval(interval)
-        
-        // Create the main refresh task
-        refreshTask = Task { [weak self] in
-            guard let self = self else { return }
-            
-            while !Task.isCancelled && self.autoRefreshEnabled {
-                do {
-                    // Sleep for the interval duration
-                    try await Task.sleep(for: .seconds(interval))
-                    
-                    // Check if we're still supposed to be running
-                    guard !Task.isCancelled && self.autoRefreshEnabled else { break }
-                    
-                    await MainActor.run {
-                        // Update next refresh time
-                        self.nextRefreshTime = Date().addingTimeInterval(interval)
-                        self.log(.info, category: "AsyncRefresh", "🔄 Async refresh timer FIRED at \(Date())")
-                    }
-                    
-                    // AGGRESSIVE STALENESS CHECK: Force refresh if cache data is older than 2 hours
-                    var forceRefreshDueToStaleCache = false
-                    if let profile = self.selectedProfile,
-                       let cachedData = self.costCache[profile.name] {
-                        let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-                        let twoHours: TimeInterval = 2 * 60 * 60 // 2 hours
-                        if cacheAge > twoHours {
-                            forceRefreshDueToStaleCache = true
-                            self.log(.warning, category: "AsyncRefresh", "AGGRESSIVE: Cache is \(Int(cacheAge/3600)) hours old, forcing refresh")
-                        }
-                    }
-                    
-                    // Check if data is stale and force refresh if needed
-                    if self.checkIfRefreshNeeded() || forceRefreshDueToStaleCache {
-                        let reason = forceRefreshDueToStaleCache ? "AGGRESSIVE cache staleness check" : "Standard staleness check"
-                        self.log(.info, category: "AsyncRefresh", "Data is stale (\(reason)), forcing refresh regardless of screen state")
-                        await self.fetchCostForSelectedProfile(force: true)
-                    } else if ScreenStateMonitor.shared.shouldAllowRefresh() {
-                        self.log(.info, category: "AsyncRefresh", "Screen is active, performing refresh")
-                        await self.fetchCostForSelectedProfile()
-                    } else {
-                        self.log(.info, category: "AsyncRefresh", "Skipped scheduled refresh: screen off or locked")
-                    }
-                } catch {
-                    // Handle cancellation gracefully
-                    if error is CancellationError {
-                        self.log(.info, category: "AsyncRefresh", "Async refresh timer was cancelled")
-                        break
-                    } else {
-                        self.log(.error, category: "AsyncRefresh", "Async refresh timer error: \(error)")
-                        // Wait a bit before retrying to avoid tight loops
-                        try? await Task.sleep(for: .seconds(30))
-                    }
-                }
-            }
-            // Ensure the task handle is cleared when the task ends so state checks are accurate
-            await MainActor.run {
-                self.refreshTask = nil
-            }
-            self.log(.info, category: "AsyncRefresh", "Async refresh timer task ended")
-        }
-        
-        // Create a validation task that checks every 60 seconds
-        timerValidationTask = Task { [weak self] in
-            guard let self = self else { return }
-            
-            while !Task.isCancelled && self.autoRefreshEnabled {
-                do {
-                    try await Task.sleep(for: .seconds(60))
-                    
-                    guard !Task.isCancelled && self.autoRefreshEnabled else { break }
-                    
-                    // Validate timer is still working
-                    if let nextTime = await MainActor.run(body: { self.nextRefreshTime }) {
-                        let timeUntilNext = nextTime.timeIntervalSinceNow
-                        if timeUntilNext < -120 { // More than 2 minutes overdue
-                            self.log(.warning, category: "AsyncRefresh", "Async timer is overdue by \(Int(-timeUntilNext)) seconds, restarting")
-                            await MainActor.run {
-                                self.startAutomaticRefresh()
-                            }
-                            break
-                        }
-                    }
-                } catch {
-                    if error is CancellationError {
-                        break
-                    }
-                    // Continue validation loop even on errors
-                }
-            }
-        }
-    }
-    
-    // Stop all async timer tasks
+    // MARK: - Legacy async task cleanup
+    //
+    // The previous implementation paired a DispatchSourceTimer with a long-running
+    // `Task.sleep(for: interval)` loop. Both shared the same vulnerability to macOS
+    // timer coalescing under App Nap, so redundancy was illusory. The refresh path
+    // is now a single 60s DispatchSource heartbeat driving `heartbeatTick`. This
+    // helper remains to cancel any leftover tasks from pre-upgrade state or future
+    // experiments.
     private func stopAsyncRefreshTimer() {
         refreshTask?.cancel()
         refreshTask = nil
         timerValidationTask?.cancel()
         timerValidationTask = nil
-        log(.info, category: "AsyncRefresh", "Stopped async refresh timer tasks")
     }
     
     // MARK: - Debug Timer Functions (only in DEBUG builds)
@@ -2832,12 +2677,18 @@ class AWSManager: ObservableObject {
                     self.costCache[profile.name] = cacheEntry
                     self.mergeDailyData(for: profile.name, dailyCosts: dailyCosts, dailyServiceCosts: dailyServiceCosts)
                     self.cacheStatus[profile.name] = Date()
+                    self.saveCostCache()
                 }
                 
                 // Update team cache after successful API call
                 await updateTeamCacheAfterAPICall()
                 
                 await MainActor.run { [totalAmount, currency, services, dailyCosts, forecastTotal] in
+                    guard self.selectedProfile?.name == profile.name else {
+                        self.log(.info, category: "API", "Ignoring stale fetch result for \(profile.name); current selection is \(self.selectedProfile?.name ?? "none")")
+                        return
+                    }
+
                     // Update UI data
                     self.costData.removeAll()
                     self.costData.append(CostData(
@@ -2882,10 +2733,7 @@ class AWSManager: ObservableObject {
                     let duration = Date().timeIntervalSince(startTime)
                     self.recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-Daily", success: true, duration: duration)
                     self.log(.info, category: "API", "Fetched MTD: \(totalAmount), Daily entries: \(dailyCosts.count), Services: \(services.count)")
-                    
-                    // Save cache to disk
-                    self.saveCostCache()
-                    
+
                     // Also fetch last month data (with caching)
                     Task {
                         await self.fetchLastMonthData(for: profile.name)
@@ -2902,7 +2750,12 @@ class AWSManager: ObservableObject {
                 // No data returned
                 let duration = Date().timeIntervalSince(startTime)
                 await MainActor.run {
-                    self.handleAPIFailure(duration: duration, profile: profile.name, error: "No data returned")
+                    self.handleAPIFailure(
+                        duration: duration,
+                        profile: profile.name,
+                        error: "No data returned",
+                        updatesCurrentSelection: self.selectedProfile?.name == profile.name
+                    )
                 }
             }
         } catch {
@@ -2926,11 +2779,17 @@ class AWSManager: ObservableObject {
             }
             
             await MainActor.run {
-                self.handleAPIFailure(duration: duration, profile: profile.name, error: errorMessage)
+                self.handleAPIFailure(
+                    duration: duration,
+                    profile: profile.name,
+                    error: errorMessage,
+                    updatesCurrentSelection: self.selectedProfile?.name == profile.name
+                )
             }
         }
         
         await MainActor.run {
+            guard self.selectedProfile?.name == profile.name else { return }
             self.isLoading = false
             self.isLoadingServices = false
         }
@@ -3884,27 +3743,8 @@ class AWSManager: ObservableObject {
     // Load data from cache
     private func loadFromCache(_ cacheEntry: CostCacheEntry) async {
         await MainActor.run {
-            // Update UI data from cache
-            self.costData.removeAll()
-            self.costData.append(CostData(
-                profileName: cacheEntry.profileName,
-                amount: cacheEntry.mtdTotal,
-                currency: cacheEntry.currency
-            ))
-            
-            // Update service costs
-            self.serviceCosts = cacheEntry.serviceCosts
-            
-            // Merge cached daily totals without disturbing existing history
-            self.mergeDailyData(for: cacheEntry.profileName, dailyCosts: cacheEntry.dailyCosts, dailyServiceCosts: [])
-            
-            // Update projections and trends
-            self.applyProjection(forecastTotal: cacheEntry.forecastTotal, dailyCosts: cacheEntry.dailyCosts)
-            self.updateCostTrend(for: cacheEntry.profileName)
-            
-            // Update loading states
-            self.isLoading = false
-            self.isLoadingServices = false
+            guard self.selectedProfile?.name == cacheEntry.profileName else { return }
+            self.applyCacheEntryToVisibleState(cacheEntry)
         }
     }
     
@@ -3948,17 +3788,7 @@ class AWSManager: ObservableObject {
                 // If we have a selected profile and cached data for it, populate the display immediately
                 if let profile = selectedProfile,
                    let cachedData = costCache[profile.name] {
-                    // Populate cost data from cache for immediate display
-                    let costData = CostData(
-                        profileName: cachedData.profileName,
-                        amount: cachedData.mtdTotal,
-                        currency: cachedData.currency
-                    )
-                    self.costData = [costData]
-                    self.serviceCosts = cachedData.serviceCosts
-                    Task { @MainActor in
-                        self.applyProjection(forecastTotal: cachedData.forecastTotal, dailyCosts: cachedData.dailyCosts)
-                    }
+                    applyCacheEntryToVisibleState(cachedData)
                     
                     let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
                     log(.info, category: "Cache", "Loaded cached data for \(profile.name) (\(Int(cacheAge/60)) minutes old)")
@@ -3982,20 +3812,25 @@ class AWSManager: ObservableObject {
     // MARK: - Circuit Breaker & Error Handling
     
     // Handle API failures with circuit breaker logic
-    private func handleAPIFailure(duration: TimeInterval, profile: String, error: String) {
+    private func handleAPIFailure(duration: TimeInterval, profile: String, error: String, updatesCurrentSelection: Bool) {
         consecutiveAPIFailures += 1
         
         if consecutiveAPIFailures >= maxConsecutiveFailures {
             circuitBreakerTripped = true
             log(.error, category: "API", "Circuit breaker tripped after \(consecutiveAPIFailures) failures")
-            errorMessage = "Multiple API failures detected. Circuit breaker active."
-        } else {
-            errorMessage = "API request failed: \(error)"
         }
         
         recordAPIRequest(profile: profile, endpoint: "GetCostAndUsage-Daily", success: false, duration: duration, error: error)
         log(.error, category: "API", "Error fetching cost for profile \(profile): \(error)")
-        
+
+        guard updatesCurrentSelection else { return }
+
+        if circuitBreakerTripped {
+            errorMessage = "Multiple API failures detected. Circuit breaker active."
+        } else {
+            errorMessage = "API request failed: \(error)"
+        }
+
         isLoading = false
         isLoadingServices = false
     }
@@ -4691,6 +4526,50 @@ class AWSManager: ObservableObject {
         }
     }
     #endif
+
+    // MARK: - Ledger menu bar derived values
+
+    var deltaFractionVsLastMonth: Double? {
+        guard let cost = costData.first,
+              let lastMonthFull = lastMonthData[cost.profileName] else { return nil }
+        let lastMonthTotal = NSDecimalNumber(decimal: lastMonthFull.amount).doubleValue
+        guard lastMonthTotal > 0 else { return nil }
+        let calendar = Calendar.current
+        let now = Date()
+        let daysElapsed = max(1, Double(calendar.component(.day, from: now)))
+        let lastMonthDate = calendar.date(byAdding: .month, value: -1, to: now)!
+        let daysInLastMonth = Double(calendar.range(of: .day, in: .month, for: lastMonthDate)?.count ?? 30)
+        let currentRate = NSDecimalNumber(decimal: cost.amount).doubleValue / daysElapsed
+        let lastMonthRate = lastMonthTotal / daysInLastMonth
+        return (currentRate - lastMonthRate) / lastMonthRate
+    }
+
+    var budgetFraction: Double? {
+        guard let p = selectedProfile,
+              let cost = costData.first?.amount else { return nil }
+        let b = getBudget(for: p.name)
+        guard let monthlyBudget = b.monthlyBudget,
+              NSDecimalNumber(decimal: monthlyBudget).doubleValue > 0 else { return nil }
+        return NSDecimalNumber(decimal: cost).doubleValue / NSDecimalNumber(decimal: monthlyBudget).doubleValue
+    }
+
+    var dailyTotalsForSelectedProfile: [Double]? {
+        guard let points = dailyPointsForSelectedProfile else { return nil }
+        return points.map { $0.1 }
+    }
+
+    var dailyPointsForSelectedProfile: [(Date, Double)]? {
+        guard let p = selectedProfile,
+              let daily = dailyServiceCostsByProfile[p.name] else { return nil }
+        let grouped = Dictionary(grouping: daily, by: { $0.date })
+        let sorted = grouped.keys.sorted()
+        return sorted.map { day in
+            let total = grouped[day]!
+                .map { NSDecimalNumber(decimal: $0.amount).doubleValue }
+                .reduce(0, +)
+            return (day, total)
+        }
+    }
 }
 
 // Error enum for cost fetching

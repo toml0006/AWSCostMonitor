@@ -9,6 +9,36 @@ import Foundation
 import AppKit
 import SwiftUI
 import OSLog
+import Combine
+
+// Store whats-new window reference
+var globalWhatsNewWindow: NSWindow?
+
+func showWhatsNewV15IfNeeded(appearance: AppearanceManager) {
+    let key = "shownWhatsNew.1.5.0"
+    guard !UserDefaults.standard.bool(forKey: key) else { return }
+    UserDefaults.standard.set(true, forKey: key)
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        let view = WhatsNewV15 {
+            globalWhatsNewWindow?.close()
+            globalWhatsNewWindow = nil
+        }
+        .environmentObject(appearance)
+        .environment(\.ledgerAppearance, appearance.appearance)
+
+        let controller = NSHostingController(rootView: view)
+        controller.sizingOptions = []
+        let window = NSWindow(contentViewController: controller)
+        window.title = "What's New"
+        window.styleMask = [.titled, .closable]
+        window.setContentSize(NSSize(width: 440, height: 340))
+        window.center()
+        globalWhatsNewWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
 
 class WindowCloseDelegate: NSObject, NSWindowDelegate {
     private let onClose: () -> Void
@@ -78,6 +108,7 @@ func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "Gen
         
         let settingsView = SettingsView(initialSelectedCategory: selectedTab)
             .environmentObject(awsManager)
+            .environmentObject(AppearanceManager.shared)
         
         let controller = NSHostingController(rootView: settingsView)
         controller.sizingOptions = []
@@ -116,17 +147,31 @@ func showRefreshSettingsForApp(awsManager: AWSManager) {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
+    private var cancellables = Set<AnyCancellable>()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Close any windows that may have opened during launch
-        // This is important because WindowGroup can create windows automatically
-        for window in NSApp.windows {
+        // Close any WindowGroup-spawned windows that may have opened during launch.
+        // Preserve explicitly-presented windows (onboarding, profile-change alerts,
+        // what's-new) so we don't race with them and make them flash closed.
+        let preservedTitles: Set<String> = [
+            "Welcome to AWSCostMonitor",
+            "New Profiles Detected",
+            "Profiles Removed",
+            "What's New"
+        ]
+        for window in NSApp.windows where !preservedTitles.contains(window.title) {
             window.close()
         }
 
+        AppearanceManager.shared.runLegacyMigrationIfNeeded()
+
         // Initialize the status bar controller with a small delay to ensure proper setup
         DispatchQueue.main.async { [weak self] in
-            self?.statusBarController = StatusBarController(awsManager: AWSManager.shared, themeManager: ThemeManager.shared)
+            self?.statusBarController = StatusBarController(
+                awsManager: AWSManager.shared,
+                appearance: AppearanceManager.shared
+            )
+            showWhatsNewV15IfNeeded(appearance: AppearanceManager.shared)
 
             // Check if we need to refresh cost data on launch after UI is ready
             // This ensures that when the app launches, it checks if an update is due
@@ -135,5 +180,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Hide the dock icon
         NSApp.setActivationPolicy(.accessory)
+
+        NSApp.publisher(for: \.effectiveAppearance)
+            .receive(on: DispatchQueue.main)
+            .sink { _ in
+                AppearanceManager.shared.systemAppearanceDidChange()
+            }
+            .store(in: &cancellables)
     }
 }

@@ -11,7 +11,7 @@ import Charts
 struct ServiceHistogramView: View {
     let dailyServiceCosts: [DailyServiceCost]
     let serviceName: String
-    @ObservedObject var themeManager = ThemeManager.shared
+    @Environment(\.ledgerAppearance) private var a
     
     var body: some View {
         let last14Days = getLast14DaysData()
@@ -23,22 +23,22 @@ struct ServiceHistogramView: View {
                 
                 HStack(spacing: 0) {
                     Text(histogramText.bars)
-                        .font(.system(size: 10 * themeManager.currentTheme.spacingMultiplier, design: .monospaced))
-                        .foregroundColor(themeManager.currentTheme.accentColor)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(LedgerTokens.Color.accent(a))
                     
                     Text(" ")
                         .font(.system(size: 6))
                     
                     Text(histogramText.trend)
-                        .font(.system(size: 8 * themeManager.currentTheme.spacingMultiplier))
+                        .font(.system(size: 8))
                         .foregroundColor(histogramText.trendColor)
                 }
                 
                 Spacer()
                 
                 Text("14d")
-                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                    .foregroundColor(themeManager.currentTheme.secondaryColor)
+                    .ledgerMeta()
+                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
             }
         }
     }
@@ -101,7 +101,7 @@ struct ServiceHistogramView: View {
         
         if maxAmount == 0.0 {
             let emptyBars = String(repeating: "▁", count: dailyData.count)
-            return (emptyBars, "—", themeManager.currentTheme.secondaryColor) // All zero bars with neutral trend
+            return (emptyBars, "—", LedgerTokens.Color.inkSecondary(a))
         }
         
         // Create bars using fine-grained Unicode blocks
@@ -124,13 +124,13 @@ struct ServiceHistogramView: View {
             
             if lastWeek > firstWeek * 1.2 { // 20% increase
                 trend = "↗"
-                trendColor = themeManager.currentTheme.errorColor
+                trendColor = LedgerTokens.Color.signalOver(a)
             } else if lastWeek < firstWeek * 0.8 { // 20% decrease
                 trend = "↘"
-                trendColor = themeManager.currentTheme.successColor
+                trendColor = LedgerTokens.Color.signalUnder(a)
             } else {
                 trend = "→"
-                trendColor = themeManager.currentTheme.secondaryColor
+                trendColor = LedgerTokens.Color.inkSecondary(a)
             }
             
             return (bars, trend, trendColor)
@@ -145,13 +145,13 @@ struct ServiceHistogramView: View {
             
             if lastHalf > firstHalf * 1.2 { // 20% increase
                 trend = "↗"
-                trendColor = themeManager.currentTheme.errorColor
+                trendColor = LedgerTokens.Color.signalOver(a)
             } else if lastHalf < firstHalf * 0.8 { // 20% decrease
                 trend = "↘"
-                trendColor = themeManager.currentTheme.successColor
+                trendColor = LedgerTokens.Color.signalUnder(a)
             } else {
                 trend = "→"
-                trendColor = themeManager.currentTheme.secondaryColor
+                trendColor = LedgerTokens.Color.inkSecondary(a)
             }
             
             return (bars, trend, trendColor)
@@ -169,4 +169,3 @@ struct ServiceHistogramView: View {
         return CGFloat(normalizedHeight)
     }
 }
-

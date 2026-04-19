@@ -576,7 +576,7 @@ struct ContentView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("$\(estimatedMonthlyCost, specifier: "%.2f")")
+                    Text(CurrencyFormatter.format(estimatedMonthlyCost))
                         .font(.caption.monospacedDigit())
                         .foregroundColor(estimatedMonthlyCost > 1.0 ? .orange : .secondary)
                 }

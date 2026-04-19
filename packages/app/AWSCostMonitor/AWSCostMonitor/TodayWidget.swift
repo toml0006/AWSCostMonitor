@@ -195,11 +195,7 @@ struct SmallWidgetView: View {
     }
     
     private var formattedCost: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = entry.currency
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSDecimalNumber(decimal: entry.cost)) ?? "$0"
+        CurrencyFormatter.format(entry.cost, currencyCode: entry.currency)
     }
 }
 
@@ -259,10 +255,7 @@ struct MediumWidgetView: View {
     }
     
     private var formattedCost: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = entry.currency
-        return formatter.string(from: NSDecimalNumber(decimal: entry.cost)) ?? "$0.00"
+        CurrencyFormatter.format(entry.cost, currencyCode: entry.currency)
     }
     
     private var statusText: String {
@@ -358,10 +351,7 @@ struct LargeWidgetView: View {
     }
     
     private var formattedCost: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = entry.currency
-        return formatter.string(from: NSDecimalNumber(decimal: entry.cost)) ?? "$0.00"
+        CurrencyFormatter.format(entry.cost, currencyCode: entry.currency)
     }
     
     private var statusText: String {

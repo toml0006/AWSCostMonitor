@@ -9,17 +9,19 @@ import SwiftUI
 
 struct CalendarView: View {
     @EnvironmentObject var awsManager: AWSManager
-    @ObservedObject var themeManager = ThemeManager.shared
+    @Environment(\.ledgerAppearance) private var a
     let highlightedService: String?
+    private let initialDate: Date?
     @State private var selectedDate: Date = Date()
     @State private var currentMonth: Date = Date()
     @State private var showingDayDetail = false
     @State private var selectedDayData: DailyCost?
     @State private var selectedDayServices: [ServiceCost] = []
     @State private var hoveredDate: Date?
-    
-    init(highlightedService: String? = nil) {
+
+    init(highlightedService: String? = nil, initialDate: Date? = nil) {
         self.highlightedService = highlightedService
+        self.initialDate = initialDate
     }
     
     private let calendar = Calendar.current
@@ -48,8 +50,8 @@ struct CalendarView: View {
             HStack {
                 Button(action: previousMonth) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: themeManager.currentTheme.largeFontSize))
-                        .foregroundColor(themeManager.currentTheme.accentColor)
+                        .font(.system(size: 14))
+                        .foregroundColor(LedgerTokens.Color.accent(a))
                 }
                 .buttonStyle(.plain)
                 .help("Previous month")
@@ -57,15 +59,15 @@ struct CalendarView: View {
                 Spacer()
                 
                 Text(dateFormatter.string(from: currentMonth))
-                    .themeFont(themeManager.currentTheme, size: .large, weight: .secondary)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .ledgerStatValue()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
                 Spacer()
                 
                 Button(action: nextMonth) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: themeManager.currentTheme.largeFontSize))
-                        .foregroundColor(themeManager.currentTheme.accentColor)
+                        .font(.system(size: 14))
+                        .foregroundColor(LedgerTokens.Color.accent(a))
                 }
                 .buttonStyle(.plain)
                 .help("Next month")
@@ -81,8 +83,8 @@ struct CalendarView: View {
                 .help("Go to current month")
                 .disabled(isCurrentMonth)
             }
-            .themePadding(themeManager.currentTheme, .all, 12)
-            .background(themeManager.currentTheme.backgroundColor)
+            .padding(12)
+            .background(LedgerTokens.Color.surfaceWindow(a))
             
             Divider()
             
@@ -90,8 +92,8 @@ struct CalendarView: View {
             if awsManager.profiles.count > 1 {
                 HStack {
                     Text("Profile:")
-                        .themeFont(themeManager.currentTheme, size: .regular, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor)
+                        .ledgerBody()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                     
                     Picker("", selection: Binding(
                         get: { awsManager.selectedProfile },
@@ -114,13 +116,17 @@ struct CalendarView: View {
                     if let profile = awsManager.selectedProfile {
                         let budget = awsManager.getBudget(for: profile.name)
                         Text("Total: \(formatCurrency(monthTotal))")
-                            .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
-                            .foregroundColor(budget.monthlyBudget.map { monthTotal > $0 } ?? false ? themeManager.currentTheme.errorColor : themeManager.currentTheme.textColor)
+                            .ledgerStatValue()
+                            .foregroundColor(
+                                budget.monthlyBudget.map { monthTotal > $0 } ?? false
+                                    ? LedgerTokens.Color.signalOver(a)
+                                    : LedgerTokens.Color.inkPrimary(a)
+                            )
                     }
                 }
-                .themePadding(themeManager.currentTheme, .horizontal, 12)
-                .themePadding(themeManager.currentTheme, .vertical, 8)
-                .background(themeManager.currentTheme.secondaryColor.opacity(0.1))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(LedgerTokens.Color.inkSecondary(a).opacity(0.1))
             }
             
             Divider()
@@ -132,16 +138,16 @@ struct CalendarView: View {
                     HStack(spacing: 0) {
                         ForEach(weekdaySymbols, id: \.self) { day in
                             Text(day)
-                                .themeFont(themeManager.currentTheme, size: .small, weight: .primary)
-                                .foregroundColor(themeManager.currentTheme.secondaryColor)
+                                .ledgerMeta()
+                                .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
                         }
                     }
-                    .background(themeManager.currentTheme.secondaryColor.opacity(0.05))
+                    .background(LedgerTokens.Color.inkSecondary(a).opacity(0.05))
                     
                     // Calendar days grid
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1 * themeManager.currentTheme.spacingMultiplier), count: 7), spacing: 1 * themeManager.currentTheme.spacingMultiplier) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7), spacing: 1) {
                         ForEach(calendarDays, id: \.self) { date in
                             if let date = date {
                                 DayCell(
@@ -163,38 +169,38 @@ struct CalendarView: View {
                             }
                         }
                     }
-                    .background(themeManager.currentTheme.secondaryColor.opacity(0.2))
+                    .background(LedgerTokens.Color.inkSecondary(a).opacity(0.2))
                 }
-                .themePadding(themeManager.currentTheme, .all, 12)
+                .padding(12)
             }
             
             // Legend
-            HStack(spacing: 20 * themeManager.currentTheme.spacingMultiplier) {
-                HStack(spacing: 5 * themeManager.currentTheme.spacingMultiplier) {
+            HStack(spacing: 20) {
+                HStack(spacing: 5) {
                     Circle()
-                        .fill(themeManager.currentTheme.successColor.opacity(0.3))
+                        .fill(LedgerTokens.Color.signalUnder(a).opacity(0.3))
                         .frame(width: 10, height: 10)
                     Text("Low spend")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor)
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 }
                 
-                HStack(spacing: 5 * themeManager.currentTheme.spacingMultiplier) {
+                HStack(spacing: 5) {
                     Circle()
-                        .fill(themeManager.currentTheme.chartColor(for: 2).opacity(0.3))
+                        .fill(LedgerTokens.Color.accent(a).opacity(0.3))
                         .frame(width: 10, height: 10)
                     Text("Medium spend")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor)
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 }
                 
-                HStack(spacing: 5 * themeManager.currentTheme.spacingMultiplier) {
+                HStack(spacing: 5) {
                     Circle()
-                        .fill(themeManager.currentTheme.errorColor.opacity(0.3))
+                        .fill(LedgerTokens.Color.signalOver(a).opacity(0.3))
                         .frame(width: 10, height: 10)
                     Text("High spend")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor)
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 }
                 
                 Spacer()
@@ -205,14 +211,14 @@ struct CalendarView: View {
                     }
                 }) {
                     Text("Refresh")
-                        .themeFont(themeManager.currentTheme, size: .regular, weight: .primary)
-                        .foregroundColor(awsManager.isLoading ? themeManager.currentTheme.secondaryColor : themeManager.currentTheme.accentColor)
+                        .ledgerBody()
+                        .foregroundColor(awsManager.isLoading ? LedgerTokens.Color.inkSecondary(a) : LedgerTokens.Color.accent(a))
                 }
                 .buttonStyle(.plain)
                 .disabled(awsManager.isLoading)
             }
-            .themePadding(themeManager.currentTheme, .all, 12)
-            .background(themeManager.currentTheme.backgroundColor)
+            .padding(12)
+            .background(LedgerTokens.Color.surfaceWindow(a))
         }
         .frame(minWidth: 800, minHeight: 600)
         .sheet(isPresented: $showingDayDetail) {
@@ -234,6 +240,11 @@ struct CalendarView: View {
                 Task {
                     await awsManager.fetchCostForSelectedProfile()
                 }
+            }
+
+            if let target = initialDate {
+                currentMonth = target
+                selectDay(target)
             }
         }
     }
@@ -317,7 +328,7 @@ struct CalendarView: View {
     }
     
     private func formatCurrency(_ amount: Decimal) -> String {
-        currencyFormatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
+        CurrencyFormatter.format(amount)
     }
     
     private func previousMonth() {
@@ -385,7 +396,7 @@ struct DayCell: View {
     let isToday: Bool
     let isHovered: Bool
     let maxDailyCost: Decimal
-    @ObservedObject var themeManager = ThemeManager.shared
+    @Environment(\.ledgerAppearance) private var a
     
     private let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -409,14 +420,14 @@ struct DayCell: View {
                         .stroke(borderColor, lineWidth: isToday ? 2 : 1)
                 )
             
-            VStack(spacing: 4 * themeManager.currentTheme.spacingMultiplier) {
+            VStack(spacing: 4) {
                 Text(dayFormatter.string(from: date))
-                    .themeFont(themeManager.currentTheme, size: .regular, weight: .primary)
-                    .foregroundColor(isToday ? themeManager.currentTheme.accentColor : themeManager.currentTheme.textColor)
+                    .ledgerBody()
+                    .foregroundColor(isToday ? LedgerTokens.Color.accent(a) : LedgerTokens.Color.inkPrimary(a))
                 
                 if let cost = dailyCost {
                     Text(formatAmount(cost.amount))
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                        .ledgerMeta()
                         .foregroundColor(costColor(cost.amount))
                     
                     // Visual indicator bar
@@ -426,18 +437,18 @@ struct DayCell: View {
                             .frame(width: geometry.size.width * CGFloat(truncating: NSDecimalNumber(decimal: cost.amount / maxDailyCost)), height: 4)
                     }
                     .frame(height: 4)
-                    .themePadding(themeManager.currentTheme, .horizontal, 4)
+                    .padding(.horizontal, 4)
                 } else if date <= Date() {
                     Text("$0")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor)
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 } else {
                     Text("-")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor.opacity(0.5))
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a).opacity(0.5))
                 }
             }
-            .themePadding(themeManager.currentTheme, .all, 8)
+            .padding(8)
         }
         .frame(height: 80)
         .scaleEffect(isHovered ? 1.05 : 1.0)
@@ -446,46 +457,41 @@ struct DayCell: View {
     
     private var backgroundColor: Color {
         if isHovered {
-            return themeManager.currentTheme.accentColor.opacity(0.1)
+            return LedgerTokens.Color.accent(a).opacity(0.1)
         } else if let cost = dailyCost {
             let costValue = NSDecimalNumber(decimal: cost.amount).doubleValue
             let maxValue = NSDecimalNumber(decimal: maxDailyCost).doubleValue
-            return themeManager.currentTheme.dayBackgroundColor(cost: costValue, maxCost: maxValue)
+            guard maxValue > 0 else { return LedgerTokens.Color.surfaceWindow(a) }
+            return LedgerTokens.Color.accent(a).opacity(Double(costValue / maxValue) * 0.5)
         } else {
-            return themeManager.currentTheme.backgroundColor
+            return LedgerTokens.Color.surfaceWindow(a)
         }
     }
     
     private var borderColor: Color {
         if isToday {
-            return themeManager.currentTheme.accentColor
+            return LedgerTokens.Color.accent(a)
         } else if isHovered {
-            return themeManager.currentTheme.accentColor.opacity(0.5)
+            return LedgerTokens.Color.accent(a).opacity(0.5)
         } else {
-            return themeManager.currentTheme.secondaryColor.opacity(0.3)
+            return LedgerTokens.Color.inkSecondary(a).opacity(0.3)
         }
     }
     
     private func formatAmount(_ amount: Decimal) -> String {
-        if amount < 1 {
-            return String(format: "$%.2f", NSDecimalNumber(decimal: amount).doubleValue)
-        } else if amount < 100 {
-            return String(format: "$%.1f", NSDecimalNumber(decimal: amount).doubleValue)
-        } else {
-            return currencyFormatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0"
-        }
+        CurrencyFormatter.format(amount)
     }
     
     private func costColor(_ amount: Decimal) -> Color {
         let percentage = NSDecimalNumber(decimal: amount / maxDailyCost).doubleValue
         if percentage > 0.75 {
-            return themeManager.currentTheme.errorColor
+            return LedgerTokens.Color.signalOver(a)
         } else if percentage > 0.5 {
-            return themeManager.currentTheme.warningColor
+            return LedgerTokens.Color.signalOver(a)
         } else if percentage > 0.25 {
-            return themeManager.currentTheme.chartColor(for: 2)  // Yellow-ish from chart palette
+            return LedgerTokens.Color.accent(a)
         } else {
-            return themeManager.currentTheme.successColor
+            return LedgerTokens.Color.signalUnder(a)
         }
     }
 }

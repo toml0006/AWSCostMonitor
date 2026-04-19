@@ -19,49 +19,56 @@ import {
   ArrowRight,
   ChevronDown,
   History,
-  Layers
+  Layers,
+  Activity,
+  Sliders
 } from 'lucide-react'
 
 const releases = [
   {
-    version: '1.4.0',
-    date: 'January 19, 2026',
-    title: 'Theme Selector & Enhanced Data Views',
+    version: '1.5.0',
+    date: 'April 19, 2026',
+    title: 'Ledger — A Refreshed Visual Identity',
     icon: Palette,
     color: 'primary',
     highlights: [
-      'UI theme selector with multiple color schemes',
-      'Collapsible services section for cleaner interface',
-      'Automatic historical data fetching for better trends',
-      'Dynamic popover height based on content'
+      'New Ledger design system with four orthogonal appearance axes',
+      'Menu bar pill with inline sparkline and luminance-aware ink',
+      'WCAG AAA contrast mode for high-legibility displays',
+      'New HeroSplit popover layout with per-service sparklines'
     ],
     features: [
       {
         icon: Palette,
-        title: 'UI Theme Selector',
-        description: 'Personalize your experience with multiple color schemes to match your style or system preferences'
+        title: 'Ledger Design System',
+        description: 'One opinionated identity with four independent controls: Accent (Amber, Mint, Plasma, Bone, System), Density, Contrast, and Color Scheme'
       },
       {
-        icon: ChevronDown,
-        title: 'Collapsible Services Section',
-        description: 'Expand or collapse the services breakdown to view all AWS services at a glance without clutter'
+        icon: Activity,
+        title: 'Pill Menu Bar with Sparkline',
+        description: 'Optional accent-colored pill renders your MTD with a 14-day spend sparkline and contrast-aware ink that stays legible on any accent'
       },
       {
-        icon: History,
-        title: 'Historical Data Fetching',
-        description: 'Automatically fetches previous month\'s daily spending for better trend analysis and comparisons'
+        icon: Sliders,
+        title: 'WCAG AAA Contrast',
+        description: 'Flip a single switch for sharper type, stronger separators, and AAA-grade color pairings — perfect for bright rooms or external displays'
       },
       {
         icon: Layers,
-        title: 'Dynamic Popover Height',
-        description: 'Smart popover that adjusts its height based on content for an optimized viewing experience'
+        title: 'HeroSplit Popover',
+        description: 'Redesigned popover pairs a large MTD hero number with a right-hand detail column, including per-service sparklines and a sparkline range toggle'
       }
     ],
     improvements: [
-      'Enhanced popover with dynamic height adjustment based on expanded state',
-      'Improved daily data merging for seamless month transitions',
-      'Better visual hierarchy in the services breakdown',
-      'Performance optimizations throughout the app'
+      'Luminance-aware ink automatically picks black or white on the menu bar pill based on the active accent',
+      'Per-service sparklines (0.22 opacity) show 14-day service-level trends inline in the service list',
+      'Settings → Appearance consolidates accent, density, contrast, and color scheme into a single tab',
+      'Legacy theme preferences from pre-1.5 installs migrate on first launch'
+    ],
+    bugFixes: [
+      'Fixed a profile-change alert that could flash briefly on every launch after adopting the App Sandbox',
+      'New AWS profiles are now added silently to the dropdown instead of prompting each time',
+      'Pre-sandbox profile visibility settings now migrate forward so known profiles aren\'t re-flagged as new'
     ]
   },
   {

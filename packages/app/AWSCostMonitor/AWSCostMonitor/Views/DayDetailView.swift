@@ -16,7 +16,7 @@ struct DayDetailView: View {
     let highlightedService: String?
     let onNavigateToDate: ((Date) -> Void)?
     @Environment(\.dismiss) var dismiss
-    @ObservedObject var themeManager = ThemeManager.shared
+    @Environment(\.ledgerAppearance) private var a
     @State private var hoveredService: String? = nil
     @State private var showAllServices = false
     @State private var showAPIDetails = false
@@ -95,8 +95,8 @@ struct DayDetailView: View {
             // Navigation buttons on the left, matching calendar view style
             Button(action: navigateToPreviousDay) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: themeManager.currentTheme.largeFontSize))
-                    .foregroundColor(themeManager.currentTheme.accentColor)
+                    .font(.system(size: 14))
+                    .foregroundColor(LedgerTokens.Color.accent(a))
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.leftArrow, modifiers: [])
@@ -104,28 +104,28 @@ struct DayDetailView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(dateFormatter.string(from: date))
-                    .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .ledgerStatValue()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
                 if let cost = dailyCost {
-                    Text("Total: \(currencyFormatter.string(from: NSDecimalNumber(decimal: cost.amount)) ?? "$0.00")")
-                        .themeFont(themeManager.currentTheme, size: .regular, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor)
+                    Text("Total: \(CurrencyFormatter.format(cost.amount))")
+                        .ledgerBody()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 } else {
                     Text("No data available")
-                        .themeFont(themeManager.currentTheme, size: .regular, weight: .secondary)
-                        .foregroundColor(themeManager.currentTheme.secondaryColor)
+                        .ledgerBody()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 }
             }
-            .themePadding(themeManager.currentTheme, .horizontal, 8)
+            .padding(.horizontal, 8)
             
             Spacer()
             
             // Calendar button to jump to today
             Button(action: navigateToToday) {
                 Image(systemName: "calendar")
-                    .font(.system(size: themeManager.currentTheme.largeFontSize))
-                    .foregroundColor(isViewingToday ? themeManager.currentTheme.secondaryColor : themeManager.currentTheme.accentColor)
+                    .font(.system(size: 14))
+                    .foregroundColor(isViewingToday ? LedgerTokens.Color.inkSecondary(a) : LedgerTokens.Color.accent(a))
             }
             .buttonStyle(.plain)
             .keyboardShortcut("t", modifiers: [.command])
@@ -135,23 +135,23 @@ struct DayDetailView: View {
             // Forward navigation button
             Button(action: navigateToNextDay) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: themeManager.currentTheme.largeFontSize))
-                    .foregroundColor(isNextDayInFuture ? themeManager.currentTheme.secondaryColor : themeManager.currentTheme.accentColor)
+                    .font(.system(size: 14))
+                    .foregroundColor(isNextDayInFuture ? LedgerTokens.Color.inkSecondary(a) : LedgerTokens.Color.accent(a))
             }
             .buttonStyle(.plain)
             .disabled(isNextDayInFuture)
             .keyboardShortcut(.rightArrow, modifiers: [])
             .help(isNextDayInFuture ? "Cannot navigate to future dates" : "Next day")
         }
-        .themePadding(themeManager.currentTheme, .all, 12)
-        .background(themeManager.currentTheme.backgroundColor)
+        .padding(12)
+        .background(LedgerTokens.Color.surfaceWindow(a))
     }
     
     private var donutChartView: some View {
         VStack {
             Text("Cost Distribution")
-                .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .ledgerStatValue()
+                .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 .padding(.bottom, 10)
             
             ZStack {
@@ -195,7 +195,7 @@ struct DayDetailView: View {
                         context.fill(path, with: .color(serviceColor.opacity(opacity)))
                         
                         // Add subtle stroke
-                        context.stroke(path, with: .color(themeManager.currentTheme.secondaryColor.opacity(0.2)), lineWidth: 1)
+                        context.stroke(path, with: .color(LedgerTokens.Color.inkSecondary(a).opacity(0.2)), lineWidth: 1)
                         
                         currentAngle += angleSpan
                     }
@@ -214,44 +214,44 @@ struct DayDetailView: View {
                let service = processedServices.first(where: { $0.name == hovered }) {
                 // Show hovered service details
                 Text(service.name)
-                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                    .ledgerMeta()
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
-                Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
-                    .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
-                    .foregroundColor(themeManager.currentTheme.primaryColor)
+                Text(CurrencyFormatter.format(service.amount))
+                    .ledgerStatValue()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
                 let percentage = totalAmount > 0 ? (service.amount / totalAmount) * 100 : 0
                 Text("\(Int(truncating: NSDecimalNumber(decimal: percentage)))%")
-                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                    .foregroundColor(themeManager.currentTheme.secondaryColor)
+                    .ledgerMeta()
+                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
             } else {
                 // Show total when nothing is hovered
                 Text("Total")
-                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                    .foregroundColor(themeManager.currentTheme.secondaryColor)
+                    .ledgerMeta()
+                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                 
-                Text(currencyFormatter.string(from: NSDecimalNumber(decimal: totalAmount)) ?? "$0")
-                    .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
-                    .foregroundColor(themeManager.currentTheme.primaryColor)
+                Text(CurrencyFormatter.format(totalAmount))
+                    .ledgerStatValue()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 
                 Text("All Services")
-                    .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
-                    .foregroundColor(themeManager.currentTheme.secondaryColor)
+                    .ledgerMeta()
+                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
             }
         }
         .frame(width: 140, height: 140)
-        .background(themeManager.currentTheme.backgroundColor)
+        .background(LedgerTokens.Color.surfaceWindow(a))
         .clipShape(Circle())
     }
     
     private var serviceListView: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Services")
-                .themeFont(themeManager.currentTheme, size: .large, weight: .primary)
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .ledgerStatValue()
+                .foregroundColor(LedgerTokens.Color.inkPrimary(a))
                 .padding(.bottom, 4)
             
             ScrollView {
@@ -262,7 +262,7 @@ struct DayDetailView: View {
                     
                     toggleButton
                 }
-                .themePadding(themeManager.currentTheme, .trailing, 8)
+                .padding(.trailing, 8)
             }
             .frame(maxHeight: 350)
         }
@@ -285,22 +285,26 @@ struct DayDetailView: View {
                 .frame(width: 8, height: 8)
             
             Text(service.serviceName)
-                .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                .ledgerMeta()
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .foregroundColor(LedgerTokens.Color.inkPrimary(a))
             
-            Text(currencyFormatter.string(from: NSDecimalNumber(decimal: service.amount)) ?? "$0")
-                .themeFont(themeManager.currentTheme, size: .small, weight: .primary)
-                .foregroundColor(service.amount > 10 ? themeManager.currentTheme.errorColor : (service.amount > 1 ? themeManager.currentTheme.warningColor : themeManager.currentTheme.textColor))
+            Text(CurrencyFormatter.format(service.amount))
+                .ledgerMeta()
+                .foregroundColor(
+                    service.amount > 10
+                        ? LedgerTokens.Color.signalOver(a)
+                        : (service.amount > 1 ? LedgerTokens.Color.signalOver(a) : LedgerTokens.Color.inkPrimary(a))
+                )
         }
-        .themePadding(themeManager.currentTheme, .vertical, 4)
-        .themePadding(themeManager.currentTheme, .horizontal, 8)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(
-                    highlightedService == service.serviceName ? themeManager.currentTheme.accentColor.opacity(0.2) :
-                    hoveredService == service.serviceName ? themeManager.currentTheme.accentColor.opacity(0.1) : Color.clear
+                    highlightedService == service.serviceName ? LedgerTokens.Color.accent(a).opacity(0.2) :
+                    hoveredService == service.serviceName ? LedgerTokens.Color.accent(a).opacity(0.1) : Color.clear
                 )
         )
         .onHover { isHovered in
@@ -316,7 +320,7 @@ struct DayDetailView: View {
                     HStack {
                         Image(systemName: "chevron.down.circle")
                         Text("Show all services")
-                            .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                            .ledgerMeta()
                     }
                 }
                 .buttonStyle(.plain)
@@ -327,7 +331,7 @@ struct DayDetailView: View {
                     HStack {
                         Image(systemName: "chevron.up.circle")
                         Text("Show less")
-                            .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                            .ledgerMeta()
                     }
                 }
                 .buttonStyle(.plain)
@@ -356,16 +360,21 @@ struct DayDetailView: View {
     }
     
     private func colorForService(_ serviceName: String) -> Color {
-        // Use theme chart colors for services
-        let serviceNames = processedServices.map { $0.name }
-        if let index = serviceNames.firstIndex(of: serviceName) {
-            return themeManager.currentTheme.chartColor(for: index)
+        // Distribute hues evenly across all segments so adjacent slices
+        // always differ by a meaningful amount, regardless of count.
+        let names = processedServices.map { $0.name }
+        if let index = names.firstIndex(of: serviceName) {
+            let total = max(names.count, 1)
+            let baseHue: Double = 0.10 // start in the amber range to match the brand
+            let hue = (baseHue + Double(index) / Double(total)).truncatingRemainder(dividingBy: 1.0)
+            // Alternate saturation/brightness slightly so similar hues still read apart
+            let saturation = index.isMultiple(of: 2) ? 0.78 : 0.62
+            let brightness = index.isMultiple(of: 2) ? 0.92 : 0.78
+            return Color(hue: hue, saturation: saturation, brightness: brightness)
         }
-        
-        // Generate a consistent color based on the service name
         let hash = serviceName.hashValue
         let hue = Double(abs(hash) % 360) / 360.0
-        return Color(hue: hue, saturation: 0.7, brightness: 0.8)
+        return Color(hue: hue, saturation: 0.7, brightness: 0.85)
     }
     
     // MARK: - API Calls Section
@@ -389,7 +398,7 @@ struct DayDetailView: View {
                     
                     Image(systemName: showAPIDetails ? "chevron.up" : "chevron.down")
                         .foregroundColor(.secondary)
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                        .ledgerMeta()
                 }
                 .padding()
                 .contentShape(Rectangle())
@@ -431,7 +440,7 @@ struct DayDetailView: View {
                             .font(.title2)
                             .foregroundColor(Color(.systemBlue).opacity(0.5))
                         Text("No API calls recorded for this day")
-                            .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                            .ledgerMeta()
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical)
@@ -451,11 +460,11 @@ struct DayDetailView: View {
                 // Footer info
                 HStack(spacing: 16) {
                     Label("Rate Limit: 1 call/minute", systemImage: "speedometer")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                        .ledgerMeta()
                         .foregroundColor(.secondary)
                     
                     Label("Est. cost: ~$\(String(format: "%.3f", Double(apiCalls.count) * 0.01))", systemImage: "dollarsign.circle")
-                        .themeFont(themeManager.currentTheme, size: .small, weight: .secondary)
+                        .ledgerMeta()
                         .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
@@ -517,10 +526,10 @@ struct DayDetailView: View {
                 dismiss()
             }
             .keyboardShortcut(.defaultAction)
-            .themePadding(themeManager.currentTheme, .horizontal, 12)
-            .themePadding(themeManager.currentTheme, .vertical, 12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
         }
-        .background(themeManager.currentTheme.backgroundColor)
+        .background(LedgerTokens.Color.surfaceWindow(a))
     }
     
     // MARK: - Navigation
