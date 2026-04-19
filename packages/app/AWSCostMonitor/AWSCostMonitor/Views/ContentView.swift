@@ -862,10 +862,15 @@ func showHelpWindow() {
     // Create new help window
     let helpView = HelpView()
     let hostingController = NSHostingController(rootView: helpView)
-    let window = NSWindow(contentViewController: hostingController)
+    hostingController.sizingOptions = []
+    let window = NSWindow(
+        contentRect: NSRect(x: 0, y: 0, width: 700, height: 500),
+        styleMask: [.titled, .closable, .miniaturizable, .resizable],
+        backing: .buffered,
+        defer: false
+    )
+    window.contentViewController = hostingController
     window.title = "Help"
-    window.setContentSize(NSSize(width: 700, height: 500))
-    window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
     window.center()
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
@@ -889,10 +894,15 @@ func showMultiProfileDashboard(awsManager: AWSManager) {
         .environmentObject(awsManager)
     
     let hostingController = NSHostingController(rootView: dashboardView)
-    let window = NSWindow(contentViewController: hostingController)
+    hostingController.sizingOptions = []
+    let window = NSWindow(
+        contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+        styleMask: [.titled, .closable, .miniaturizable, .resizable],
+        backing: .buffered,
+        defer: false
+    )
+    window.contentViewController = hostingController
     window.title = "Multi-Profile Dashboard"
-    window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-    window.setContentSize(NSSize(width: 800, height: 600))
     window.center()
     
     globalDashboardWindow = window

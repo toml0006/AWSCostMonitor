@@ -68,6 +68,9 @@ struct RemoteCacheEntry: Codable {
     let serviceCosts: [ServiceCost]
     let startDate: Date
     let endDate: Date
+    let forecastTotal: Decimal?
+    let forecastCurrency: String?
+    let forecastFetchDate: Date?
     let version: String
     let metadata: CacheMetadata
     
@@ -81,6 +84,9 @@ struct RemoteCacheEntry: Codable {
         serviceCosts: [ServiceCost],
         startDate: Date,
         endDate: Date,
+        forecastTotal: Decimal? = nil,
+        forecastCurrency: String? = nil,
+        forecastFetchDate: Date? = nil,
         version: String = "1.0",
         metadata: CacheMetadata
     ) {
@@ -93,6 +99,9 @@ struct RemoteCacheEntry: Codable {
         self.serviceCosts = serviceCosts
         self.startDate = startDate
         self.endDate = endDate
+        self.forecastTotal = forecastTotal
+        self.forecastCurrency = forecastCurrency
+        self.forecastFetchDate = forecastFetchDate
         self.version = version
         self.metadata = metadata
     }

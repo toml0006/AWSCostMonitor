@@ -100,6 +100,9 @@ struct CostCacheEntry: Codable {
     let serviceCosts: [ServiceCost]
     let startDate: Date
     let endDate: Date
+    let forecastTotal: Decimal?
+    let forecastCurrency: String?
+    let forecastFetchDate: Date?
     
     var isValid: Bool {
         // Cache validity based on age and completeness

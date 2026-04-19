@@ -26,14 +26,15 @@ class CalendarWindowController {
                 .environmentObject(awsManager)
             
             let hostingController = NSHostingController(rootView: calendarView)
-            
+            hostingController.sizingOptions = []
+
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 900, height: 700),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable],
                 backing: .buffered,
                 defer: false
             )
-            
+
             window.title = "AWS Cost Calendar"
             window.contentViewController = hostingController
             window.center()

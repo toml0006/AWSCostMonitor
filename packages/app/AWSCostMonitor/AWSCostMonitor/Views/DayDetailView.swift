@@ -483,7 +483,10 @@ struct DayDetailView: View {
                 .font(.caption)
                 .foregroundColor(Color(.systemBlue))
             
-            Text("Cost Explorer - \(call.endpoint.replacingOccurrences(of: "GetCostAndUsage-", with: ""))")
+            let endpointLabel = call.endpoint
+                .replacingOccurrences(of: "GetCostAndUsage-", with: "")
+                .replacingOccurrences(of: "GetCostForecast", with: "CostForecast")
+            Text("Cost Explorer - \(endpointLabel)")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
                 .lineLimit(1)

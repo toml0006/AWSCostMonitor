@@ -322,7 +322,7 @@ struct RealHistogramView: View {
             .filter { record in
                 record.profileName == profileName &&
                 calendar.isDate(record.timestamp, inSameDayAs: date) &&
-                record.endpoint.contains("GetCostAndUsage")
+                (record.endpoint.contains("GetCostAndUsage") || record.endpoint.contains("GetCostForecast"))
             }
             .sorted { $0.timestamp > $1.timestamp }
     }

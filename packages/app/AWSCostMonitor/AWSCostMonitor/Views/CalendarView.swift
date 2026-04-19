@@ -362,7 +362,7 @@ struct CalendarView: View {
         return awsManager.apiRequestRecords.filter { record in
             record.profileName == profile.name &&
             calendar.isDate(record.timestamp, inSameDayAs: date) &&
-            record.endpoint.contains("GetCostAndUsage")
+            (record.endpoint.contains("GetCostAndUsage") || record.endpoint.contains("GetCostForecast"))
         }.count
     }
     
@@ -372,7 +372,7 @@ struct CalendarView: View {
         return awsManager.apiRequestRecords.filter { record in
             record.profileName == profile.name &&
             calendar.isDate(record.timestamp, inSameDayAs: date) &&
-            record.endpoint.contains("GetCostAndUsage")
+            (record.endpoint.contains("GetCostAndUsage") || record.endpoint.contains("GetCostForecast"))
         }.sorted { $0.timestamp > $1.timestamp }
     }
 }
@@ -512,4 +512,3 @@ struct APICallBadge: View {
         .help("\(count) API call\(count == 1 ? "" : "s") made by this app")
     }
 }
-

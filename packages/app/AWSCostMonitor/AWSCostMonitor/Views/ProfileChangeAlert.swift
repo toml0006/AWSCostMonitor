@@ -256,8 +256,14 @@ class ProfileChangeWindowController: NSWindowController {
         )
         
         let hostingController = NSHostingController(rootView: contentView)
-        let window = NSWindow(contentViewController: hostingController)
-        window.setContentSize(NSSize(width: 450, height: 400))
+        hostingController.sizingOptions = []
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 400),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentViewController = hostingController
 
         window.title = "New Profiles Detected"
         window.styleMask = [.titled, .closable]
@@ -286,8 +292,14 @@ class ProfileChangeWindowController: NSWindowController {
         )
         
         let hostingController = NSHostingController(rootView: contentView)
-        let window = NSWindow(contentViewController: hostingController)
-        window.setContentSize(NSSize(width: 550, height: 500))
+        hostingController.sizingOptions = []
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 500),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentViewController = hostingController
 
         window.title = "Profiles Removed"
         window.styleMask = [.titled, .closable]

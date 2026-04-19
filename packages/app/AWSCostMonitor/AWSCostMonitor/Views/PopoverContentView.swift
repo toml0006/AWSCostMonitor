@@ -294,25 +294,22 @@ struct PopoverContentView: View {
                                 Spacer()
                             }
                             
-                            // Month-end projection
-                            let calendar = Calendar.current
-                            let now = Date()
-                            let daysInMonth = calendar.range(of: .day, in: .month, for: now)?.count ?? 30
-                            let dayOfMonth = calendar.component(.day, from: now)
-                            let dailyAverage = NSDecimalNumber(decimal: cost.amount).doubleValue / Double(dayOfMonth)
-                            let projection = dailyAverage * Double(daysInMonth)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Projected Month-End")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                HStack {
-                                    Text(awsManager.formatCurrency(Decimal(projection)))
-                                        .font(.system(size: 14, weight: .medium))
-                                        .textSelection(.enabled)
-                                    Text("(at current rate)")
+                            // Month-end projection (Cost Explorer forecast when available)
+                            if let projection = awsManager.projectedMonthlyTotal {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Projected Month-End")
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
+                                    HStack {
+                                        Text(awsManager.formatCurrency(projection))
+                                            .font(.system(size: 14, weight: .medium))
+                                            .textSelection(.enabled)
+                                        if let source = awsManager.projectedMonthlyTotalSource {
+                                            Text(source == .costExplorer ? "AWS Cost Explorer forecast" : "Estimated at current rate")
+                                                .font(.system(size: 10))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                 }
                             }
                             
@@ -401,9 +398,13 @@ struct PopoverContentView: View {
                                     }
                                     .frame(maxHeight: serviceAreaHeight)
                                     .padding(.horizontal)
-                                    .transition(.move(edge: .top).combined(with: .opacity))
+                                    .transition(.opacity)
                                     .onPreferenceChange(ServiceListHeightPreferenceKey.self) { newValue in
-                                        serviceContentHeight = newValue
+                                        DispatchQueue.main.async {
+                                            if abs(serviceContentHeight - newValue) > 0.5 {
+                                                serviceContentHeight = newValue
+                                            }
+                                        }
                                     }
                                 }
                             }

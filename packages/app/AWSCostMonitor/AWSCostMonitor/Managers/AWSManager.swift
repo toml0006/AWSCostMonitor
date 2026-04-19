@@ -77,6 +77,11 @@ class AWSManager: ObservableObject {
     @Published var tagCosts: [TagCost] = []
     @Published var costTrend: CostTrend = .stable
     @Published var projectedMonthlyTotal: Decimal?
+    enum ProjectionSource {
+        case costExplorer
+        case localEstimate
+    }
+    @Published var projectedMonthlyTotalSource: ProjectionSource?
     @Published var isLoadingServices = false
     @Published var lastServiceFetchTime: Date?
     @Published var anomalies: [SpendingAnomaly] = []
@@ -1524,6 +1529,44 @@ class AWSManager: ObservableObject {
         
         return projected as Decimal
     }
+
+    private func forecastRefreshIntervalSeconds(for profileName: String) -> TimeInterval {
+        let budget = getBudget(for: profileName)
+        let minutes = max(budget.refreshIntervalMinutes, 480) // Forecast data updates a few times per day
+        return TimeInterval(minutes * 60)
+    }
+
+    private func shouldRefreshForecast(for profileName: String, now: Date, existingEntry: CostCacheEntry?) -> Bool {
+        guard let fetchDate = existingEntry?.forecastFetchDate else {
+            return true
+        }
+
+        let calendar = Calendar.current
+        if !calendar.isDate(fetchDate, equalTo: now, toGranularity: .month) {
+            return true
+        }
+
+        let maxAge = forecastRefreshIntervalSeconds(for: profileName)
+        return now.timeIntervalSince(fetchDate) > maxAge
+    }
+
+    @MainActor
+    private func applyProjection(forecastTotal: Decimal?, dailyCosts: [DailyCost]) {
+        if let forecastTotal = forecastTotal {
+            self.projectedMonthlyTotal = forecastTotal
+            self.projectedMonthlyTotalSource = .costExplorer
+            return
+        }
+
+        if let fallback = calculateEnhancedProjection(dailyCosts: dailyCosts) {
+            self.projectedMonthlyTotal = fallback
+            self.projectedMonthlyTotalSource = .localEstimate
+            return
+        }
+
+        self.projectedMonthlyTotal = nil
+        self.projectedMonthlyTotalSource = nil
+    }
     
     // MARK: - Anomaly Detection
     
@@ -2695,6 +2738,79 @@ class AWSManager: ObservableObject {
                         currency: currency
                     )
                 }.sorted(by: { $0.amount > $1.amount })
+
+                // Cost Explorer forecast (month-end projection), fetched sparingly
+                let existingCacheEntry = costCache[profile.name]
+                var forecastTotal = existingCacheEntry?.forecastTotal
+                var forecastCurrency = existingCacheEntry?.forecastCurrency
+                var forecastFetchDate = existingCacheEntry?.forecastFetchDate
+
+                let endOfMonth = calendar.dateInterval(of: .month, for: now)?.end ?? endOfToday
+                let shouldFetchForecast = force || shouldRefreshForecast(
+                    for: profile.name,
+                    now: now,
+                    existingEntry: existingCacheEntry
+                )
+
+                if shouldFetchForecast {
+                    let forecastStartTime = Date()
+                    do {
+                        let forecastInput = GetCostForecastInput(
+                            granularity: .monthly,
+                            metric: .amortizedCost,
+                            timePeriod: .init(
+                                end: dateFormatter.string(from: endOfMonth),
+                                start: dateFormatter.string(from: startOfMonth)
+                            )
+                        )
+
+                        await MainActor.run {
+                            self.lastAPICallTime = Date()
+                        }
+
+                        let forecastOutput = try await client.getCostForecast(input: forecastInput)
+                        var newForecastTotal: Decimal?
+
+                        if let totalString = forecastOutput.total?.amount,
+                           let totalAmount = Decimal(string: totalString) {
+                            newForecastTotal = totalAmount
+                            forecastCurrency = forecastOutput.total?.unit ?? currency
+                        } else if let results = forecastOutput.forecastResultsByTime, !results.isEmpty {
+                            let summed = results.compactMap { result -> Decimal? in
+                                guard let meanValue = result.meanValue else { return nil }
+                                return Decimal(string: meanValue)
+                            }.reduce(Decimal(0), +)
+                            if summed > 0 {
+                                newForecastTotal = summed
+                                forecastCurrency = forecastOutput.total?.unit ?? currency
+                            }
+                        }
+
+                        if let newForecastTotal = newForecastTotal {
+                            forecastTotal = newForecastTotal
+                            forecastFetchDate = Date()
+                        } else {
+                            log(.warning, category: "API", "Cost forecast returned no total for \(profile.name)")
+                        }
+
+                        self.recordAPIRequest(
+                            profile: profile.name,
+                            endpoint: "GetCostForecast",
+                            success: true,
+                            duration: Date().timeIntervalSince(forecastStartTime)
+                        )
+                    } catch {
+                        let errorMessage = error.localizedDescription
+                        self.recordAPIRequest(
+                            profile: profile.name,
+                            endpoint: "GetCostForecast",
+                            success: false,
+                            duration: Date().timeIntervalSince(forecastStartTime),
+                            error: errorMessage
+                        )
+                        log(.error, category: "API", "Failed to fetch cost forecast for \(profile.name): \(errorMessage)")
+                    }
+                }
                 
                 // Create comprehensive cache entry
                 let cacheEntry = CostCacheEntry(
@@ -2705,7 +2821,10 @@ class AWSManager: ObservableObject {
                     dailyCosts: dailyCosts,
                     serviceCosts: services,
                     startDate: startOfMonth,
-                    endDate: endOfToday
+                    endDate: endOfToday,
+                    forecastTotal: forecastTotal,
+                    forecastCurrency: forecastTotal == nil ? nil : (forecastCurrency ?? currency),
+                    forecastFetchDate: forecastTotal == nil ? nil : forecastFetchDate
                 )
                 
                 await MainActor.run { [cacheEntry, dailyCosts, dailyServiceCosts] in
@@ -2718,7 +2837,7 @@ class AWSManager: ObservableObject {
                 // Update team cache after successful API call
                 await updateTeamCacheAfterAPICall()
                 
-                await MainActor.run { [totalAmount, currency, services, dailyCosts] in
+                await MainActor.run { [totalAmount, currency, services, dailyCosts, forecastTotal] in
                     // Update UI data
                     self.costData.removeAll()
                     self.costData.append(CostData(
@@ -2733,8 +2852,8 @@ class AWSManager: ObservableObject {
                     // Update historical data
                     self.updateHistoricalData(profile: profile.name, amount: totalAmount, currency: currency)
                     
-                    // Calculate enhanced projections using daily data
-                    self.projectedMonthlyTotal = self.calculateEnhancedProjection(dailyCosts: dailyCosts)
+                    // Set projections using Cost Explorer forecast when available
+                    self.applyProjection(forecastTotal: forecastTotal, dailyCosts: dailyCosts)
                     
                     // Update cost trend if we have last month data
                     self.updateCostTrend(for: profile.name)
@@ -3313,7 +3432,10 @@ class AWSManager: ObservableObject {
             dailyCosts: dailyCosts,
             serviceCosts: serviceCosts,
             startDate: startDate14DaysAgo,
-            endDate: Date()
+            endDate: Date(),
+            forecastTotal: projectedTotal,
+            forecastCurrency: "USD",
+            forecastFetchDate: Date()
         )
         
         await MainActor.run { [cacheEntry, dailyCosts, dailyServiceCosts] in
@@ -3336,6 +3458,7 @@ class AWSManager: ObservableObject {
             
             // Calculate analytics
             self.projectedMonthlyTotal = projectedTotal
+            self.projectedMonthlyTotalSource = .costExplorer
             
             // Set comparison data
             self.lastMonthData["acme"] = CostData(
@@ -3776,7 +3899,7 @@ class AWSManager: ObservableObject {
             self.mergeDailyData(for: cacheEntry.profileName, dailyCosts: cacheEntry.dailyCosts, dailyServiceCosts: [])
             
             // Update projections and trends
-            self.projectedMonthlyTotal = self.calculateEnhancedProjection(dailyCosts: cacheEntry.dailyCosts)
+            self.applyProjection(forecastTotal: cacheEntry.forecastTotal, dailyCosts: cacheEntry.dailyCosts)
             self.updateCostTrend(for: cacheEntry.profileName)
             
             // Update loading states
@@ -3833,6 +3956,9 @@ class AWSManager: ObservableObject {
                     )
                     self.costData = [costData]
                     self.serviceCosts = cachedData.serviceCosts
+                    Task { @MainActor in
+                        self.applyProjection(forecastTotal: cachedData.forecastTotal, dailyCosts: cachedData.dailyCosts)
+                    }
                     
                     let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
                     log(.info, category: "Cache", "Loaded cached data for \(profile.name) (\(Int(cacheAge/60)) minutes old)")
@@ -4172,6 +4298,9 @@ class AWSManager: ObservableObject {
             serviceCosts: localEntry.serviceCosts,
             startDate: localEntry.startDate,
             endDate: localEntry.endDate,
+            forecastTotal: localEntry.forecastTotal,
+            forecastCurrency: localEntry.forecastCurrency,
+            forecastFetchDate: localEntry.forecastFetchDate,
             metadata: metadata
         )
     }
@@ -4186,7 +4315,10 @@ class AWSManager: ObservableObject {
             dailyCosts: remoteEntry.dailyCosts,
             serviceCosts: remoteEntry.serviceCosts,
             startDate: remoteEntry.startDate,
-            endDate: remoteEntry.endDate
+            endDate: remoteEntry.endDate,
+            forecastTotal: remoteEntry.forecastTotal,
+            forecastCurrency: remoteEntry.forecastCurrency,
+            forecastFetchDate: remoteEntry.forecastFetchDate
         )
     }
     
@@ -4383,9 +4515,10 @@ class AWSManager: ObservableObject {
     /// Create a persistent window for AWS config access that won't disappear
     private func createPersistentAWSConfigWindow() {
         let awsConfigView = AWSConfigAccessView()
-        
+
         let hostingController = NSHostingController(rootView: awsConfigView)
-        
+        hostingController.sizingOptions = []
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 500, height: 450),
             styleMask: [.titled, .closable, .resizable],
@@ -4424,9 +4557,10 @@ class AWSManager: ObservableObject {
     /// Show a modal window for AWS config access request
     private func showAWSConfigAccessWindow() {
         let awsConfigView = AWSConfigAccessView()
-        
+
         let hostingController = NSHostingController(rootView: awsConfigView)
-        
+        hostingController.sizingOptions = []
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 450, height: 400),
             styleMask: [.titled, .closable],
@@ -4498,7 +4632,10 @@ class AWSManager: ObservableObject {
                 },
                 serviceCosts: demoData.services,
                 startDate: startOfMonth,
-                endDate: endOfMonth
+                endDate: endOfMonth,
+                forecastTotal: Decimal(demoData.forecast),
+                forecastCurrency: "USD",
+                forecastFetchDate: Date()
             )
             self.costCache[demoProfileName] = cacheEntry
             
@@ -4532,6 +4669,7 @@ class AWSManager: ObservableObject {
                 
                 // Set forecast
                 self.projectedMonthlyTotal = Decimal(demoData.forecast)
+                self.projectedMonthlyTotalSource = .costExplorer
                 
                 // Determine trend
                 let percentageChange = ((demoData.mtdSpend - demoData.previousMonthSpend) / demoData.previousMonthSpend) * 100
