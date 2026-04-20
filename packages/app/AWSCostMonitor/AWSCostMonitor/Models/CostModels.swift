@@ -112,30 +112,32 @@ struct CostCacheEntry: Codable {
     }
     
     func isValidForBudget(_ budget: ProfileBudget) -> Bool {
-        // Intelligent cache validity based on budget proximity
+        // Cache validity combines the profile's configured refresh interval
+        // with a budget-aware tightening when spend is close to the budget.
         let age = Date().timeIntervalSince(fetchDate)
+        let configuredMax = TimeInterval(max(1, budget.refreshIntervalMinutes) * 60)
 
-        // Calculate budget percentage only if budget is set
         let budgetPercentage: Double
-        if let monthlyBudget = budget.monthlyBudget {
+        if let monthlyBudget = budget.monthlyBudget, monthlyBudget > 0 {
             budgetPercentage = NSDecimalNumber(decimal: mtdTotal).dividing(by: NSDecimalNumber(decimal: monthlyBudget)).doubleValue
         } else {
-            budgetPercentage = 0.0 // No budget tracking
+            budgetPercentage = 0.0
         }
-        
-        // Adjust cache duration based on budget usage
-        let maxAge: TimeInterval
+
+        // Budget proximity can only shorten the window, never extend it past
+        // what the user configured.
+        let budgetMax: TimeInterval
         if budgetPercentage > 0.95 {
-            maxAge = 900 // 15 minutes if over 95% of budget
+            budgetMax = 900
         } else if budgetPercentage > 0.8 {
-            maxAge = 1800 // 30 minutes if over 80%
+            budgetMax = 1800
         } else if budgetPercentage > 0.5 {
-            maxAge = 3600 // 1 hour if over 50%
+            budgetMax = 3600
         } else {
-            maxAge = 7200 // 2 hours if under 50%
+            budgetMax = configuredMax
         }
-        
-        return age < maxAge
+
+        return age < min(configuredMax, budgetMax)
     }
 }
 

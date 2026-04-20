@@ -1794,66 +1794,43 @@ class AWSManager: ObservableObject {
         }
     }
     
+    // Anchor staleness on the per-profile cache. Global lastAPICallTime is
+    // unsafe — a fetch for profile A would make profile B look fresh.
+    private func lastFetchDate(for profileName: String) -> Date? {
+        if let cached = costCache[profileName]?.fetchDate { return cached }
+        return apiRequestRecords
+            .filter { $0.profileName == profileName && $0.success }
+            .map(\.timestamp)
+            .max()
+    }
+
+    // Returns true if the profile's cached data is older than its configured
+    // refresh interval. Missing cache counts as stale.
+    private func isRefreshDue(for profileName: String, now: Date = Date()) -> Bool {
+        let intervalSeconds = TimeInterval(max(1, getBudget(for: profileName).refreshIntervalMinutes) * 60)
+        guard let last = lastFetchDate(for: profileName) else { return true }
+        return now.timeIntervalSince(last) >= intervalSeconds
+    }
+
     // Wall-clock staleness check against the profile's configured refresh interval.
     // Used by catch-up paths (wake, screen-on) to decide whether to force a fetch
     // that bypasses the ScreenStateMonitor gate.
     private func isStaleByInterval() -> Bool {
         guard let profile = selectedProfile else { return false }
-        let intervalSeconds = TimeInterval(getBudget(for: profile.name).refreshIntervalMinutes * 60)
-        let lastFetch = lastAPICallTime ?? costCache[profile.name]?.fetchDate
-        guard let last = lastFetch else { return true }
-        return Date().timeIntervalSince(last) >= intervalSeconds
+        return isRefreshDue(for: profile.name)
     }
 
-    // Helper to check if immediate refresh is needed
+    // Helper to check if immediate refresh is needed for the currently
+    // selected profile. Uses the profile's own cache age so profile switches
+    // and missed ticks actually refresh.
     private func checkIfRefreshNeeded() -> Bool {
-        // If we don't have a next refresh time, we need to refresh
-        guard let scheduledTime = nextRefreshTime else {
-            log(.info, category: "Refresh", "No next refresh time scheduled, refresh needed")
+        guard let profile = selectedProfile else { return false }
+        if isRefreshDue(for: profile.name) {
+            let age = lastFetchDate(for: profile.name).map { Int(Date().timeIntervalSince($0) / 60) }
+            let interval = getBudget(for: profile.name).refreshIntervalMinutes
+            log(.info, category: "Refresh", "Refresh needed for \(profile.name): age \(age.map(String.init) ?? "none") min (interval \(interval) min)")
             return true
         }
-        
-        // If the scheduled time has already passed (e.g., due to sleep), refresh immediately
-        if Date() >= scheduledTime {
-            log(.info, category: "Refresh", "Scheduled refresh time has passed (was: \(scheduledTime), now: \(Date()))")
-            return true
-        }
-        
-        // Check if data is too old based on last API call time
-        if let lastCall = lastAPICallTime {
-            let timeSinceLastCall = Date().timeIntervalSince(lastCall)
-            // Use profile-specific interval if available
-            let intervalMinutes: Int
-            if let profile = selectedProfile {
-                let budget = getBudget(for: profile.name)
-                intervalMinutes = budget.refreshIntervalMinutes
-            } else {
-                intervalMinutes = refreshInterval
-            }
-            let maxAge = TimeInterval(intervalMinutes * 60)
-            if timeSinceLastCall > maxAge {
-                log(.info, category: "Refresh", "Data is stale (last fetch: \(Int(timeSinceLastCall/60)) minutes ago, max age: \(intervalMinutes) minutes)")
-                return true
-            }
-        } else {
-            // CRITICAL FIX: If lastAPICallTime is null, check cache data age directly
-            if let profile = selectedProfile,
-               let cachedData = costCache[profile.name] {
-                let cacheAge = Date().timeIntervalSince(cachedData.fetchDate)
-                let intervalMinutes = getBudget(for: profile.name).refreshIntervalMinutes
-                let maxAge = TimeInterval(intervalMinutes * 60)
-                
-                if cacheAge > maxAge {
-                    log(.info, category: "Refresh", "Cache data is stale (age: \(Int(cacheAge/60)) minutes, max age: \(intervalMinutes) minutes) - lastAPICallTime was null")
-                    return true
-                }
-            } else if lastAPICallTime == nil {
-                // No API call time and no cache data - definitely need refresh
-                log(.info, category: "Refresh", "No lastAPICallTime and no cache data - refresh needed")
-                return true
-            }
-        }
-        
         return false
     }
     
@@ -1875,8 +1852,10 @@ class AWSManager: ObservableObject {
 
         log(.info, category: "Refresh", "Heartbeat scheduling: \(intervalMinutes)min interval for profile \(profile.name)")
 
-        // Display target derived from last successful fetch (or now if none yet)
-        nextRefreshTime = (lastAPICallTime ?? Date()).addingTimeInterval(interval)
+        // Display target derived from this profile's last fetch (or now if none yet).
+        // Using global lastAPICallTime here was a bug — it reflected whichever
+        // profile last fetched, making switched-to profiles appear fresh.
+        nextRefreshTime = (lastFetchDate(for: profile.name) ?? Date()).addingTimeInterval(interval)
 
         let timer = DispatchSource.makeTimerSource(queue: timerQueue)
         refreshTimer = timer
@@ -1904,23 +1883,26 @@ class AWSManager: ObservableObject {
         }
     }
 
-    // One heartbeat tick: refresh if wall-clock age exceeds the configured interval.
+    // One heartbeat tick: refresh if this profile's cache age exceeds the
+    // configured interval. Anchored per-profile, not on the global
+    // lastAPICallTime — otherwise a fetch on profile A would keep profile B
+    // from ever refreshing.
     @MainActor
     private func heartbeatTick() async {
         guard autoRefreshEnabled, let profile = selectedProfile else { return }
 
         let intervalMinutes = getBudget(for: profile.name).refreshIntervalMinutes
         let interval = TimeInterval(intervalMinutes * 60)
-        let lastFetch = lastAPICallTime ?? .distantPast
-        let age = Date().timeIntervalSince(lastFetch)
+        let last = lastFetchDate(for: profile.name)
+        let age = Date().timeIntervalSince(last ?? .distantPast)
 
         if age >= interval {
-            log(.info, category: "Refresh", "Heartbeat due: \(Int(age/60))min since last fetch (interval \(intervalMinutes)min), refreshing")
+            log(.info, category: "Refresh", "Heartbeat due for \(profile.name): \(Int(age/60))min since last fetch (interval \(intervalMinutes)min), refreshing")
             await fetchCostForSelectedProfile(force: true)
         }
 
-        // Keep display target in sync with the last fetch time (updated by fetch on success)
-        let anchor = lastAPICallTime ?? Date()
+        // Keep display target in sync with this profile's most recent fetch.
+        let anchor = lastFetchDate(for: profile.name) ?? Date()
         nextRefreshTime = anchor.addingTimeInterval(interval)
     }
     
