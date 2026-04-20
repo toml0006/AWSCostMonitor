@@ -50,15 +50,10 @@ class AWSManager: ObservableObject {
     @Published var nextRefreshTime: Date?
     @Published var refreshInterval: Int = 5 { // minutes
         didSet {
-            // Automatically recreate timers when interval changes if any timer was active
-            let wasRunning = isAutoRefreshActive
-            if wasRunning {
-                // Preserve autoRefreshEnabled state across restart
-                let shouldBeEnabled = autoRefreshEnabled
+            // Recreate timers when interval changes if the timer was active.
+            if isAutoRefreshActive {
                 stopAutomaticRefresh()
-                if shouldBeEnabled {
-                    startAutomaticRefresh()
-                }
+                startAutomaticRefresh()
             }
         }
     }
@@ -142,9 +137,8 @@ class AWSManager: ObservableObject {
     @Published var apiRequestRecords: [APIRequestRecord] = []
     @AppStorage("DebugMode") var debugMode: Bool = false
     @AppStorage("MaxLogEntries") private var maxLogEntries: Int = 1000
-    // Default to true so new installs auto-refresh without manual toggling.
-    @AppStorage("AutoRefreshEnabled") var autoRefreshEnabled: Bool = true
-    
+
+
     // Cost alerts
     let alertManager = CostAlertManager()
     
@@ -242,7 +236,18 @@ class AWSManager: ObservableObject {
         
         log(.info, category: "Config", "AWSManager initialized - telemetry disabled")
         print("DEBUG: AWSManager init() called at \(Date())")
-        
+
+        // Migrate: remove obsolete AutoRefreshEnabled flag (auto-refresh is now always on).
+        // Historical installs could have this set to false and silently disable refreshes.
+        if UserDefaults.standard.object(forKey: "AutoRefreshEnabled") != nil {
+            UserDefaults.standard.removeObject(forKey: "AutoRefreshEnabled")
+            log(.info, category: "Config", "Removed obsolete AutoRefreshEnabled UserDefaults key")
+        }
+        if userDefaults.object(forKey: "AutoRefreshEnabled") != nil {
+            userDefaults.removeObject(forKey: "AutoRefreshEnabled")
+            log(.info, category: "Config", "Removed obsolete AutoRefreshEnabled from app suite UserDefaults")
+        }
+
         // Initialize team cache controller
         self.teamCacheController = TeamCacheController(awsManager: self)
         
@@ -374,14 +379,9 @@ class AWSManager: ObservableObject {
                 }
             }
             
-            // REMOVED: checkForStartupRefresh() - conflicts with performStartupRefreshCheck()
-            // The performStartupRefreshCheck() method is called after profiles are loaded
-            
-            // Start auto-refresh after profiles are loaded and startup is complete
-            if self.autoRefreshEnabled {
-                self.log(.info, category: "Startup", "Starting automatic refresh after startup complete")
-                self.startAutomaticRefresh()
-            }
+            // Start auto-refresh after profiles are loaded and startup is complete.
+            self.log(.info, category: "Startup", "Starting automatic refresh after startup complete")
+            self.startAutomaticRefresh()
         }
 
         // Independent validation and health check timers to guard against stalled timers
@@ -443,15 +443,14 @@ class AWSManager: ObservableObject {
         let screenMonitor = ScreenStateMonitor.shared
         if screenMonitor.canRefresh {
             // Screen is on and unlocked - resume refresh if needed
-            let timersActive = isAutoRefreshActive
-            if autoRefreshEnabled && !timersActive {
+            if !isAutoRefreshActive {
                 log(.info, category: "Refresh", "Resuming automatic refresh - timers were inactive and screen is on/unlocked")
                 startAutomaticRefresh()
             }
 
-            // Catch-up: if auto-refresh is enabled and data is stale by wall-clock,
-            // force a refresh. Non-forced fetches re-check screen state and can bail.
-            if autoRefreshEnabled, isStaleByInterval() {
+            // Catch-up: if data is stale by wall-clock, force a refresh.
+            // Non-forced fetches re-check screen state and can bail.
+            if isStaleByInterval() {
                 log(.info, category: "Refresh", "Catch-up force-refresh after becoming active/unlocked")
                 Task { @MainActor in
                     await self.fetchCostForSelectedProfile(force: true)
@@ -467,11 +466,9 @@ class AWSManager: ObservableObject {
     // Handle system wake notification
     @objc private func handleSystemWake() {
         log(.info, category: "Refresh", "System woke from sleep")
-        
-        // If auto-refresh is enabled, check if we need to refresh
-        if autoRefreshEnabled {
-            // Give the system a moment to fully wake up
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+
+        // Give the system a moment to fully wake up before checking the timer.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
                 guard let self = self else { return }
                 
                 let hasHeartbeat = self.refreshTimer != nil
@@ -509,10 +506,9 @@ class AWSManager: ObservableObject {
                         self.startAutomaticRefresh()
                     }
                 }
-            }
         }
     }
-    
+
     // Handle AWS config access granted notification
     @objc func awsConfigAccessGranted() {
         log(.info, category: "Config", "AWS config access granted, transitioning from demo mode")
@@ -718,7 +714,6 @@ class AWSManager: ObservableObject {
     private func performStartupRefreshCheck() {
         log(.info, category: "Startup", "=== STARTUP REFRESH CHECK BEGIN ===")
         log(.info, category: "Startup", "Selected profile: \(selectedProfile?.name ?? "nil")")
-        log(.info, category: "Startup", "Auto refresh enabled: \(autoRefreshEnabled)")
         log(.info, category: "Startup", "Cost cache keys: \(Array(costCache.keys))")
         log(.info, category: "Startup", "Profile count: \(profiles.count)")
         
@@ -843,8 +838,8 @@ class AWSManager: ObservableObject {
                     let budget = self.getBudget(for: firstProfile.name)
                     self.refreshInterval = budget.refreshIntervalMinutes
                     
-                    // Start automatic refresh if enabled and not already running
-                    if self.autoRefreshEnabled && !self.isAutoRefreshActive {
+                    // Start automatic refresh if not already running
+                    if !self.isAutoRefreshActive {
                          self.log(.info, category: "Startup", "Starting automatic refresh for auto-selected profile: \(firstProfile.name)")
                          self.startAutomaticRefresh()
                      }
@@ -938,8 +933,8 @@ class AWSManager: ObservableObject {
                 let budget = getBudget(for: storedProfileName)
                 self.refreshInterval = budget.refreshIntervalMinutes
                 
-                // Start automatic refresh if enabled but timers are not active
-                if autoRefreshEnabled && !isAutoRefreshActive {
+                // Start automatic refresh if timers are not active
+                if !isAutoRefreshActive {
                     log(.info, category: "Startup", "Starting automatic refresh for loaded profile: \(storedProfileName)")
                     startAutomaticRefresh()
                 }
@@ -977,10 +972,9 @@ class AWSManager: ObservableObject {
         isRateLimited = false
 
         let budget = getBudget(for: profile.name)
-        let timersWereActive = isAutoRefreshActive
         refreshInterval = budget.refreshIntervalMinutes
 
-        if autoRefreshEnabled && !timersWereActive && !isAutoRefreshActive {
+        if !isAutoRefreshActive {
             startAutomaticRefresh()
         }
 
@@ -1758,9 +1752,7 @@ class AWSManager: ObservableObject {
         }
         stopAsyncRefreshTimer() // Stop any async tasks
         nextRefreshTime = nil
-        
-        autoRefreshEnabled = true // Persist the state
-        
+
         // Get the profile-specific refresh interval
         let intervalMinutes: Int
         if let profile = selectedProfile {
@@ -1889,7 +1881,7 @@ class AWSManager: ObservableObject {
     // from ever refreshing.
     @MainActor
     private func heartbeatTick() async {
-        guard autoRefreshEnabled, let profile = selectedProfile else { return }
+        guard let profile = selectedProfile else { return }
 
         let intervalMinutes = getBudget(for: profile.name).refreshIntervalMinutes
         let interval = TimeInterval(intervalMinutes * 60)
@@ -1952,8 +1944,7 @@ class AWSManager: ObservableObject {
         stopAsyncRefreshTimer()
         
         nextRefreshTime = nil
-        autoRefreshEnabled = false // Persist the state
-        
+
         log(.info, category: "Refresh", "All refresh timers stopped")
     }
 
@@ -1984,9 +1975,9 @@ class AWSManager: ObservableObject {
     func performHealthCheck() {
         log(.debug, category: "HealthCheck", "Performing health check...")
 
-        // Check 1: Auto-refresh should be running but timer is nil
-        if autoRefreshEnabled && refreshTimer == nil {
-            log(.error, category: "HealthCheck", "CRITICAL: Auto-refresh enabled but timer is nil! Restarting...")
+        // Check 1: Refresh timer should always be running
+        if refreshTimer == nil {
+            log(.error, category: "HealthCheck", "CRITICAL: Refresh timer is nil! Restarting...")
             DispatchQueue.main.async { [weak self] in
                 self?.startAutomaticRefresh()
             }
@@ -1994,7 +1985,7 @@ class AWSManager: ObservableObject {
         }
 
         // Check 2: Timer exists but is significantly overdue
-        if autoRefreshEnabled, let nextTime = nextRefreshTime {
+        if let nextTime = nextRefreshTime {
             let overdue = -nextTime.timeIntervalSinceNow
             if overdue > 300 { // More than 5 minutes overdue
                 log(.error, category: "HealthCheck", "CRITICAL: Timer is \(Int(overdue/60)) minutes overdue! Restarting...")
@@ -2006,7 +1997,7 @@ class AWSManager: ObservableObject {
         }
 
         // Check 3: Validation timer is missing
-        if autoRefreshEnabled && timerValidationTimer == nil {
+        if timerValidationTimer == nil {
             log(.warning, category: "HealthCheck", "Validation timer is missing, restarting validation")
             startTimerValidation()
         }
@@ -2017,11 +2008,6 @@ class AWSManager: ObservableObject {
     // Public method to validate timer health (called from UI interactions)
     func validateTimerHealth() {
         log(.debug, category: "TimerHealth", "User-triggered timer health validation")
-
-        guard autoRefreshEnabled else {
-            log(.debug, category: "TimerHealth", "Auto-refresh is disabled, skipping validation")
-            return
-        }
 
         // Quick validation - check critical timers
         var needsRecovery = false
@@ -2071,8 +2057,6 @@ class AWSManager: ObservableObject {
     // handles pacing, so overdue detection on `nextRefreshTime` is left to the
     // separate health check (>5min tolerance).
     func validateRefreshTimer() {
-        guard autoRefreshEnabled else { return }
-
         if refreshTimer == nil {
             log(.warning, category: "Refresh", "Heartbeat missing - restarting automatic refresh")
             DispatchQueue.main.async { [weak self] in

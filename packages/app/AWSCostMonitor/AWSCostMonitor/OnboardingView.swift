@@ -8,7 +8,6 @@ struct OnboardingView: View {
     @State private var monthlyBudget: String = "5"
     @State private var alertThreshold: Double = 0.8
     @State private var enableNotifications = true
-    @State private var enableAutoRefresh = true
     @State private var enableAnomalyAlerts = true
     @State private var refreshInterval: Double = 360
     @State private var awsAccessGranted = false

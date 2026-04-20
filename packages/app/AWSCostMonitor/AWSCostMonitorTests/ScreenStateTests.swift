@@ -114,54 +114,43 @@ struct ScreenStateTests {
         #expect(shouldProceed == true || shouldProceed == false)
     }
     
-    @Test func testAutomaticRefreshPausesOnScreenOff() async throws {
+    @Test func testAutomaticRefreshContinuesOnScreenOff() async throws {
         let awsManager = AWSManager()
         let monitor = ScreenStateMonitor.shared
-        
+
         // Start automatic refresh
         awsManager.startAutomaticRefresh()
         #expect(awsManager.isAutoRefreshActive)
-        #expect(awsManager.autoRefreshEnabled == true)
-        
+
         // Simulate screen off
         monitor.isScreenOn = false
         try await Task.sleep(nanoseconds: 100_000_000)
-        
+
         // Trigger screen state change handler
         awsManager.handleScreenStateChange()
-        
-        // Timer should be stopped but autoRefreshEnabled should remain true
-        #expect(!awsManager.isAutoRefreshActive)
-        #expect(awsManager.autoRefreshEnabled == true)
+
+        // Timer continues running; fetches are skipped while screen is off.
+        #expect(awsManager.isAutoRefreshActive)
     }
-    
-    @Test func testAutomaticRefreshResumesOnScreenOn() async throws {
+
+    @Test func testAutomaticRefreshRunsWhileScreenOn() async throws {
         let awsManager = AWSManager()
         let monitor = ScreenStateMonitor.shared
-        
-        // Setup: Start refresh, then pause it
+
+        // Setup: Start refresh
         awsManager.startAutomaticRefresh()
-        monitor.isScreenOn = false
-        monitor.isSystemUnlocked = false
-        try await Task.sleep(nanoseconds: 100_000_000)
-        awsManager.handleScreenStateChange()
-        
-        // Verify paused state
-        #expect(!awsManager.isAutoRefreshActive)
-        #expect(awsManager.autoRefreshEnabled == true)
-        
+
         // Simulate screen on and unlock
         monitor.isScreenOn = true
         monitor.isSystemUnlocked = true
         try await Task.sleep(nanoseconds: 100_000_000)
-        
+
         // Trigger screen state change handler
         awsManager.handleScreenStateChange()
-        
-        // Timer should be restarted
+
+        // Timer should still be active.
         #expect(awsManager.isAutoRefreshActive)
-        #expect(awsManager.autoRefreshEnabled == true)
-        
+
         // Cleanup
         awsManager.stopAutomaticRefresh()
     }
@@ -246,23 +235,11 @@ struct ScreenStateTests {
 // MARK: - Test Extensions
 
 extension AWSManager {
-    // Make handleScreenStateChange accessible for testing
+    // Test shim mirroring the production handler's behavior.
     func handleScreenStateChange() {
         let screenMonitor = ScreenStateMonitor.shared
-        if screenMonitor.canRefresh {
-            // Screen is on and unlocked - resume refresh if needed
-            if autoRefreshEnabled && !isAutoRefreshActive {
-                log(.info, category: "Refresh", "Resuming automatic refresh - screen is on and unlocked")
-                startAutomaticRefresh()
-            }
-        } else {
-            // Screen is off or locked - pause refresh
-            if isAutoRefreshActive {
-                log(.info, category: "Refresh", "Pausing automatic refresh - screen is off or locked")
-                stopAutomaticRefresh()
-                // Remember to resume when screen comes back
-                autoRefreshEnabled = true
-            }
+        if screenMonitor.canRefresh, !isAutoRefreshActive {
+            startAutomaticRefresh()
         }
     }
 }

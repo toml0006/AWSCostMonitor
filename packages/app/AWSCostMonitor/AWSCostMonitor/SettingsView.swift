@@ -208,25 +208,6 @@ struct RefreshSettingsTab: View {
                             Text("\(refreshInterval) minute\(refreshInterval == 1 ? "" : "s")")
                                 .frame(minWidth: 80, alignment: .leading)
                         }
-                        
-                        Divider()
-                        
-                        HStack {
-                            Text("Auto-refresh is currently:")
-                            Text(awsManager.isAutoRefreshActive ? "On" : "Off")
-                                .fontWeight(.semibold)
-                                .foregroundColor(awsManager.isAutoRefreshActive ? .green : .secondary)
-                            
-                            Spacer()
-                            
-                            Button(awsManager.isAutoRefreshActive ? "Stop" : "Start") {
-                                if awsManager.isAutoRefreshActive {
-                                    awsManager.stopAutomaticRefresh()
-                                } else {
-                                    awsManager.startAutomaticRefresh()
-                                }
-                            }
-                        }
                     }
                     .padding(.vertical, 8)
                 }

@@ -48,12 +48,10 @@ struct RefreshRateTests {
         // Start automatic refresh
         awsManager.startAutomaticRefresh()
         #expect(awsManager.isAutoRefreshActive)
-        #expect(awsManager.autoRefreshEnabled == true)
-        
+
         // Stop automatic refresh
         awsManager.stopAutomaticRefresh()
         #expect(!awsManager.isAutoRefreshActive)
-        #expect(awsManager.autoRefreshEnabled == false)
     }
     
     @Test func testRefreshIntervalUpdateRecreatesTimer() async throws {
@@ -346,26 +344,6 @@ struct RefreshRateTests {
         // Test that startup refresh happens with old data
         awsManager.lastRefreshTime = Date().addingTimeInterval(-7200) // 2 hours ago
         #expect(awsManager.shouldRefreshOnStartup() == true)
-    }
-    
-    // MARK: - Auto-Refresh State Persistence Tests
-    
-    @Test func testAutoRefreshStatePersistence() async throws {
-        let awsManager = AWSManager()
-        
-        // Enable auto-refresh
-        awsManager.startAutomaticRefresh()
-        #expect(awsManager.autoRefreshEnabled == true)
-        
-        // Simulate app restart by creating new instance
-        // Note: In real app, this would read from UserDefaults
-        let newAwsManager = AWSManager()
-        
-        // Auto-refresh state should be restored from UserDefaults
-        // This test assumes the init method loads the state
-        if newAwsManager.autoRefreshEnabled {
-            #expect(newAwsManager.isAutoRefreshActive)
-        }
     }
     
     // MARK: - Error Handling in Refresh Logic Tests
