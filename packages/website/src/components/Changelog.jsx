@@ -26,6 +26,31 @@ import {
 
 const releases = [
   {
+    version: '1.5.1',
+    date: 'April 20, 2026',
+    title: 'Reliable Auto-Refresh',
+    icon: RefreshCw,
+    color: 'secondary',
+    highlights: [
+      'Per-profile staleness tracking so profiles catch up after switching',
+      'Cache expiry honors your configured refresh interval',
+      'Removed the Auto-Refresh on/off toggle — it is now always on',
+      'Migration silently clears any stale auto-refresh-off value on first launch'
+    ],
+    features: [
+      {
+        icon: RefreshCw,
+        title: 'Always-On Auto-Refresh',
+        description: 'Auto-refresh is now a core guarantee, not a toggle. A stale "off" value could previously disable all fetches indefinitely — the v1.5.1 migration clears it on first launch.'
+      }
+    ],
+    bugFixes: [
+      'Refresh scheduling now anchors on each profile\'s own last-fetch timestamp instead of a single global timer, so profiles that went stale while another was selected catch up after switching',
+      'CostCacheEntry.isValidForBudget now clamps validity by the profile\'s configured refreshIntervalMinutes — budget-proximity windows can only tighten refresh, never extend past what you set',
+      'Removed the AutoRefreshEnabled setting and migrated the key out of UserDefaults so a stale "false" cannot silently disable all cost fetches'
+    ]
+  },
+  {
     version: '1.5.0',
     date: 'April 19, 2026',
     title: 'Ledger — A Refreshed Visual Identity',
