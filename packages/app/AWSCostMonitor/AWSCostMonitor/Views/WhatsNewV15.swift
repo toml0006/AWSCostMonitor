@@ -6,7 +6,7 @@ struct WhatsNewV15: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: LedgerTokens.Layout.unit(a) * 2) {
-            Text("What's New in Ledger").ledgerHero()
+            Text("New Stuff!").ledgerHero()
             Text("AWSCostMonitor v1.5 brings a redesigned visual identity.").ledgerBody()
             Divider().background(LedgerTokens.Color.surfaceHairline(a))
             VStack(alignment: .leading, spacing: LedgerTokens.Layout.unit(a)) {

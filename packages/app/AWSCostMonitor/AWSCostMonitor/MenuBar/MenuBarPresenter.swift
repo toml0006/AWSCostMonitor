@@ -25,19 +25,14 @@ final class MenuBarPresenter {
         let plainTextColor: NSColor = isOver ? overBudget : .labelColor
         let text = MenuBarFormatter.format(amount: amount, options: options, delta: delta)
 
-        // Reset
-        button.image = nil
-        button.attributedTitle = NSAttributedString(string: "")
-        button.title = ""
-        button.imagePosition = .noImage
-
         let needsImage = options.showSparkline || options.pillBackground
         if needsImage {
+            let newImage: NSImage
             if options.pillBackground {
                 // Solid themed chip with contrasting ink for readability.
                 let pillFill = accentColor.withAlphaComponent(0.92)
                 let pillInk = Self.contrastingInk(on: accentColor)
-                button.image = Self.composeImage(
+                newImage = Self.composeImage(
                     text: text,
                     textColor: pillInk,
                     sparkline: options.showSparkline ? sparkline : nil,
@@ -47,7 +42,7 @@ final class MenuBarPresenter {
                 )
             } else {
                 // Sparkline only — text uses system menubar color, sparkline keeps accent.
-                button.image = Self.composeImage(
+                newImage = Self.composeImage(
                     text: text,
                     textColor: plainTextColor,
                     sparkline: sparkline,
@@ -56,7 +51,21 @@ final class MenuBarPresenter {
                     pillFill: nil
                 )
             }
+            // Set end state without an intermediate `image = nil` / empty-title step.
+            // Rapid back-to-back renders during theme changes were triggering a zombie
+            // _NSWindowTransformAnimation release via the status-bar button's hosting
+            // window — clearing and re-setting within the same runloop pass multiplied
+            // the animations.
+            if button.attributedTitle.length > 0 {
+                button.attributedTitle = NSAttributedString()
+            }
+            if button.image !== newImage {
+                button.image = newImage
+            }
         } else {
+            if button.image != nil {
+                button.image = nil
+            }
             button.attributedTitle = Self.attributedTitle(text, color: plainTextColor)
         }
     }
@@ -104,33 +113,33 @@ final class MenuBarPresenter {
         let contentHeight = max(ceil(textSize.height), sparkline != nil ? sparkSize.height : 0)
         let size = NSSize(width: contentWidth + padH * 2, height: contentHeight + padV * 2)
 
-        let image = NSImage(size: size)
-        image.lockFocus()
-        defer { image.unlockFocus() }
+        // Use the drawing-handler initializer instead of lockFocus/unlockFocus —
+        // it's safer for short-lived images built on the main runloop and avoids
+        // retaining CA animation state between draws.
+        return NSImage(size: size, flipped: false) { _ in
+            if let pillFill {
+                pillFill.setFill()
+                NSBezierPath(roundedRect: NSRect(origin: .zero, size: size),
+                             xRadius: size.height / 2,
+                             yRadius: size.height / 2).fill()
+            }
 
-        if let pillFill {
-            pillFill.setFill()
-            NSBezierPath(roundedRect: NSRect(origin: .zero, size: size),
-                         xRadius: size.height / 2,
-                         yRadius: size.height / 2).fill()
+            let textOrigin = NSPoint(x: padH, y: padV + (contentHeight - textSize.height) / 2)
+            (text as NSString).draw(at: textOrigin, withAttributes: attrs)
+
+            if let sparkline {
+                let sparkImage = MenuBarSparklineImage.render(
+                    values: sparkline,
+                    color: sparklineColor,
+                    highlightIndex: sparklineHighlightIndex
+                )
+                let sparkOrigin = NSPoint(
+                    x: padH + ceil(textSize.width) + gap,
+                    y: padV + (contentHeight - sparkSize.height) / 2
+                )
+                sparkImage.draw(at: sparkOrigin, from: .zero, operation: .sourceOver, fraction: 1.0)
+            }
+            return true
         }
-
-        let textOrigin = NSPoint(x: padH, y: padV + (contentHeight - textSize.height) / 2)
-        (text as NSString).draw(at: textOrigin, withAttributes: attrs)
-
-        if let sparkline {
-            let sparkImage = MenuBarSparklineImage.render(
-                values: sparkline,
-                color: sparklineColor,
-                highlightIndex: sparklineHighlightIndex
-            )
-            let sparkOrigin = NSPoint(
-                x: padH + ceil(textSize.width) + gap,
-                y: padV + (contentHeight - sparkSize.height) / 2
-            )
-            sparkImage.draw(at: sparkOrigin, from: .zero, operation: .sourceOver, fraction: 1.0)
-        }
-
-        return image
     }
 }

@@ -57,18 +57,19 @@ class AWSManager: ObservableObject {
             }
         }
     }
-    private var refreshTimer: DispatchSourceTimer?
-    private var timerValidationTimer: DispatchSourceTimer? // Periodic timer to validate main refresh timer
-    private var healthCheckTimer: DispatchSourceTimer? // Independent health check - ultimate failsafe
+    // Apple-sanctioned periodic work for LSUIElement apps. Survives App Nap,
+    // respects power/thermal state, and is self-healing — replacing a fragile
+    // stack of DispatchSourceTimer + validation + health-check that macOS was
+    // killing under suspension.
+    private var refreshScheduler: NSBackgroundActivityScheduler?
     private let timerQueue = DispatchQueue(label: "com.awscostmonitor.refresh", qos: .utility)
-    
+
     // Modern async timer task for more reliability
     private var refreshTask: Task<Void, Never>?
     private var timerValidationTask: Task<Void, Never>?
-    
-    // Computed property to check if auto-refresh is active
+
     var isAutoRefreshActive: Bool {
-        return refreshTimer != nil
+        return refreshScheduler != nil
     }
 
     // User-selected breakdown preference
@@ -384,17 +385,12 @@ class AWSManager: ObservableObject {
             self.startAutomaticRefresh()
         }
 
-        // Independent validation and health check timers to guard against stalled timers
-        log(.info, category: "Init", "Starting validation and health check timers")
-        startTimerValidation()
-        startHealthCheckTimer()
-
-        #if DEBUG
-        // Start debug timer automatically to monitor timer execution
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.startDebugTimer()
-        }
-        #endif
+        // Debug timer is no longer auto-started. It fires every 60s and toggles
+        // `debugTimerFlash` twice per tick (on/off 500ms apart), which drove a
+        // status-bar re-render storm and was the trigger for a repeating
+        // _NSWindowTransformAnimation zombie-release crash during theme changes
+        // or idle operation. If needed for manual timer debugging, it can still
+        // be started from the debug panel in ContentView.
     }
     
     deinit {
@@ -406,11 +402,7 @@ class AWSManager: ObservableObject {
         stopAutomaticRefresh()
         stopBackgroundSyncTimer()
         stopAsyncRefreshTimer()
-        if let healthTimer = healthCheckTimer {
-            healthTimer.cancel()
-            healthCheckTimer = nil
-        }
-        
+
         #if DEBUG
         stopDebugTimer()
         #endif
@@ -470,40 +462,17 @@ class AWSManager: ObservableObject {
         // Give the system a moment to fully wake up before checking the timer.
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
                 guard let self = self else { return }
-                
-                let hasHeartbeat = self.refreshTimer != nil
-                self.log(.info, category: "Refresh", "After system wake - Heartbeat: \(hasHeartbeat)")
 
-                if hasHeartbeat {
-                    // Heartbeat survived sleep; force-refresh if data is actually stale
-                    if self.isStaleByInterval() {
-                        self.log(.info, category: "Refresh", "Post-wake force-refresh (stale by interval)")
-                        Task {
-                            await self.fetchCostForSelectedProfile(force: true)
-                        }
-                    }
-                } else {
-                    self.log(.warning, category: "Refresh", "Heartbeat invalid after system wake - restarting automatic refresh")
+                let hasScheduler = self.refreshScheduler != nil
+                self.log(.info, category: "Refresh", "After system wake - Scheduler armed: \(hasScheduler)")
+
+                if !hasScheduler {
+                    self.log(.warning, category: "Refresh", "Scheduler missing after wake - restarting automatic refresh")
                     self.startAutomaticRefresh()
-                }
-
-                // Restart any missing validation/health check timers as a failsafe
-                if self.timerValidationTimer == nil {
-                    self.log(.warning, category: "Refresh", "Validation timer was lost during sleep - restarting")
-                    self.startTimerValidation()
-                }
-
-                if self.healthCheckTimer == nil {
-                    self.log(.warning, category: "HealthCheck", "Health check timer was lost during sleep - restarting")
-                    self.startHealthCheckTimer()
-                }
-                
-                // Also force validation of next refresh time
-                if let nextTime = self.nextRefreshTime {
-                    let timeUntilNext = nextTime.timeIntervalSinceNow
-                    if timeUntilNext < -300 { // More than 5 minutes overdue
-                        self.log(.warning, category: "Refresh", "Next refresh time is very stale (\(Int(-timeUntilNext)) seconds overdue) - restarting timers")
-                        self.startAutomaticRefresh()
+                } else if self.isStaleByInterval() {
+                    self.log(.info, category: "Refresh", "Post-wake force-refresh (stale by interval)")
+                    Task {
+                        await self.fetchCostForSelectedProfile(force: true)
                     }
                 }
         }
@@ -852,24 +821,16 @@ class AWSManager: ObservableObject {
             } else if self.selectedProfile != nil {
                 print("[DEBUG] Profile already selected: \(self.selectedProfile!.name)")
             }
-        }
-        
-        // CRITICAL FIX: Perform startup refresh check AFTER profile selection is complete
-        // This ensures selectedProfile is set before checking for startup refresh
-        log(.warning, category: "Startup", "=== STARTUP SEQUENCE DEBUG ===")
-        log(.warning, category: "Startup", "Profile selection complete - selectedProfile: \(selectedProfile?.name ?? "nil")")
-        log(.warning, category: "Startup", "Total profiles loaded: \(profiles.count)")
-        log(.warning, category: "Startup", "Profiles: \(profiles.map { $0.name })")
-        
-        if self.selectedProfile != nil {
-            log(.warning, category: "Startup", "Profile selected successfully - calling performStartupRefreshCheck()")
-            performStartupRefreshCheck()
-            
-            // Also post notification for delayed startup refresh
-            NotificationCenter.default.post(name: .profilesLoadedAfterConfigAccess, object: nil)
-        } else {
-            log(.warning, category: "Startup", "No profile selected after profile loading - skipping startup refresh check")
-            print("DEBUG: NO PROFILE SELECTED - Cannot perform startup refresh check")
+
+            // Startup refresh check must run AFTER profile selection resolves.
+            // Previously this lived outside the async block and always saw
+            // selectedProfile == nil, silently skipping the check on every launch.
+            self.log(.info, category: "Startup", "Profile selection complete - selectedProfile: \(self.selectedProfile?.name ?? "nil"), profiles: \(self.profiles.count)")
+            if self.selectedProfile != nil {
+                self.performStartupRefreshCheck()
+            } else {
+                self.log(.warning, category: "Startup", "No profile selected after profile loading - skipping startup refresh check")
+            }
         }
         
         // Handle new profiles: silently add them as visible. Alerting on every
@@ -1744,12 +1705,9 @@ class AWSManager: ObservableObject {
         #if DEBUG
         log(.debug, category: "RefreshTimer", "startAutomaticRefresh() called")
         #endif
-        
-        // Cancel existing timers if present
-        if refreshTimer != nil {
-            refreshTimer?.cancel()
-            refreshTimer = nil
-        }
+
+        refreshScheduler?.invalidate()
+        refreshScheduler = nil
         stopAsyncRefreshTimer() // Stop any async tasks
         nextRefreshTime = nil
 
@@ -1826,53 +1784,39 @@ class AWSManager: ObservableObject {
         return false
     }
     
-    // Heartbeat interval for the refresh timer. A short tick + wall-clock age check
-    // avoids macOS timer coalescing of long-duration timers, which silently skipped
-    // hour-plus refreshes under App Nap.
-    private static let refreshHeartbeatSeconds: TimeInterval = 60
-
-    // Schedule a 60s heartbeat that fetches when wall-clock age exceeds the
-    // profile's refresh interval.
+    // Schedule the next refresh tick. Uses NSBackgroundActivityScheduler so the
+    // handler fires reliably even when the app is App-Napped or suspended.
+    // The wall-clock age check in `heartbeatTick` decides whether to actually
+    // fetch, so running a bit early (within tolerance) costs nothing.
     private func scheduleNextRefresh() {
         guard let profile = selectedProfile else {
             log(.warning, category: "Refresh", "No profile selected, cannot schedule refresh")
+            refreshScheduler?.invalidate()
+            refreshScheduler = nil
             return
         }
 
-        let intervalMinutes = getBudget(for: profile.name).refreshIntervalMinutes
+        let intervalMinutes = max(1, getBudget(for: profile.name).refreshIntervalMinutes)
         let interval = TimeInterval(intervalMinutes * 60)
 
-        log(.info, category: "Refresh", "Heartbeat scheduling: \(intervalMinutes)min interval for profile \(profile.name)")
-
-        // Display target derived from this profile's last fetch (or now if none yet).
-        // Using global lastAPICallTime here was a bug — it reflected whichever
-        // profile last fetched, making switched-to profiles appear fresh.
         nextRefreshTime = (lastFetchDate(for: profile.name) ?? Date()).addingTimeInterval(interval)
 
-        let timer = DispatchSource.makeTimerSource(queue: timerQueue)
-        refreshTimer = timer
-
-        let heartbeat = AWSManager.refreshHeartbeatSeconds
-        timer.schedule(deadline: .now() + heartbeat, repeating: heartbeat)
-
-        timer.setEventHandler { [weak self] in
-            guard let self = self else { return }
+        refreshScheduler?.invalidate()
+        let scheduler = NSBackgroundActivityScheduler(identifier: "middleout.AWSCostMonitor.refresh")
+        scheduler.repeats = true
+        scheduler.interval = interval
+        scheduler.tolerance = min(interval * 0.2, 600)
+        scheduler.qualityOfService = .utility
+        scheduler.schedule { [weak self] completion in
+            guard let self = self else { completion(NSBackgroundActivityScheduler.Result.finished); return }
             Task { @MainActor in
                 await self.heartbeatTick()
+                completion(NSBackgroundActivityScheduler.Result.finished)
             }
         }
+        refreshScheduler = scheduler
 
-        timer.setCancelHandler { [weak self] in
-            self?.log(.info, category: "Refresh", "Refresh heartbeat cancelled")
-        }
-
-        timer.resume()
-
-        log(.info, category: "Refresh", "Heartbeat started (60s tick, \(intervalMinutes)min interval). Next target: \(nextRefreshTime!)")
-
-        if timerValidationTimer == nil {
-            startTimerValidation()
-        }
+        log(.info, category: "Refresh", "Scheduler armed: interval=\(intervalMinutes)min tolerance=\(Int(scheduler.tolerance))s profile=\(profile.name). Next≈\(nextRefreshTime!)")
     }
 
     // One heartbeat tick: refresh if this profile's cache age exceeds the
@@ -1898,171 +1842,13 @@ class AWSManager: ObservableObject {
         nextRefreshTime = anchor.addingTimeInterval(interval)
     }
     
-    // Start a periodic timer to validate the main refresh timer (failsafe)
-    private func startTimerValidation() {
-        // Cancel any existing validation timer
-        if let existingTimer = timerValidationTimer {
-            existingTimer.cancel()
-            timerValidationTimer = nil
-        }
-        
-        // Create a DispatchSourceTimer for validation
-        let validationTimer = DispatchSource.makeTimerSource(queue: timerQueue)
-        timerValidationTimer = validationTimer
-        
-        // Configure to run every 30 seconds
-        validationTimer.schedule(deadline: .now() + 30, repeating: 30.0)
-        
-        // Set the event handler
-        validationTimer.setEventHandler { [weak self] in
-            self?.validateRefreshTimer()
-        }
-        
-        // Start the validation timer
-        validationTimer.resume()
-        
-        log(.debug, category: "Refresh", "Started timer validation checker (runs every 30 seconds)")
-    }
-    
-    // Stops automatic refresh
+    // Stops automatic refresh.
     func stopAutomaticRefresh() {
-        // Stop legacy DispatchSource timers
-        if refreshTimer != nil {
-            refreshTimer?.cancel()
-            refreshTimer = nil
-        }
-        if let validationTimer = timerValidationTimer {
-            validationTimer.cancel()
-            timerValidationTimer = nil
-        }
-        if let healthTimer = healthCheckTimer {
-            healthTimer.cancel()
-            healthCheckTimer = nil
-        }
-        
-        // Stop modern async timers
+        refreshScheduler?.invalidate()
+        refreshScheduler = nil
         stopAsyncRefreshTimer()
-        
         nextRefreshTime = nil
-
-        log(.info, category: "Refresh", "All refresh timers stopped")
-    }
-
-    // Independent health check timer - ultimate failsafe (runs every 5 minutes)
-    func startHealthCheckTimer() {
-        // Cancel any existing health check timer
-        if let existingTimer = healthCheckTimer {
-            existingTimer.cancel()
-            healthCheckTimer = nil
-        }
-
-        let healthTimer = DispatchSource.makeTimerSource(queue: timerQueue)
-        healthCheckTimer = healthTimer
-
-        // Check every 5 minutes (300 seconds)
-        healthTimer.schedule(deadline: .now() + 300, repeating: 300.0)
-
-        healthTimer.setEventHandler { [weak self] in
-            self?.performHealthCheck()
-        }
-
-        healthTimer.resume()
-
-        log(.info, category: "HealthCheck", "Started independent health check timer (runs every 5 minutes)")
-    }
-
-    // Perform comprehensive health check
-    func performHealthCheck() {
-        log(.debug, category: "HealthCheck", "Performing health check...")
-
-        // Check 1: Refresh timer should always be running
-        if refreshTimer == nil {
-            log(.error, category: "HealthCheck", "CRITICAL: Refresh timer is nil! Restarting...")
-            DispatchQueue.main.async { [weak self] in
-                self?.startAutomaticRefresh()
-            }
-            return
-        }
-
-        // Check 2: Timer exists but is significantly overdue
-        if let nextTime = nextRefreshTime {
-            let overdue = -nextTime.timeIntervalSinceNow
-            if overdue > 300 { // More than 5 minutes overdue
-                log(.error, category: "HealthCheck", "CRITICAL: Timer is \(Int(overdue/60)) minutes overdue! Restarting...")
-                DispatchQueue.main.async { [weak self] in
-                    self?.startAutomaticRefresh()
-                }
-                return
-            }
-        }
-
-        // Check 3: Validation timer is missing
-        if timerValidationTimer == nil {
-            log(.warning, category: "HealthCheck", "Validation timer is missing, restarting validation")
-            startTimerValidation()
-        }
-
-        log(.debug, category: "HealthCheck", "Health check passed - all timers healthy")
-    }
-
-    // Public method to validate timer health (called from UI interactions)
-    func validateTimerHealth() {
-        log(.debug, category: "TimerHealth", "User-triggered timer health validation")
-
-        // Quick validation - check critical timers
-        var needsRecovery = false
-
-        if refreshTimer == nil {
-            log(.warning, category: "TimerHealth", "Refresh timer is nil - needs recovery")
-            needsRecovery = true
-        }
-
-        if timerValidationTimer == nil {
-            log(.warning, category: "TimerHealth", "Validation timer is nil - needs recovery")
-            needsRecovery = true
-        }
-
-        if healthCheckTimer == nil {
-            log(.warning, category: "TimerHealth", "Health check timer is nil - needs recovery")
-            needsRecovery = true
-        }
-
-        // Check if refresh is overdue
-        if let nextTime = nextRefreshTime {
-            let overdue = -nextTime.timeIntervalSinceNow
-            if overdue > 60 { // More than 1 minute overdue
-                log(.warning, category: "TimerHealth", "Refresh is \(Int(overdue/60)) minutes overdue")
-                needsRecovery = true
-            }
-        }
-
-        if needsRecovery {
-            log(.error, category: "TimerHealth", "Timer recovery needed - restarting all timers")
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                self.startAutomaticRefresh()
-                if self.timerValidationTimer == nil {
-                    self.startTimerValidation()
-                }
-                if self.healthCheckTimer == nil {
-                    self.startHealthCheckTimer()
-                }
-            }
-        } else {
-            log(.debug, category: "TimerHealth", "All timers healthy")
-        }
-    }
-    
-    // Validates that the heartbeat timer is still running. The heartbeat itself
-    // handles pacing, so overdue detection on `nextRefreshTime` is left to the
-    // separate health check (>5min tolerance).
-    func validateRefreshTimer() {
-        if refreshTimer == nil {
-            log(.warning, category: "Refresh", "Heartbeat missing - restarting automatic refresh")
-            DispatchQueue.main.async { [weak self] in
-                self?.startAutomaticRefresh()
-            }
-        }
+        log(.info, category: "Refresh", "Refresh scheduler stopped")
     }
     
     // Updates refresh interval and recreates timer if running
@@ -2143,11 +1929,11 @@ class AWSManager: ObservableObject {
             self?.debugTimerFlash = false
         }
         
-        // Also log the state of the refresh timer
-        if refreshTimer != nil {
-            log(.info, category: "Debug", "Refresh timer is active")
+        // Also log the state of the refresh scheduler
+        if refreshScheduler != nil {
+            log(.info, category: "Debug", "Refresh scheduler is armed")
         } else {
-            log(.warning, category: "Debug", "⚠️ Refresh timer is nil - auto-refresh not running!")
+            log(.warning, category: "Debug", "⚠️ Refresh scheduler is nil - auto-refresh not running!")
         }
         
         if let nextRefresh = nextRefreshTime {
