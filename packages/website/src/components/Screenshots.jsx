@@ -27,20 +27,28 @@ const screenshots = [
     features: ["Interactive donut charts", "Click histogram bars for daily view", "Service cost breakdown", "Smart service grouping"]
   },
   {
+    title: "Menu Bar Pill with Sparkline",
+    description: "An at-a-glance MTD chip in your menu bar, accent-colored with an inline 14-day sparkline and luminance-aware ink that stays legible on any background",
+    image: "/AWSCostMonitor/screenshots/menubar-pill.png",
+    width: 2000,
+    height: 1125,
+    features: ["Accent-colored pill", "Inline 14-day sparkline", "Auto black/white ink"]
+  },
+  {
     title: "Settings - Refresh Rate",
-    description: "Configure intelligent refresh rates based on your budget and spending patterns",
+    description: "Configure a per-profile refresh interval. Auto-refresh is always on and each profile tracks its own last-fetch.",
     image: "/AWSCostMonitor/screenshots/settings-refresh-rate.png",
     width: 2000,
     height: 1125,
-    features: ["Smart refresh rates", "API usage tracking", "Budget-based polling"]
+    features: ["Per-profile interval", "Budget-aware tightening", "Always-on refresh"]
   },
   {
-    title: "Settings - Display Format",
-    description: "Customize how costs appear in your menu bar with various formatting options",
-    image: "/AWSCostMonitor/screenshots/settings-display-format.png",
+    title: "Settings - Appearance",
+    description: "Tune Ledger's four independent axes — Accent, Density, Contrast, and Color Scheme — from a single consolidated tab",
+    image: "/AWSCostMonitor/screenshots/settings-appearance.png",
     width: 2000,
     height: 1125,
-    features: ["Currency formatting", "Display modes", "Visual customization"]
+    features: ["Four orthogonal axes", "WCAG AAA contrast mode", "Accent: Amber / Mint / Plasma / Bone / System"]
   },
   {
     title: "Help & Getting Started",
