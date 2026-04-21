@@ -5,29 +5,26 @@ enum MenuBarSparklineImage {
     /// `color` should come from `LedgerTokens.Color.accent(…)` resolved to NSColor.
     static func render(values: [Double], color: NSColor, highlightIndex: Int? = nil) -> NSImage {
         let size = NSSize(width: 60, height: 14)
-        let image = NSImage(size: size)
-        image.lockFocus()
-        defer { image.unlockFocus() }
+        return NSImage(size: size, flipped: false) { _ in
+            guard let maxV = values.max(), maxV > 0, !values.isEmpty else { return true }
+            let columnWidth: CGFloat = 2
+            let gap: CGFloat = 1
+            let barCount = min(values.count, Int(size.width / (columnWidth + gap)))
+            let start = max(0, values.count - barCount)
+            let slice = Array(values[start..<values.count])
+            let sliceHighlight: Int? = highlightIndex.map { $0 - start }
+            let defaultHighlight = slice.count - 1
 
-        guard let maxV = values.max(), maxV > 0, !values.isEmpty else { return image }
-        let columnWidth: CGFloat = 2
-        let gap: CGFloat = 1
-        let barCount = min(values.count, Int(size.width / (columnWidth + gap)))
-        let start = max(0, values.count - barCount)
-        let slice = Array(values[start..<values.count])
-        // Translate the highlight index (expressed in the full series) into slice coordinates.
-        let sliceHighlight: Int? = highlightIndex.map { $0 - start }
-        let defaultHighlight = slice.count - 1
-
-        for (i, v) in slice.enumerated() {
-            let h = max(1, (CGFloat(v) / CGFloat(maxV)) * size.height)
-            let x = CGFloat(i) * (columnWidth + gap)
-            let rect = NSRect(x: x, y: 0, width: columnWidth, height: h)
-            let isHighlight = i == (sliceHighlight ?? defaultHighlight)
-            let alpha: CGFloat = isHighlight ? 1.0 : 0.6
-            color.withAlphaComponent(alpha).setFill()
-            NSBezierPath(roundedRect: rect, xRadius: 1, yRadius: 1).fill()
+            for (i, v) in slice.enumerated() {
+                let h = max(1, (CGFloat(v) / CGFloat(maxV)) * size.height)
+                let x = CGFloat(i) * (columnWidth + gap)
+                let rect = NSRect(x: x, y: 0, width: columnWidth, height: h)
+                let isHighlight = i == (sliceHighlight ?? defaultHighlight)
+                let alpha: CGFloat = isHighlight ? 1.0 : 0.6
+                color.withAlphaComponent(alpha).setFill()
+                NSBezierPath(roundedRect: rect, xRadius: 1, yRadius: 1).fill()
+            }
+            return true
         }
-        return image
     }
 }

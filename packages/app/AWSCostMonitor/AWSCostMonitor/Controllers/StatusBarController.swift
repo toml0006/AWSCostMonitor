@@ -56,59 +56,34 @@ class StatusBarController: NSObject {
             button.target = self
         }
         
-        // Subscribe to changes in cost data and settings
-        awsManager.$costData
-            .sink { [weak self] _ in
-                self?.updateStatusItemView()
-            }
-            .store(in: &cancellables)
-        
-        awsManager.$isLoading
-            .sink { [weak self] _ in
-                self?.updateStatusItemView()
-            }
-            .store(in: &cancellables)
-        
-        awsManager.$errorMessage
-            .sink { [weak self] _ in
-                self?.updateStatusItemView()
-            }
-            .store(in: &cancellables)
-        
-        awsManager.$selectedProfile
-            .sink { [weak self] _ in
-                self?.updateStatusItemView()
-            }
-            .store(in: &cancellables)
-        
-        // Listen to UserDefaults changes for display settings (debounced to prevent recursion)
-        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
-            .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.updateStatusItemView()
-            }
-            .store(in: &cancellables)
-        
-        #if DEBUG
-        // Subscribe to debug timer flash for visual feedback
-        awsManager.$debugTimerFlash
-            .sink { [weak self] shouldFlash in
-                self?.updateStatusItemView(flash: shouldFlash)
-            }
-            .store(in: &cancellables)
-        #endif
+        // All render-triggering signals funnel into one debounced publisher so
+        // rapid theme/appearance clicks can't fire overlapping button mutations
+        // mid-CATransaction. Previously separate sinks on appearance, UserDefaults,
+        // and AWSManager publishers could fire 2–3 renders per user click, which
+        // was producing zombie _NSWindowTransformAnimation over-releases under
+        // AppKit's implicit layout animations.
+        let signals: [AnyPublisher<Void, Never>] = [
+            awsManager.$costData.map { _ in () }.eraseToAnyPublisher(),
+            awsManager.$isLoading.map { _ in () }.eraseToAnyPublisher(),
+            awsManager.$errorMessage.map { _ in () }.eraseToAnyPublisher(),
+            awsManager.$selectedProfile.map { _ in () }.eraseToAnyPublisher(),
+            appearance.$appearance.map { _ in () }.eraseToAnyPublisher(),
+            NotificationCenter.default
+                .publisher(for: UserDefaults.didChangeNotification)
+                .map { _ in () }
+                .eraseToAnyPublisher(),
+            NotificationCenter.default
+                .publisher(for: .menuBarOptionsChanged)
+                .handleEvents(receiveOutput: { [weak self] _ in
+                    self?.options = MenuBarOptions()
+                })
+                .map { _ in () }
+                .eraseToAnyPublisher()
+        ]
 
-        appearance.$appearance
-            .receive(on: DispatchQueue.main)
+        Publishers.MergeMany(signals)
+            .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in self?.renderStatusItem() }
-            .store(in: &cancellables)
-
-        NotificationCenter.default.publisher(for: .menuBarOptionsChanged)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.options = MenuBarOptions()
-                self?.renderStatusItem()
-            }
             .store(in: &cancellables)
         
         // Monitor for clicks outside popover
@@ -160,9 +135,6 @@ class StatusBarController: NSObject {
     
     func showPopover() {
         if let button = statusItem.button {
-            // Validate timer health when user opens the menu
-            awsManager.validateTimerHealth()
-
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }
