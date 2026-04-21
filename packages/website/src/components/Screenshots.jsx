@@ -5,7 +5,7 @@ const screenshots = [
   {
     title: "Main Interface",
     description: "Clean menu bar display showing your current AWS costs with trend indicators",
-    image: "/AWSCostMonitor/screenshots/main-interface.png",
+    image: "/AWSCostMonitor/screenshots/main-interface.webp",
     width: 2000,
     height: 1125,
     features: ["Real-time cost display", "Profile switching", "Trend indicators"]
@@ -13,7 +13,7 @@ const screenshots = [
   {
     title: "Calendar View",
     description: "Beautiful monthly calendar showing daily spending patterns with color-coded intensity",
-    image: "/AWSCostMonitor/screenshots/calendar-view.png",
+    image: "/AWSCostMonitor/screenshots/calendar-view.webp",
     width: 2000,
     height: 1125,
     features: ["Monthly spending calendar", "Color-coded daily costs", "Quick month navigation", "⌘K keyboard shortcut"]
@@ -21,7 +21,7 @@ const screenshots = [
   {
     title: "Day Detail with Donut Chart",
     description: "Interactive donut chart showing service breakdown - click any calendar day or histogram bar to see details",
-    image: "/AWSCostMonitor/screenshots/day-detail-donut.png",
+    image: "/AWSCostMonitor/screenshots/day-detail-donut.webp",
     width: 2000,
     height: 1125,
     features: ["Interactive donut charts", "Click histogram bars for daily view", "Service cost breakdown", "Smart service grouping"]
@@ -29,7 +29,7 @@ const screenshots = [
   {
     title: "Menu Bar Pill with Sparkline",
     description: "An at-a-glance MTD chip in your menu bar, accent-colored with an inline 14-day sparkline and luminance-aware ink that stays legible on any background",
-    image: "/AWSCostMonitor/screenshots/menubar-pill.png",
+    image: "/AWSCostMonitor/screenshots/menubar-pill.webp",
     width: 2000,
     height: 1125,
     features: ["Accent-colored pill", "Inline 14-day sparkline", "Auto black/white ink"]
@@ -37,7 +37,7 @@ const screenshots = [
   {
     title: "Settings - Refresh Rate",
     description: "Configure a per-profile refresh interval. Auto-refresh is always on and each profile tracks its own last-fetch.",
-    image: "/AWSCostMonitor/screenshots/settings-refresh-rate.png",
+    image: "/AWSCostMonitor/screenshots/settings-refresh-rate.webp",
     width: 2000,
     height: 1125,
     features: ["Per-profile interval", "Budget-aware tightening", "Always-on refresh"]
@@ -45,7 +45,7 @@ const screenshots = [
   {
     title: "Settings - Appearance",
     description: "Tune Ledger's four independent axes — Accent, Density, Contrast, and Color Scheme — from a single consolidated tab",
-    image: "/AWSCostMonitor/screenshots/settings-appearance.png",
+    image: "/AWSCostMonitor/screenshots/settings-appearance.webp",
     width: 2000,
     height: 1125,
     features: ["Four orthogonal axes", "WCAG AAA contrast mode", "Accent: Amber / Mint / Plasma / Bone / System"]
@@ -53,7 +53,7 @@ const screenshots = [
   {
     title: "Help & Getting Started",
     description: "Built-in help system with setup guides and troubleshooting information",
-    image: "/AWSCostMonitor/screenshots/help-getting-started.png",
+    image: "/AWSCostMonitor/screenshots/help-getting-started.webp",
     width: 2000,
     height: 1125,
     features: ["Setup guide", "Keyboard shortcuts", "Troubleshooting tips"]
@@ -61,7 +61,7 @@ const screenshots = [
   {
     title: "Settings - Anomaly Detection",
     description: "Set up intelligent alerts for unusual spending patterns and budget overages",
-    image: "/AWSCostMonitor/screenshots/settings-anomaly-detection.png",
+    image: "/AWSCostMonitor/screenshots/settings-anomaly-detection.webp",
     width: 2000,
     height: 1125,
     features: ["Smart alerts", "Budget monitoring", "Spending anomalies"]
