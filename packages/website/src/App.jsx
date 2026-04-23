@@ -33,6 +33,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 // Components
 import Hero from './components/Hero'
 import Features from './components/Features'
+import Screenshots from './components/Screenshots'
 import HowItWorks from './components/HowItWorks'
 import Pricing from './components/Pricing'
 import Installation from './components/Installation'
@@ -63,6 +64,7 @@ function HomePage() {
         <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
         <Hero />
         <Features />
+        <Screenshots />
         <Installation />
         <HowItWorks />
         <Pricing />
