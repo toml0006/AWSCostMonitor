@@ -634,6 +634,16 @@ code {
   box-shadow: 12px 12px 0 var(--color-black);
 }
 
+/* In dark themes, --color-black resolves close to the page bg so the
+   offset shadow vanishes. Use the brand pink for a visible neobrutalist
+   block shadow that doubles as a brand accent. */
+.twilight .actual-screenshot,
+.twilight .hero-screenshot,
+.ultra-dark .actual-screenshot,
+.ultra-dark .hero-screenshot {
+  box-shadow: 12px 12px 0 var(--color-brand-primary);
+}
+
 /* Preserve the hero's slight tilt, just without the card behind it */
 .hero-screenshot-frame {
   transform: rotate(-1deg);

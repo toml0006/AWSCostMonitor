@@ -249,51 +249,8 @@ const Features = () => {
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="feature-highlight"
-        >
-          <div className="highlight-content">
-            <div className="highlight-text">
-              <h3>Enterprise Features, Personal Simplicity</h3>
-              <p>
-                AWSCostMonitor brings enterprise-grade cost monitoring to individual developers and
-                small teams. No complex setup, no monthly fees, no data leaving your machine.
-              </p>
-              <ul className="feature-list">
-                <li>✓ Calendar view with daily spending patterns</li>
-                <li>✓ Interactive donut charts with hover effects</li>
-                <li>✓ Service-by-service cost breakdown</li>
-                <li>✓ Monthly spending forecasts</li>
-                <li>✓ Historical data tracking</li>
-                <li>✓ Export to CSV/JSON</li>
-                <li>✓ Anomaly detection</li>
-                <li>✓ API rate limiting protection</li>
-              </ul>
-            </div>
-            <div className="highlight-visual">
-              <div className="cost-chart">
-                <div className="chart-bar" style={{ height: '60%', background: 'var(--color-secondary)' }}>
-                  <span>Jan</span>
-                </div>
-                <div className="chart-bar" style={{ height: '80%', background: 'var(--color-secondary)' }}>
-                  <span>Feb</span>
-                </div>
-                <div className="chart-bar" style={{ height: '40%', background: 'var(--color-primary)' }}>
-                  <span>Mar</span>
-                </div>
-                <div className="chart-bar" style={{ height: '30%', background: 'var(--color-tertiary)' }}>
-                  <span>Apr</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </div>
-      
+
     </section>
   )
 }
