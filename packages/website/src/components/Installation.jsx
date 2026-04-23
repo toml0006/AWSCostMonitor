@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download, ExternalLink, Shield, DollarSign, Clock, Lock, AlertCircle } from 'lucide-react'
+import { Download, ExternalLink, Shield, DollarSign, Clock, Lock, AlertCircle, Apple, Github } from 'lucide-react'
 
 // Inline constants to fix build
 const EXTERNAL_LINKS = {
@@ -67,19 +67,27 @@ const Installation = () => {
               <div className="step-number">1</div>
               <div className="step-content">
                 <h4>Download AWS Cost Monitor</h4>
-                <p>Get the latest release for macOS (requires macOS 13.0+)</p>
-                <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
-                   target="_blank" 
+                <p>Two ways to get it — both run the same app (macOS 13.0+):</p>
+                <a href="https://apps.apple.com/app/id6749865679"
+                   target="_blank"
                    rel="noopener noreferrer"
                    className="download-btn">
-                  <Download size={20} />
-                  Download for macOS
+                  <Apple size={20} />
+                  Mac App Store — $3.99 (signed, auto-updates)
+                </a>
+                <a href="https://github.com/toml0006/AWSCostMonitor/releases"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="download-btn"
+                   style={{ marginTop: '0.5rem', background: 'transparent', border: '2px solid var(--color-text)' }}>
+                  <Github size={20} />
+                  GitHub Releases — free, OSS, unsigned
                 </a>
                 <div className="warning-note">
                   <AlertCircle size={16} />
                   <span>
-                    Note: You'll see a security dialog about opening an app downloaded from the internet. 
-                    <a href="#/unsigned-app-guide" style={{color: 'var(--color-primary)', marginLeft: '4px'}}>
+                    Choosing the GitHub build? macOS will show a security dialog about opening an app from the internet.
+                    <a href="/unsigned-app-guide" style={{color: 'var(--color-primary)', marginLeft: '4px'}}>
                       Learn how to open it →
                     </a>
                   </span>

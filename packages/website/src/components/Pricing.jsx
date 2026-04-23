@@ -139,10 +139,10 @@ const Pricing = () => {
               </div>
             </div>
             
-            <button className="btn btn-primary price-cta" disabled>
+            <a href="https://apps.apple.com/app/id6749865679" className="btn btn-primary price-cta">
               <Apple size={18} />
-              Coming Soon
-            </button>
+              Get on the App Store
+            </a>
             
             <p className="support-note">
               Supporting indie development, one coffee at a time ☕

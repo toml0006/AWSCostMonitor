@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { DollarSign, Download, Github, ArrowRight } from 'lucide-react'
+import { DollarSign, Download, Github, ArrowRight, Apple } from 'lucide-react'
 
 const Hero = () => {
   return (
@@ -31,15 +31,15 @@ const Hero = () => {
             </p>
             
             <div className="hero-cta">
-              <a href="https://github.com/toml0006/AWSCostMonitor/releases" 
+              <a href="https://apps.apple.com/app/id6749865679"
                  className="btn btn-primary btn-memphis">
-                <Download size={20} />
-                Download for macOS
+                <Apple size={20} />
+                Get on the App Store — $3.99
               </a>
-              <a href="https://github.com/toml0006/AWSCostMonitor" 
+              <a href="https://github.com/toml0006/AWSCostMonitor"
                  className="btn btn-outline btn-memphis">
                 <Github size={20} />
-                View on GitHub
+                Free on GitHub (OSS)
               </a>
             </div>
             
@@ -73,7 +73,7 @@ const Hero = () => {
               </div>
               <div className="hero-screenshot-image">
                 <img 
-                  src="/screenshots/main-interface.png"
+                  src="/screenshots/main-interface.webp"
                   alt="AWSCostMonitor main interface showing menu bar cost display with MiddleOut profile"
                   className="hero-screenshot"
                   width="2000"

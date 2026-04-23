@@ -19,7 +19,7 @@ const Footer = () => {
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
             <a href="#pricing">Pricing</a>
-            <a href="https://github.com/toml0006/AWSCostMonitor/releases">Download</a>
+            <a href="https://apps.apple.com/app/id6749865679">Download</a>
           </div>
           
           <div className="footer-links">
@@ -27,7 +27,7 @@ const Footer = () => {
             <a href="https://github.com/toml0006/AWSCostMonitor">GitHub</a>
             <a href="https://github.com/toml0006/AWSCostMonitor/wiki">Documentation</a>
             <a href="https://github.com/toml0006/AWSCostMonitor/issues">Support</a>
-            <a href="#/privacy">Privacy Policy</a>
+            <a href="/privacy">Privacy Policy</a>
             <a href="https://github.com/toml0006/AWSCostMonitor/blob/main/LICENSE">License</a>
           </div>
           

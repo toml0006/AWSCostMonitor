@@ -16,34 +16,29 @@ function Support() {
 
   const faqCategories = [
     {
-      title: "Purchase & Licensing",
+      title: "Pricing & Editions",
       icon: <CreditCard size={24} />,
       color: "primary",
       faqs: [
         {
-          question: "Why does the app show 'Unable to load pricing' in the purchase window?",
-          answer: "This can happen if the App Store is having connectivity issues or if there's a problem loading the in-app purchase information. Please try:\n\n1. Ensure you have a stable internet connection\n2. Restart the app\n3. Check if you're signed into the Mac App Store\n4. If the issue persists, you can purchase directly from our website at awscostmonitor.io\n\nWe're actively working with Apple to resolve any App Store connectivity issues.",
-          highlight: true
+          question: "How do I get AWSCostMonitor?",
+          answer: "Two options, same app:\n\n1. **Mac App Store — $3.99**: signed, notarized, auto-updates. One-time purchase, no subscription.\n2. **GitHub — free & open source**: build from source or download the unsigned release. You'll get a Gatekeeper prompt the first time you open it.\n\nPicking the App Store version also supports continued development — thank you!"
         },
         {
-          question: "How do I purchase AWSCostMonitor?",
-          answer: "You can purchase AWSCostMonitor through two methods:\n\n1. **Mac App Store**: Download from the App Store and purchase the Pro version through in-app purchase ($29.99)\n2. **Direct Purchase**: Buy directly from awscostmonitor.io and download the standalone version\n\nBoth versions include the same features and lifetime updates."
+          question: "What's the difference between the App Store and GitHub builds?",
+          answer: "The **app itself is identical** — same features, same code. The differences are distribution:\n\n• **App Store ($3.99)**: Apple notarization, automatic updates via the Mac App Store, no Gatekeeper warning, supports the project.\n• **GitHub (free)**: unsigned build, you update manually, requires a one-time right-click → Open to bypass Gatekeeper.\n\nNo feature gates. Nothing is locked behind either channel."
         },
         {
-          question: "Is this a subscription or one-time purchase?",
-          answer: "AWSCostMonitor is a one-time purchase of $29.99. No subscriptions, no recurring fees. You get lifetime updates and all future features included."
+          question: "Is this a subscription?",
+          answer: "No. The App Store version is a one-time $3.99 purchase. No subscriptions, no recurring fees."
         },
         {
-          question: "Can I use my license on multiple Macs?",
-          answer: "Yes! Your license is valid for all your personal Macs. If you purchased through the Mac App Store, you can install it on any Mac signed into your Apple ID. Direct purchases include a license key that can be used on up to 3 machines."
-        },
-        {
-          question: "What's included in the free trial?",
-          answer: "The 14-day free trial includes ALL Pro features:\n• Unlimited AWS profiles\n• Smart refresh with budgets\n• Cost forecasting & trends\n• Historical data & comparisons\n• Service breakdown views\n• Export functionality\n• Keyboard shortcuts\n• All future updates"
+          question: "Can I use my App Store purchase on multiple Macs?",
+          answer: "Yes. Your $3.99 App Store purchase works on any Mac signed into the same Apple ID via Family Sharing rules."
         },
         {
           question: "Do you offer refunds?",
-          answer: "Yes! We offer a 30-day money-back guarantee. If you're not satisfied, contact support@awscostmonitor.io for a full refund. For App Store purchases, you can also request a refund through Apple."
+          answer: "App Store purchases can be refunded through Apple at reportaproblem.apple.com — Apple handles all refund requests directly."
         }
       ]
     },
@@ -185,12 +180,9 @@ function Support() {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
                 <AlertCircle size={24} color="var(--color-warning)" />
                 <div style={{ textAlign: 'left' }}>
-                  <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-warning)' }}>App Store Purchase Issue</h3>
-                  <p style={{ marginBottom: '1rem' }}>
-                    We're aware some users are experiencing "Unable to load pricing" in the App Store version. This is being actively resolved with Apple.
-                  </p>
+                  <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-warning)' }}>Having trouble with the App Store version?</h3>
                   <p style={{ marginBottom: '0' }}>
-                    <strong>Workaround:</strong> You can purchase directly from our website and download the standalone version with the same features.
+                    If the App Store version isn't working, you can grab the free, open-source build from <a href="https://github.com/toml0006/AWSCostMonitor/releases" style={{ color: 'var(--color-primary)' }}>GitHub Releases</a> — same app, just unsigned.
                   </p>
                 </div>
               </div>
@@ -231,7 +223,7 @@ function Support() {
           
           <div className="features-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             <motion.a
-              href="mailto:support@awscostmonitor.io"
+              href="mailto:awsapp@middleout.dev"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -242,7 +234,7 @@ function Support() {
                 <Mail size={32} />
               </div>
               <h3>Email Support</h3>
-              <p>support@awscostmonitor.io</p>
+              <p>awsapp@middleout.dev</p>
               <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>24-hour response time</p>
             </motion.a>
             
