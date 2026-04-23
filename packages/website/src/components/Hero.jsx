@@ -72,12 +72,12 @@ const Hero = () => {
                 <span></span>
               </div>
               <div className="hero-screenshot-image">
-                <img 
+                <img
                   src="/screenshots/main-interface.webp"
-                  alt="AWSCostMonitor main interface showing menu bar cost display with MiddleOut profile"
+                  alt="AWSCostMonitor menu bar dashboard showing MTD cost, forecast, and top services"
                   className="hero-screenshot"
-                  width="2000"
-                  height="1125"
+                  width="1586"
+                  height="992"
                   fetchPriority="high"
                 />
               </div>

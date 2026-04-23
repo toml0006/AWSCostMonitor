@@ -3,68 +3,44 @@ import { useState } from 'react'
 
 const screenshots = [
   {
-    title: "Main Interface",
-    description: "Clean menu bar display showing your current AWS costs with trend indicators",
+    title: "Menu Bar Dashboard",
+    description: "Click the menu bar pill to reveal MTD spend, forecast, daily burn, a 7-day sparkline, and the top services — all without opening a browser tab.",
     image: "/screenshots/main-interface.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Real-time cost display", "Profile switching", "Trend indicators"]
+    width: 1586,
+    height: 992,
+    features: ["MTD + forecast at a glance", "7-day burn sparkline", "Top services with %", "One-click AWS console"]
   },
   {
-    title: "Calendar View",
-    description: "Beautiful monthly calendar showing daily spending patterns with color-coded intensity",
+    title: "Cost Calendar",
+    description: "A month at a glance — every day shaded by spend intensity so anomalies and weekend dips jump out instantly.",
     image: "/screenshots/calendar-view.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Monthly spending calendar", "Color-coded daily costs", "Quick month navigation", "⌘K keyboard shortcut"]
+    width: 1586,
+    height: 992,
+    features: ["Heatmap by spend intensity", "Month navigation", "⌘K to open from menu bar", "Running month total"]
   },
   {
-    title: "Day Detail with Donut Chart",
-    description: "Interactive donut chart showing service breakdown - click any calendar day or histogram bar to see details",
+    title: "Day Detail with Donut",
+    description: "Click any day for a full service breakdown — a donut chart plus ranked service list with exact dollar amounts.",
     image: "/screenshots/day-detail-donut.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Interactive donut charts", "Click histogram bars for daily view", "Service cost breakdown", "Smart service grouping"]
+    width: 1586,
+    height: 992,
+    features: ["Donut chart per service", "Ranked service list", "Exact dollars + percentages", "Day-level API refresh"]
   },
   {
-    title: "Menu Bar Pill with Sparkline",
-    description: "An at-a-glance MTD chip in your menu bar, accent-colored with an inline 14-day sparkline and luminance-aware ink that stays legible on any background",
-    image: "/screenshots/menubar-pill.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Accent-colored pill", "Inline 14-day sparkline", "Auto black/white ink"]
-  },
-  {
-    title: "Settings - Refresh Rate",
-    description: "Configure a per-profile refresh interval. Auto-refresh is always on and each profile tracks its own last-fetch.",
-    image: "/screenshots/settings-refresh-rate.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Per-profile interval", "Budget-aware tightening", "Always-on refresh"]
-  },
-  {
-    title: "Settings - Appearance",
-    description: "Tune Ledger's four independent axes — Accent, Density, Contrast, and Color Scheme — from a single consolidated tab",
+    title: "Appearance",
+    description: "Tune Ledger's four independent axes — Accent, Density, Contrast, and Color Scheme — plus menu-bar visuals and currency formatting.",
     image: "/screenshots/settings-appearance.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Four orthogonal axes", "WCAG AAA contrast mode", "Accent: Amber / Mint / Plasma / Bone / System"]
+    width: 1586,
+    height: 992,
+    features: ["5 accents: Amber / Mint / Plasma / Bone / System", "Comfortable / Compact density", "WCAG AAA contrast mode", "Menu-bar sparkline toggle"]
   },
   {
-    title: "Help & Getting Started",
-    description: "Built-in help system with setup guides and troubleshooting information",
-    image: "/screenshots/help-getting-started.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Setup guide", "Keyboard shortcuts", "Troubleshooting tips"]
-  },
-  {
-    title: "Settings - Anomaly Detection",
-    description: "Set up intelligent alerts for unusual spending patterns and budget overages",
-    image: "/screenshots/settings-anomaly-detection.webp",
-    width: 2000,
-    height: 1125,
-    features: ["Smart alerts", "Budget monitoring", "Spending anomalies"]
+    title: "Per-Profile Refresh",
+    description: "Pick a refresh interval per AWS profile — from tight 15-minute loops on hot accounts to 24-hour cadence on sleepy ones. API call budget is displayed inline.",
+    image: "/screenshots/settings-refresh-rate.webp",
+    width: 1586,
+    height: 992,
+    features: ["Independent interval per profile", "Quick-set presets: 1h / 2h / 8h / 24h", "Estimated monthly API cost", "Always-on auto-refresh"]
   }
 ]
 
