@@ -1,7 +1,5 @@
-# Netlify redirects file for AWSCostMonitor
-
-# SPA fallback - handle client-side routing
-/*    /index.html   200
+# Redirects for AWSCostMonitor
+# SPA fallback is handled by wrangler.toml not_found_handling = "single-page-application"
 
 # Handle common old URLs (if any)
 /home              /                   301
