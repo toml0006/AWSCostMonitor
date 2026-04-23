@@ -584,3 +584,51 @@ code {
 .price-cta {
   gap: 0.5rem;
 }
+
+/* ---------------------------------------------------------------- */
+/* Full-bleed screenshot treatment — drop the fake window chrome    */
+/* (white outer card + red/yellow/green traffic-light dots).        */
+/* ---------------------------------------------------------------- */
+
+.hero-screenshot-frame,
+.screenshot-frame {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.hero-screenshot-frame::before,
+.screenshot-frame::before {
+  display: none !important;
+}
+
+.hero-screenshot-frame .frame-dots,
+.screenshot-frame .frame-dots {
+  display: none !important;
+}
+
+.screenshot-image {
+  background: transparent !important;
+  min-height: 0 !important;
+}
+
+.actual-screenshot {
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35), 0 6px 12px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-lg);
+}
+
+.hero-screenshot {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-lg);
+}
+
+/* Preserve the hero's slight tilt, just without the card behind it */
+.hero-screenshot-frame {
+  transform: rotate(-1deg);
+  transition: transform 0.3s ease;
+}
+
+.hero-screenshot-frame:hover {
+  transform: rotate(0deg) scale(1.02);
+}
