@@ -595,7 +595,7 @@ code {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  box-shadow: none !important;
+  border-radius: var(--radius-lg);
 }
 
 .hero-screenshot-frame::before,
@@ -608,19 +608,30 @@ code {
   display: none !important;
 }
 
+/* Kill the second (later) .screenshot-image rule in components.css that
+   forced height: 250px + object-fit: cover — it was cropping action shots
+   vertically. Let the image keep its native aspect. */
 .screenshot-image {
   background: transparent !important;
   min-height: 0 !important;
+  height: auto !important;
+  border-radius: var(--radius-lg);
+  overflow: visible !important;
 }
 
+.screenshot-image img,
 .actual-screenshot {
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35), 0 6px 12px rgba(0, 0, 0, 0.2);
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
   border-radius: var(--radius-lg);
+  box-shadow: 12px 12px 0 var(--color-black);
+  display: block;
 }
 
 .hero-screenshot {
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-lg);
+  box-shadow: 12px 12px 0 var(--color-black);
 }
 
 /* Preserve the hero's slight tilt, just without the card behind it */
