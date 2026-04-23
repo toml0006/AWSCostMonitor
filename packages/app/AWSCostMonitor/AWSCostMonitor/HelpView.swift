@@ -117,7 +117,12 @@ struct HelpView: View {
                 
                 Text("• AWS CLI configured with profiles in ~/.aws/config")
                 Text("• AWS credentials configured in ~/.aws/credentials")
-                Text("• IAM permissions for Cost Explorer API")
+                Text("• IAM permissions for Cost Explorer API:")
+                Text("   – ce:GetCostAndUsage (required)")
+                Text("   – ce:GetCostForecast (recommended: ML forecast)")
+                Text("   – ce:GetAnomalies (optional: AWS-detected spikes)")
+                Text("   – ce:GetReservationCoverage, ce:GetReservationUtilization (optional: RI)")
+                Text("   – ce:GetSavingsPlansCoverage, ce:GetSavingsPlansUtilization (optional: SP)")
                     .padding(.bottom)
                 
                 Label("First Steps", systemImage: "1.circle")

@@ -58,17 +58,48 @@ struct TagCost: Identifiable, Comparable, Codable {
     }
 }
 
+// Account-level cost breakdown (linked accounts in an AWS Organization)
+struct AccountCost: Identifiable, Comparable, Codable {
+    var id = UUID()
+    let accountId: String
+    let accountName: String?   // Resolved from the SDK's Attributes map when present
+    let amount: Decimal
+    let currency: String
+
+    var displayName: String { accountName ?? accountId }
+
+    static func < (lhs: AccountCost, rhs: AccountCost) -> Bool {
+        lhs.amount > rhs.amount
+    }
+}
+
+// Region-level cost breakdown
+struct RegionCost: Identifiable, Comparable, Codable {
+    var id = UUID()
+    let region: String
+    let amount: Decimal
+    let currency: String
+
+    static func < (lhs: RegionCost, rhs: RegionCost) -> Bool {
+        lhs.amount > rhs.amount
+    }
+}
+
 // User preference for breakdown view
 enum CostBreakdownMode: String, CaseIterable, Codable, Identifiable {
     case service
     case tag
-    
+    case account
+    case region
+
     var id: String { rawValue }
-    
+
     var displayName: String {
         switch self {
         case .service: return "Service"
         case .tag: return "Tag"
+        case .account: return "Account"
+        case .region: return "Region"
         }
     }
 }
@@ -178,6 +209,45 @@ enum CostTrend: Equatable {
         case .stable:
             return "0%"
         }
+    }
+}
+
+// Anomaly surfaced by AWS Cost Explorer's own detection (GetAnomalies).
+// Kept separate from SpendingAnomaly so the UI can show "AWS-detected"
+// with dollar impact and root-cause services when available.
+struct CloudAnomaly: Identifiable, Codable {
+    var id: String { anomalyId }
+    let anomalyId: String
+    let startDate: Date
+    let endDate: Date?
+    let totalImpact: Double            // Dollars over expected
+    let impactPercentage: Double       // % deviation
+    let maxScore: Double               // 0..1 confidence
+    let topService: String?            // From first RootCause if present
+    let rootCauseCount: Int
+}
+
+// Aggregated commitment coverage/utilization across RIs and Savings Plans.
+// nil fields indicate the corresponding API was unavailable (access denied,
+// not configured, or no commitments exist for the account).
+struct CommitmentSummary: Codable {
+    let riCoveragePercent: Double?       // % of on-demand-eligible usage covered by RIs
+    let riUtilizationPercent: Double?    // % of owned RI hours actually used
+    let spCoveragePercent: Double?       // % of compute spend covered by Savings Plans
+    let spUtilizationPercent: Double?    // % of SP commitment consumed
+    let fetchDate: Date
+
+    /// Combined coverage: prefer Savings Plans when both present (modern AWS
+    /// accounts use SP over RI). Returns nil if neither is available.
+    var preferredCoveragePercent: Double? {
+        spCoveragePercent ?? riCoveragePercent
+    }
+
+    var hasAnyData: Bool {
+        riCoveragePercent != nil
+            || riUtilizationPercent != nil
+            || spCoveragePercent != nil
+            || spUtilizationPercent != nil
     }
 }
 

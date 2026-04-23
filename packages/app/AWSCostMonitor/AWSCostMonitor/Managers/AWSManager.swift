@@ -93,6 +93,17 @@ class AWSManager: ObservableObject {
     @Published var anomalies: [SpendingAnomaly] = []
     @AppStorage("EnableAnomalyDetection") private var enableAnomalyDetection: Bool = true
     @AppStorage("AnomalyThresholdPercentage") private var anomalyThreshold: Double = 25.0 // 25% deviation triggers anomaly
+
+    // AWS-detected anomalies (GetAnomalies). Per-profile; empty array = fetched
+    // and none present. Absence from the dict = not fetched / access denied.
+    @Published var cloudAnomalies: [String: [CloudAnomaly]] = [:]
+    @Published var cloudAnomalyFetchDate: [String: Date] = [:]
+    // Commitment coverage + utilization. Per-profile; nil = not fetched.
+    @Published var commitmentSummary: [String: CommitmentSummary] = [:]
+
+    // Account + region breakdown storage (Phase 2 breakdowns)
+    @Published var accountCosts: [AccountCost] = []
+    @Published var regionCosts: [RegionCost] = []
     
     // Last month data caching
     @Published var lastMonthData: [String: CostData] = [:] // Key is profileName - FULL month total
@@ -2491,12 +2502,23 @@ class AWSManager: ObservableObject {
                         await self.fetchLastMonthData(for: profile.name)
                     }
 
-                    // Fetch tag breakdown if user prefers tag view
-                    if self.breakdownMode == .tag {
-                        Task {
-                            await self.fetchTagBreakdown()
-                        }
+                    // Fetch breakdown if user prefers a non-service view
+                    switch self.breakdownMode {
+                    case .service:
+                        break
+                    case .tag:
+                        Task { await self.fetchTagBreakdown() }
+                    case .account:
+                        Task { await self.fetchAccountBreakdown() }
+                    case .region:
+                        Task { await self.fetchRegionBreakdown() }
                     }
+
+                    // Opportunistic Cost Explorer surfaces. Both APIs are
+                    // optional — accounts without anomaly monitors or
+                    // commitments (or with restricted IAM) will no-op.
+                    Task { await self.fetchCloudAnomalies(for: profile) }
+                    Task { await self.fetchCommitmentSummary(for: profile) }
                 }
             } else {
                 // No data returned
@@ -2576,6 +2598,10 @@ class AWSManager: ObservableObject {
             }
         case .tag:
             await fetchTagBreakdown()
+        case .account:
+            await fetchAccountBreakdown()
+        case .region:
+            await fetchRegionBreakdown()
         }
     }
     
@@ -2806,6 +2832,355 @@ class AWSManager: ObservableObject {
         }
     }
     
+    // MARK: - Account / Region breakdowns (Phase 2)
+
+    /// Fetch MTD cost grouped by AWS linked account. Populates `accountCosts`.
+    func fetchAccountBreakdown() async {
+        guard let profile = selectedProfile else { return }
+        if !canMakeAPICall() {
+            log(.warning, category: "API", "Proceeding with account breakdown even though rate limiter is active")
+        }
+        log(.info, category: "API", "Fetching account breakdown for profile: \(profile.name)")
+        let startTime = Date()
+
+        await MainActor.run {
+            self.isLoadingServices = true
+            self.accountCosts = []
+        }
+
+        do {
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let config = try await CostExplorerClient.CostExplorerClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
+                region: profile.region ?? "us-east-1"
+            )
+            let client = CostExplorerClient(config: config)
+
+            let cal = Calendar.current
+            let now = Date()
+            let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: now))!
+            let endOfToday = cal.date(byAdding: .day, value: 1, to: now)!
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+
+            let input = GetCostAndUsageInput(
+                granularity: .monthly,
+                groupBy: [.init(key: "LINKED_ACCOUNT", type: .dimension)],
+                metrics: ["UnblendedCost"],
+                timePeriod: .init(end: df.string(from: endOfToday), start: df.string(from: startOfMonth))
+            )
+
+            await MainActor.run { self.lastAPICallTime = Date() }
+            let output = try await client.getCostAndUsage(input: input)
+
+            if let resultByTime = output.resultsByTime?.first, let groups = resultByTime.groups {
+                var accounts: [AccountCost] = []
+                for group in groups {
+                    // GetCostAndUsage with LINKED_ACCOUNT returns only the account ID.
+                    // Account name requires a separate GetDimensionValues call which we
+                    // intentionally skip to avoid extra API cost.
+                    let accountId = group.keys?.first ?? ""
+                    if let metrics = group.metrics,
+                       let unblended = metrics["UnblendedCost"],
+                       let amountStr = unblended.amount,
+                       let currency = unblended.unit,
+                       let amount = Decimal(string: amountStr),
+                       amount > 0 {
+                        accounts.append(AccountCost(accountId: accountId, accountName: nil, amount: amount, currency: currency))
+                    }
+                }
+                accounts.sort()
+                let finalAccounts = accounts
+                await MainActor.run {
+                    self.accountCosts = finalAccounts
+                    let duration = Date().timeIntervalSince(startTime)
+                    self.recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-AccountBreakdown", success: true, duration: duration)
+                    self.log(.info, category: "API", "Account breakdown loaded: \(finalAccounts.count) accounts")
+                }
+            }
+        } catch {
+            let duration = Date().timeIntervalSince(startTime)
+            let msg = error.localizedDescription
+            log(.error, category: "API", "Error fetching account breakdown: \(msg)")
+            recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-AccountBreakdown", success: false, duration: duration, error: msg)
+        }
+        await MainActor.run { self.isLoadingServices = false }
+    }
+
+    /// Fetch MTD cost grouped by AWS region. Populates `regionCosts`.
+    func fetchRegionBreakdown() async {
+        guard let profile = selectedProfile else { return }
+        if !canMakeAPICall() {
+            log(.warning, category: "API", "Proceeding with region breakdown even though rate limiter is active")
+        }
+        log(.info, category: "API", "Fetching region breakdown for profile: \(profile.name)")
+        let startTime = Date()
+
+        await MainActor.run {
+            self.isLoadingServices = true
+            self.regionCosts = []
+        }
+
+        do {
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let config = try await CostExplorerClient.CostExplorerClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
+                region: profile.region ?? "us-east-1"
+            )
+            let client = CostExplorerClient(config: config)
+
+            let cal = Calendar.current
+            let now = Date()
+            let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: now))!
+            let endOfToday = cal.date(byAdding: .day, value: 1, to: now)!
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+
+            let input = GetCostAndUsageInput(
+                granularity: .monthly,
+                groupBy: [.init(key: "REGION", type: .dimension)],
+                metrics: ["UnblendedCost"],
+                timePeriod: .init(end: df.string(from: endOfToday), start: df.string(from: startOfMonth))
+            )
+
+            await MainActor.run { self.lastAPICallTime = Date() }
+            let output = try await client.getCostAndUsage(input: input)
+
+            if let resultByTime = output.resultsByTime?.first, let groups = resultByTime.groups {
+                var regions: [RegionCost] = []
+                for group in groups {
+                    let rawRegion = group.keys?.first ?? ""
+                    // Cost Explorer returns "NoRegion" for region-less services (IAM, billing, etc.)
+                    let label = rawRegion == "NoRegion" ? "Global" : rawRegion
+                    if let metrics = group.metrics,
+                       let unblended = metrics["UnblendedCost"],
+                       let amountStr = unblended.amount,
+                       let currency = unblended.unit,
+                       let amount = Decimal(string: amountStr),
+                       amount > 0 {
+                        regions.append(RegionCost(region: label, amount: amount, currency: currency))
+                    }
+                }
+                regions.sort()
+                let finalRegions = regions
+                await MainActor.run {
+                    self.regionCosts = finalRegions
+                    let duration = Date().timeIntervalSince(startTime)
+                    self.recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-RegionBreakdown", success: true, duration: duration)
+                    self.log(.info, category: "API", "Region breakdown loaded: \(finalRegions.count) regions")
+                }
+            }
+        } catch {
+            let duration = Date().timeIntervalSince(startTime)
+            let msg = error.localizedDescription
+            log(.error, category: "API", "Error fetching region breakdown: \(msg)")
+            recordAPIRequest(profile: profile.name, endpoint: "GetCostAndUsage-RegionBreakdown", success: false, duration: duration, error: msg)
+        }
+        await MainActor.run { self.isLoadingServices = false }
+    }
+
+    // MARK: - AWS-detected anomalies (Phase 1)
+
+    /// Fetch AWS Cost Explorer anomalies for the last 30 days. Silently skips
+    /// if the account has no anomaly monitors configured (ValidationException)
+    /// or the caller lacks ce:GetAnomalies (AccessDeniedException).
+    func fetchCloudAnomalies(for profile: AWSProfile) async {
+        let startTime = Date()
+        log(.info, category: "API", "Fetching Cost Explorer anomalies for profile: \(profile.name)")
+
+        do {
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let config = try await CostExplorerClient.CostExplorerClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
+                region: profile.region ?? "us-east-1"
+            )
+            let client = CostExplorerClient(config: config)
+
+            let cal = Calendar.current
+            let now = Date()
+            let thirtyDaysAgo = cal.date(byAdding: .day, value: -30, to: now)!
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+
+            let input = GetAnomaliesInput(
+                dateInterval: .init(
+                    endDate: df.string(from: now),
+                    startDate: df.string(from: thirtyDaysAgo)
+                ),
+                maxResults: 50
+            )
+
+            await MainActor.run { self.lastAPICallTime = Date() }
+            let output = try await client.getAnomalies(input: input)
+
+            let df2 = ISO8601DateFormatter()
+            df2.formatOptions = [.withFullDate]
+
+            let mapped: [CloudAnomaly] = (output.anomalies ?? []).compactMap { a in
+                guard let id = a.anomalyId, let startStr = a.anomalyStartDate else { return nil }
+                // AWS returns dates like "2026-04-15" for anomaly start/end
+                let parse: (String) -> Date? = { s in
+                    let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.timeZone = TimeZone(identifier: "UTC")
+                    return f.date(from: s)
+                }
+                guard let start = parse(startStr) else { return nil }
+                let end = a.anomalyEndDate.flatMap(parse)
+                let impact = a.impact
+                let topService = a.rootCauses?.first?.service
+                return CloudAnomaly(
+                    anomalyId: id,
+                    startDate: start,
+                    endDate: end,
+                    totalImpact: impact?.totalImpact ?? 0,
+                    impactPercentage: impact?.totalImpactPercentage ?? 0,
+                    maxScore: a.anomalyScore?.maxScore ?? 0,
+                    topService: topService,
+                    rootCauseCount: a.rootCauses?.count ?? 0
+                )
+            }
+            .sorted { $0.totalImpact > $1.totalImpact }
+
+            await MainActor.run {
+                self.cloudAnomalies[profile.name] = mapped
+                self.cloudAnomalyFetchDate[profile.name] = Date()
+                let duration = Date().timeIntervalSince(startTime)
+                self.recordAPIRequest(profile: profile.name, endpoint: "GetAnomalies", success: true, duration: duration)
+                self.log(.info, category: "API", "Anomalies loaded: \(mapped.count)")
+            }
+        } catch {
+            let duration = Date().timeIntervalSince(startTime)
+            let msg = error.localizedDescription
+            // AccessDenied / ValidationException are expected for accounts
+            // without anomaly monitors — don't surface as user-facing error.
+            log(.warning, category: "API", "Cost Explorer anomalies unavailable: \(msg)")
+            recordAPIRequest(profile: profile.name, endpoint: "GetAnomalies", success: false, duration: duration, error: msg)
+        }
+    }
+
+    // MARK: - Commitment coverage / utilization (Phase 1)
+
+    /// Fetch RI + Savings Plans coverage and utilization for current month.
+    /// All four APIs run concurrently. Partial data still produces a summary
+    /// (e.g., accounts without RIs only return SP data).
+    func fetchCommitmentSummary(for profile: AWSProfile) async {
+        let startTime = Date()
+        log(.info, category: "API", "Fetching commitment summary for profile: \(profile.name)")
+
+        do {
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let config = try await CostExplorerClient.CostExplorerClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
+                region: profile.region ?? "us-east-1"
+            )
+            let client = CostExplorerClient(config: config)
+
+            let cal = Calendar.current
+            let now = Date()
+            let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: now))!
+            let endOfToday = cal.date(byAdding: .day, value: 1, to: now)!
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            let monthlyPeriod = CommitmentPeriod(start: df.string(from: startOfMonth), end: df.string(from: endOfToday))
+
+            await MainActor.run { self.lastAPICallTime = Date() }
+
+            async let riCoverage: Double? = fetchRICoverage(client: client, period: monthlyPeriod)
+            async let riUtil: Double? = fetchRIUtilization(client: client, period: monthlyPeriod)
+            async let spCoverage: Double? = fetchSPCoverage(client: client, period: monthlyPeriod)
+            async let spUtil: Double? = fetchSPUtilization(client: client, period: monthlyPeriod)
+
+            let (riCov, riU, spCov, spU) = await (riCoverage, riUtil, spCoverage, spUtil)
+
+            let summary = CommitmentSummary(
+                riCoveragePercent: riCov,
+                riUtilizationPercent: riU,
+                spCoveragePercent: spCov,
+                spUtilizationPercent: spU,
+                fetchDate: Date()
+            )
+
+            await MainActor.run {
+                self.commitmentSummary[profile.name] = summary
+                let duration = Date().timeIntervalSince(startTime)
+                self.recordAPIRequest(profile: profile.name, endpoint: "CommitmentSummary", success: true, duration: duration)
+                self.log(.info, category: "API", "Commitment summary: RI cov=\(riCov ?? -1), RI util=\(riU ?? -1), SP cov=\(spCov ?? -1), SP util=\(spU ?? -1)")
+            }
+        } catch {
+            let duration = Date().timeIntervalSince(startTime)
+            let msg = error.localizedDescription
+            log(.warning, category: "API", "Commitment summary unavailable: \(msg)")
+            recordAPIRequest(profile: profile.name, endpoint: "CommitmentSummary", success: false, duration: duration, error: msg)
+        }
+    }
+
+    /// Helper: string date range used across commitment APIs.
+    private struct CommitmentPeriod {
+        let start: String
+        let end: String
+    }
+
+    private func fetchRICoverage(client: CostExplorerClient, period: CommitmentPeriod) async -> Double? {
+        do {
+            let input = GetReservationCoverageInput(
+                metrics: ["HoursPercentage"],
+                timePeriod: .init(end: period.end, start: period.start)
+            )
+            let output = try await client.getReservationCoverage(input: input)
+            // total.coverageHours.coverageHoursPercentage is a string like "72.5"
+            if let pctStr = output.total?.coverageHours?.coverageHoursPercentage, let pct = Double(pctStr) {
+                return pct
+            }
+        } catch {
+            log(.debug, category: "API", "RI coverage unavailable: \(error.localizedDescription)")
+        }
+        return nil
+    }
+
+    private func fetchRIUtilization(client: CostExplorerClient, period: CommitmentPeriod) async -> Double? {
+        do {
+            let input = GetReservationUtilizationInput(
+                timePeriod: .init(end: period.end, start: period.start)
+            )
+            let output = try await client.getReservationUtilization(input: input)
+            if let pctStr = output.total?.utilizationPercentage, let pct = Double(pctStr) {
+                return pct
+            }
+        } catch {
+            log(.debug, category: "API", "RI utilization unavailable: \(error.localizedDescription)")
+        }
+        return nil
+    }
+
+    private func fetchSPCoverage(client: CostExplorerClient, period: CommitmentPeriod) async -> Double? {
+        do {
+            let input = GetSavingsPlansCoverageInput(
+                metrics: ["SpendCoveredBySavingsPlans"],
+                timePeriod: .init(end: period.end, start: period.start)
+            )
+            let output = try await client.getSavingsPlansCoverage(input: input)
+            // Aggregate across buckets: pick the most recent with data.
+            if let latest = output.savingsPlansCoverages?.last,
+               let pctStr = latest.coverage?.coveragePercentage,
+               let pct = Double(pctStr) {
+                return pct
+            }
+        } catch {
+            log(.debug, category: "API", "SP coverage unavailable: \(error.localizedDescription)")
+        }
+        return nil
+    }
+
+    private func fetchSPUtilization(client: CostExplorerClient, period: CommitmentPeriod) async -> Double? {
+        do {
+            let input = GetSavingsPlansUtilizationInput(
+                timePeriod: .init(end: period.end, start: period.start)
+            )
+            let output = try await client.getSavingsPlansUtilization(input: input)
+            if let pctStr = output.total?.utilization?.utilizationPercentage, let pct = Double(pctStr) {
+                return pct
+            }
+        } catch {
+            log(.debug, category: "API", "SP utilization unavailable: \(error.localizedDescription)")
+        }
+        return nil
+    }
+
     // Fetch cost for a specific profile (used by Multi-Profile Dashboard)
     func fetchCostForProfile(_ profile: AWSProfile) async throws -> Decimal {
         log(.info, category: "API", "Fetching cost data for profile: \(profile.name)")

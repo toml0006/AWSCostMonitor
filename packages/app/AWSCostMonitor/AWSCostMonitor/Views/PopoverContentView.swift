@@ -194,6 +194,24 @@ struct PopoverContentView: View {
                 color: f > 1.0 ? .over : .ink
             ))
         }
+        // Savings Plans / RI coverage. Prefer SP when both available since
+        // modern AWS accounts use SP; fall back to RI when the account only
+        // has reservations.
+        if let p = awsManager.selectedProfile,
+           let summary = awsManager.commitmentSummary[p.name],
+           let coverage = summary.preferredCoveragePercent {
+            let label = summary.spCoveragePercent != nil ? "SP cover" : "RI cover"
+            out.append(.init(label: label, value: String(format: "%.0f%%", coverage), color: .ink))
+        }
+        // AWS-detected anomalies: show count + top-impact service when present.
+        if let p = awsManager.selectedProfile,
+           let cloud = awsManager.cloudAnomalies[p.name],
+           !cloud.isEmpty {
+            let top = cloud.first
+            let label = cloud.count > 1 ? "\(cloud.count) anomalies" : "Anomaly"
+            let value = top?.topService ?? CurrencyFormatter.format(top?.totalImpact ?? 0)
+            out.append(.init(label: label, value: value, color: .over))
+        }
         if let p = awsManager.selectedProfile, let entry = awsManager.costCache[p.name] {
             let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
             out.append(.init(label: "Updated", value: fmt.string(from: entry.fetchDate), color: .ink))
