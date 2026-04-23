@@ -168,7 +168,7 @@ const Pricing = () => {
                className="btn btn-outline">
               ⭐ Star on GitHub
             </a>
-            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://toml0006.github.io/AWSCostMonitor/" 
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://awscostmonitor.middleout.dev/"
                className="btn btn-outline">
               Share on LinkedIn
             </a>

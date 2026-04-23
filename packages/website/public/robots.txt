@@ -1,5 +1,5 @@
 # Robots.txt for AWSCostMonitor
-# https://awscostmonitor.io
+# https://awscostmonitor.middleout.dev
 
 User-agent: *
 Allow: /
@@ -8,7 +8,7 @@ Disallow: /admin/
 Disallow: /*.json$
 
 # Sitemap location
-Sitemap: https://awscostmonitor.io/sitemap.xml
+Sitemap: https://awscostmonitor.middleout.dev/sitemap.xml
 
 # Crawl-delay for responsible crawling
 Crawl-delay: 1

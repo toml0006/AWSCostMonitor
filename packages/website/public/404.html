@@ -2,16 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/AWSCostMonitor/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AWSCostMonitor - Real-time AWS Cost Tracking</title>
     <script>
-      // Redirect to index.html with hash routing
-      const path = window.location.pathname.replace('/AWSCostMonitor', '');
+      const path = window.location.pathname;
       if (path && path !== '/') {
-        window.location.replace('/AWSCostMonitor/#' + path);
+        window.location.replace('/#' + path);
       } else {
-        window.location.replace('/AWSCostMonitor/');
+        window.location.replace('/');
       }
     </script>
   </head>
