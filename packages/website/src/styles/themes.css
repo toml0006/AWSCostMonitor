@@ -482,8 +482,95 @@
     right: 1rem !important;
     padding: 0.5rem 0.75rem !important;
   }
-  
+
   .theme-toggle span {
     display: none;
   }
+}
+
+/* ---------------------------------------------------------------- */
+/* Accessibility: contrast & spacing fixes for dark themes          */
+/* ---------------------------------------------------------------- */
+
+/* Pastel badges read unreadable in white in dark modes — force near-black */
+.twilight .feature-badge,
+.ultra-dark .feature-badge,
+.twilight .badge-primary,
+.ultra-dark .badge-primary,
+.twilight .badge-secondary,
+.ultra-dark .badge-secondary,
+.twilight .badge-tertiary,
+.ultra-dark .badge-tertiary,
+.twilight .badge-accent,
+.ultra-dark .badge-accent,
+.twilight .price-badge,
+.ultra-dark .price-badge {
+  color: #0b1220 !important;
+}
+
+/* Primary buttons in dark modes: white-on-pink fails AA (2.65). Use near-black. */
+.twilight .btn-primary,
+.ultra-dark .btn-primary,
+.twilight .nav-github,
+.ultra-dark .nav-github,
+.twilight .pricing-card-featured .price-cta,
+.ultra-dark .pricing-card-featured .price-cta {
+  color: #0b1220 !important;
+}
+
+/* Outline "Download from GitHub" CTA: card sits on white, text var resolves to light slate */
+.twilight .pricing-card .price-cta.btn-outline,
+.ultra-dark .pricing-card .price-cta.btn-outline {
+  color: #0b1220 !important;
+  border-color: #0b1220 !important;
+}
+
+.twilight .pricing-card .price-cta.btn-outline:hover,
+.ultra-dark .pricing-card .price-cta.btn-outline:hover {
+  background: #0b1220 !important;
+  color: #f8fafc !important;
+}
+
+/* Footer links bleed into the near-black footer bg — lighten them */
+.twilight .footer-links a,
+.ultra-dark .footer-links a,
+.twilight .footer-brand p,
+.ultra-dark .footer-brand p,
+.twilight .footer-bottom,
+.ultra-dark .footer-bottom {
+  color: #e2e8f0 !important;
+  opacity: 0.95;
+}
+
+.twilight .footer-links h4,
+.ultra-dark .footer-links h4 {
+  color: #67e8f9 !important;
+}
+
+/* Warning note: light text on amber tint is fine when tint is low, but the
+   nested "Learn how to open it" link is pink on amber — darken for reads */
+.twilight .warning-note a,
+.ultra-dark .warning-note a {
+  color: #fbcfe8 !important;
+  text-decoration: underline;
+}
+
+/* Spacing: pastel badges with 2px 6px padding cram text against the edge */
+.feature-badge,
+.badge-primary,
+.badge-secondary,
+.badge-tertiary,
+.badge-accent {
+  padding: 4px 10px !important;
+}
+
+/* Inline code: no padding makes text kiss the background edges */
+code {
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Keep the pricing card primary CTA icon + text inset from the rounded edge */
+.price-cta {
+  gap: 0.5rem;
 }
