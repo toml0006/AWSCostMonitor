@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { DollarSign, Menu, X } from 'lucide-react'
 import { useLocation, Link, useNavigate } from 'react-router-dom'
+import Wordmark from './Wordmark'
 
 const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
   const location = useLocation()
@@ -31,7 +32,9 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
               <DollarSign size={32} />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <span>AWSCostMonitor</span>
-                <span style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '-4px' }}>by MiddleOut</span>
+                <span style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '-4px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  by <Wordmark style={{ fontSize: '0.7rem' }} />
+                </span>
               </div>
             </Link>
           </div>

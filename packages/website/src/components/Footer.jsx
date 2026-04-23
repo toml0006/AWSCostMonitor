@@ -1,4 +1,5 @@
 import { Github, Linkedin, Heart, Mail, Coffee, Globe } from 'lucide-react'
+import Wordmark from './Wordmark'
 
 const Footer = () => {
   return (
@@ -7,7 +8,7 @@ const Footer = () => {
         <div className="footer-content">
           <div className="footer-brand">
             <h3>AWSCostMonitor</h3>
-            <p>by MiddleOut</p>
+            <p>by <Wordmark /></p>
             <p>Keep your AWS costs under control.</p>
             <p className="footer-tagline">
               Made with <Heart size={16} /> for developers who care about their AWS bills.
@@ -61,7 +62,7 @@ const Footer = () => {
         </div>
         
         <div className="footer-bottom">
-          <p>© 2025 MiddleOut. AWSCostMonitor is open source under MIT License.</p>
+          <p>© 2025 <Wordmark />. AWSCostMonitor is open source under MIT License.</p>
           <p>Not affiliated with Amazon Web Services.</p>
           <p className="easter-egg-hint" style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>
             💡 Psst... try pressing "$" for a surprise, or "L"/"D" to toggle dark mode!

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { DollarSign, Download, Github, ArrowRight, Apple } from 'lucide-react'
+import Wordmark from './Wordmark'
 
 const Hero = () => {
   return (
@@ -25,7 +26,7 @@ const Hero = () => {
             </h1>
 
             <p className="hero-description">
-              AWSCostMonitor by MiddleOut pins your month-to-date spend to the macOS menu bar
+              AWSCostMonitor by <Wordmark /> pins your month-to-date spend to the macOS menu bar
               with an optional sparkline pill. Track multiple AWS profiles, tune four appearance axes,
               and stay ahead of bill shock — all with zero accounts and zero telemetry.
             </p>
