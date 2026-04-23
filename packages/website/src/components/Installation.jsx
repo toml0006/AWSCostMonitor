@@ -71,14 +71,14 @@ const Installation = () => {
                 <a href="https://apps.apple.com/app/id6749865679"
                    target="_blank"
                    rel="noopener noreferrer"
-                   className="download-btn">
+                   className="download-btn download-btn-appstore">
                   <Apple size={20} />
                   Mac App Store — $3.99 (signed, auto-updates)
                 </a>
                 <a href="https://github.com/toml0006/AWSCostMonitor/releases"
                    target="_blank"
                    rel="noopener noreferrer"
-                   className="download-btn"
+                   className="download-btn download-btn-github"
                    style={{ marginTop: '0.5rem', background: 'transparent', border: '2px solid var(--color-text)' }}>
                   <Github size={20} />
                   GitHub Releases — free, OSS, unsigned

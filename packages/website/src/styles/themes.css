@@ -502,19 +502,29 @@
 .twilight .badge-tertiary,
 .ultra-dark .badge-tertiary,
 .twilight .badge-accent,
-.ultra-dark .badge-accent,
-.twilight .price-badge,
-.ultra-dark .price-badge {
+.ultra-dark .badge-accent {
   color: #0b1220 !important;
 }
 
-/* Primary buttons in dark modes: white-on-pink fails AA (2.65). Use near-black. */
+/* Chart-bar month labels render light on pastel; force dark */
+.twilight .chart-bar,
+.ultra-dark .chart-bar,
+.twilight .chart-bar *,
+.ultra-dark .chart-bar * {
+  color: #0b1220 !important;
+}
+
+/* Primary buttons / pink-backed affordances: white-on-pink fails AA (2.65) */
 .twilight .btn-primary,
 .ultra-dark .btn-primary,
-.twilight .nav-github,
-.ultra-dark .nav-github,
+.twilight .nav-menu a.nav-github,
+.ultra-dark .nav-menu a.nav-github,
 .twilight .pricing-card-featured .price-cta,
-.ultra-dark .pricing-card-featured .price-cta {
+.ultra-dark .pricing-card-featured .price-cta,
+.twilight .step-number,
+.ultra-dark .step-number,
+.twilight .download-btn-appstore,
+.ultra-dark .download-btn-appstore {
   color: #0b1220 !important;
 }
 
