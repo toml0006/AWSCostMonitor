@@ -173,17 +173,11 @@ struct PopoverContentView: View {
                 color: delta >= 0 ? .over : .under
             ))
         }
-        // Forecast and burn: use verified MTD ÷ calendar days elapsed.
-        // dailyServiceCostsByProfile accumulates multi-month history so its sum
-        // is not reliable as an MTD figure; mtd (from costCache.mtdTotal) is authoritative.
-        if mtd > 0 {
-            let calendar = Calendar.current
-            let now = Date()
-            let daysInMonth = Double(calendar.range(of: .day, in: .month, for: now)?.count ?? 30)
-            let daysElapsed = max(1.0, Double(calendar.component(.day, from: now)))
-            let dailyAvg = mtd / daysElapsed
-            let forecast = mtd + dailyAvg * (daysInMonth - daysElapsed)
-            out.append(.init(label: "Forecast", value: CurrencyFormatter.format(forecast), color: .accent))
+        // Forecast: prefer Cost Explorer's GetCostForecast (ML model with
+        // day-of-week seasonality, RI amortization, etc.). Falls back to a
+        // local linear extrapolation when the API hasn't returned a value.
+        if let projected = awsManager.projectedMonthlyTotal {
+            out.append(.init(label: "Forecast", value: CurrencyFormatter.format(projected), color: .accent))
         }
         if let p = awsManager.selectedProfile, let last = awsManager.lastMonthData[p.name] {
             out.append(.init(label: "Last mo", value: CurrencyFormatter.format(last.amount), color: .ink))

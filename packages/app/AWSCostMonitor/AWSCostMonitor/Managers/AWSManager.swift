@@ -4281,19 +4281,17 @@ class AWSManager: ObservableObject {
 
     // MARK: - Ledger menu bar derived values
 
+    // Projected-total delta vs last month's final total. Uses Cost Explorer's
+    // forecast via projectedMonthlyTotal (falls back to the local estimate when
+    // the API hasn't returned a value). Answers: "will this month beat last?"
     var deltaFractionVsLastMonth: Double? {
         guard let cost = costData.first,
+              let projected = projectedMonthlyTotal,
               let lastMonthFull = lastMonthData[cost.profileName] else { return nil }
         let lastMonthTotal = NSDecimalNumber(decimal: lastMonthFull.amount).doubleValue
         guard lastMonthTotal > 0 else { return nil }
-        let calendar = Calendar.current
-        let now = Date()
-        let daysElapsed = max(1, Double(calendar.component(.day, from: now)))
-        let lastMonthDate = calendar.date(byAdding: .month, value: -1, to: now)!
-        let daysInLastMonth = Double(calendar.range(of: .day, in: .month, for: lastMonthDate)?.count ?? 30)
-        let currentRate = NSDecimalNumber(decimal: cost.amount).doubleValue / daysElapsed
-        let lastMonthRate = lastMonthTotal / daysInLastMonth
-        return (currentRate - lastMonthRate) / lastMonthRate
+        let projectedDouble = NSDecimalNumber(decimal: projected).doubleValue
+        return (projectedDouble - lastMonthTotal) / lastMonthTotal
     }
 
     var budgetFraction: Double? {
