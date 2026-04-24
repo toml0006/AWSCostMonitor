@@ -625,23 +625,20 @@ code {
   height: auto !important;
   object-fit: contain !important;
   border-radius: var(--radius-lg);
-  box-shadow: 12px 12px 0 var(--color-black);
   display: block;
+  box-shadow: none;
 }
 
 .hero-screenshot {
   border-radius: var(--radius-lg);
-  box-shadow: 12px 12px 0 var(--color-black);
+  box-shadow: none;
 }
 
-/* In dark themes, --color-black resolves close to the page bg so the
-   offset shadow vanishes. Use the brand pink for a visible neobrutalist
-   block shadow that doubles as a brand accent. */
-.twilight .actual-screenshot,
-.twilight .hero-screenshot,
-.ultra-dark .actual-screenshot,
-.ultra-dark .hero-screenshot {
-  box-shadow: 12px 12px 0 var(--color-brand-primary);
+/* Single shared drop shadow that wraps both the image AND the Key
+   Features card below it, so they read as one connected card. */
+.hero-screenshot-frame,
+.screenshot-frame {
+  box-shadow: 12px 12px 0 var(--color-black);
 }
 
 /* Preserve the hero's slight tilt, just without the card behind it */
