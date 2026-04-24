@@ -619,6 +619,14 @@ code {
   overflow: visible !important;
 }
 
+/* Image and Key Features are two distinct blocks, each with its own
+   12x12 offset shadow in the original --color-black. The outer frame
+   carries no shadow so the two blocks read as separate cards. */
+.hero-screenshot-frame,
+.screenshot-frame {
+  box-shadow: none !important;
+}
+
 .screenshot-image img,
 .actual-screenshot {
   width: 100% !important;
@@ -626,18 +634,15 @@ code {
   object-fit: contain !important;
   border-radius: var(--radius-lg);
   display: block;
-  box-shadow: none;
+  box-shadow: 12px 12px 0 var(--color-black);
 }
 
 .hero-screenshot {
   border-radius: var(--radius-lg);
-  box-shadow: none;
+  box-shadow: 12px 12px 0 var(--color-black);
 }
 
-/* Single shared drop shadow that wraps both the image AND the Key
-   Features card below it, so they read as one connected card. */
-.hero-screenshot-frame,
-.screenshot-frame {
+.screenshot-features {
   box-shadow: 12px 12px 0 var(--color-black);
 }
 
