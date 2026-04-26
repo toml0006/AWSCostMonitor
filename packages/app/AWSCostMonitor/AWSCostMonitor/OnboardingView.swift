@@ -41,27 +41,19 @@ struct OnboardingView: View {
                 .padding(.bottom, 20)
             
             // Content
-            TabView(selection: $currentStep) {
-                welcomeStep
-                    .tag(0)
-                
-                awsAccessStep
-                    .tag(1)
-                
-                profileSelectionStep
-                    .tag(2)
-                
-                budgetSetupStep
-                    .tag(3)
-                
-                notificationStep
-                    .tag(4)
-                
-                completionStep
-                    .tag(5)
+            Group {
+                switch currentStep {
+                case 0: welcomeStep
+                case 1: awsAccessStep
+                case 2: profileSelectionStep
+                case 3: budgetSetupStep
+                case 4: notificationStep
+                default: completionStep
+                }
             }
-            .tabViewStyle(.automatic)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .frame(height: 400)
+            .animation(.easeInOut(duration: 0.2), value: currentStep)
             
             // Navigation buttons
             HStack {
