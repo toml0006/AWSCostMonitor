@@ -160,16 +160,12 @@ struct AWSCostMonitorTests {
         let testDefaults = UserDefaults.standard
         
         // Clear any existing values
-        testDefaults.removeObject(forKey: "MenuBarDisplayFormat")
         testDefaults.removeObject(forKey: "RefreshIntervalMinutes")
         testDefaults.removeObject(forKey: "SelectedAWSProfileName")
-        
+
         // Create a new manager instance to test defaults
         let awsManager = AWSManager()
-        
-        // Display format should default to .full
-        #expect(awsManager.displayFormat == .full)
-        
+
         // Refresh interval should default to 5 minutes
         #expect(awsManager.refreshInterval == 5)
     }

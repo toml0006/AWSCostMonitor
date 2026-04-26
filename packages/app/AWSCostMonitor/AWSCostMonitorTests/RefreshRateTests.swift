@@ -274,7 +274,10 @@ struct RefreshRateTests {
             dailyCosts: [],
             serviceCosts: [],
             startDate: Date(),
-            endDate: Date()
+            endDate: Date(),
+            forecastTotal: nil,
+            forecastCurrency: nil,
+            forecastFetchDate: nil
         )
         
         awsManager.costCache[profileName] = cacheEntry
@@ -294,7 +297,10 @@ struct RefreshRateTests {
             dailyCosts: [],
             serviceCosts: [],
             startDate: Date(),
-            endDate: Date()
+            endDate: Date(),
+            forecastTotal: nil,
+            forecastCurrency: nil,
+            forecastFetchDate: nil
         )
         awsManager.costCache[profileName] = expiredCache
         

@@ -12,7 +12,8 @@ final class MenuBarPresenterTests: XCTestCase {
 
     func testMenuBarOptionsDefaults() {
         let o = MenuBarOptions(defaults: defaults)
-        XCTAssertEqual(o.preset, .iconFigure)
+        XCTAssertFalse(o.showSparkline)
+        XCTAssertFalse(o.pillBackground)
         XCTAssertFalse(o.hideCents)
         XCTAssertFalse(o.showDelta)
         XCTAssertFalse(o.autoAbbreviate)
@@ -20,12 +21,14 @@ final class MenuBarPresenterTests: XCTestCase {
 
     func testMenuBarOptionsPersist() {
         var o = MenuBarOptions(defaults: defaults)
-        o.preset = .pill
+        o.showSparkline = true
+        o.pillBackground = true
         o.hideCents = true
         o.showDelta = true
         o.autoAbbreviate = true
         let p = MenuBarOptions(defaults: defaults)
-        XCTAssertEqual(p.preset, .pill)
+        XCTAssertTrue(p.showSparkline)
+        XCTAssertTrue(p.pillBackground)
         XCTAssertTrue(p.hideCents)
         XCTAssertTrue(p.showDelta)
         XCTAssertTrue(p.autoAbbreviate)
