@@ -26,6 +26,21 @@ import {
 
 const releases = [
   {
+    version: '1.5.2',
+    date: 'April 28, 2026',
+    title: 'New App Icon, Onboarding Fix',
+    icon: Sparkles,
+    color: 'primary',
+    highlights: [
+      'New app icon — dark sparkline chart design replaces the colorful "AwS" mark',
+      'Fixed onboarding window showing an empty segmented header on first launch',
+      'Includes everything from v1.5.1'
+    ],
+    bugFixes: [
+      'Onboarding TabView no longer renders empty tab pills above the welcome content; navigation is driven by Back/Next as intended'
+    ]
+  },
+  {
     version: '1.5.1',
     date: 'April 20, 2026',
     title: 'Reliable Auto-Refresh',
