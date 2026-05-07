@@ -26,6 +26,21 @@ import {
 
 const releases = [
   {
+    version: '1.5.3',
+    date: 'May 7, 2026',
+    title: 'Combine Deadlock Fix',
+    icon: Bug,
+    color: 'secondary',
+    highlights: [
+      'Fixed a long-uptime deadlock that could freeze the menu bar app after many hours of continuous use',
+      'Routes all observable state mutations through the main actor to eliminate cross-thread Combine contention'
+    ],
+    bugFixes: [
+      'AWSManager now hops every @Published mutation to the main actor. Previously, recordAPIRequest (called from the new anomaly/commitment/account/region fetcher catch paths) wrote to apiRequestRecords from the Swift concurrency cooperative pool. When that collided with a main-thread @Published write on the same ObservableObject, SwiftUI\'s AttributeGraph syncMain and Combine\'s ObservableObjectPublisher unfair_lock formed a circular wait and the app froze',
+      'forceRefreshWithTeamCacheUpdate and testTeamCacheConnection had the same off-main mutation pattern; both are now safe'
+    ]
+  },
+  {
     version: '1.5.2',
     date: 'April 28, 2026',
     title: 'New App Icon, Onboarding Fix',
