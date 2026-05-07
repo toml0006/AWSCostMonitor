@@ -1275,23 +1275,27 @@ class AWSManager: ObservableObject {
             duration: duration,
             errorMessage: error
         )
-        
-        apiRequestRecords.append(record)
-        
-        // Also track per profile
-        if apiRequestsPerProfile[profile] == nil {
-            apiRequestsPerProfile[profile] = []
+
+        // @Published mutations on this ObservableObject must run on the main
+        // actor. Mixing main + cooperative-pool writers deadlocks SwiftUI's
+        // AttributeGraph syncMain against Combine's ObservableObjectPublisher
+        // unfair_lock (callers in async catch blocks reach this off-main).
+        Task { @MainActor in
+            self.apiRequestRecords.append(record)
+
+            if self.apiRequestsPerProfile[profile] == nil {
+                self.apiRequestsPerProfile[profile] = []
+            }
+            self.apiRequestsPerProfile[profile]?.append(record)
+
+            if let count = self.apiRequestsPerProfile[profile]?.count, count > 100 {
+                self.apiRequestsPerProfile[profile]?.removeFirst(count - 100)
+            }
+
+            self.saveAPIRequestRecords()
         }
-        apiRequestsPerProfile[profile]?.append(record)
-        
-        // Keep only last 100 requests per profile
-        if let count = apiRequestsPerProfile[profile]?.count, count > 100 {
-            apiRequestsPerProfile[profile]?.removeFirst(count - 100)
-        }
-        
-        saveAPIRequestRecords()
-        
-        // Log the request
+
+        // Log the request (log() already hops to the main actor internally)
         if success {
             log(.info, category: "API", "API request to \(endpoint) for \(profile) succeeded in \(String(format: "%.2f", duration))s")
         } else {
@@ -4335,9 +4339,11 @@ class AWSManager: ObservableObject {
             return
         }
         
-        // Clear local cache first
-        costCache.removeValue(forKey: profile.name)
-        cacheStatus.removeValue(forKey: profile.name)
+        // Clear local cache first. @Published mutations must hop to main actor.
+        await MainActor.run {
+            self.costCache.removeValue(forKey: profile.name)
+            self.cacheStatus.removeValue(forKey: profile.name)
+        }
         
         // Clear team cache if enabled
         let settings = getTeamCacheSettings(for: profile.name)
@@ -4377,7 +4383,11 @@ class AWSManager: ObservableObject {
                 do {
                     let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
                     cacheService = try await S3CacheService(config: config, profileName: profileName, credentialsProvider: credentialsProvider)
-                    teamCacheServices[profileName] = cacheService
+                    // @Published mutation must hop to main actor.
+                    let serviceForCache = cacheService
+                    await MainActor.run {
+                        self.teamCacheServices[profileName] = serviceForCache
+                    }
                     log(.info, category: "TeamCache", "Initialized cache service for test")
                 } catch {
                     log(.error, category: "TeamCache", "Failed to initialize cache service for test: \(error.localizedDescription)")
