@@ -32,6 +32,15 @@ struct ProfileRow: View {
                     .foregroundColor(LedgerTokens.Color.accent(a))
             }
 
+            if let updated = lastUpdatedString {
+                HStack(spacing: 3) {
+                    Image(systemName: "clock.arrow.circlepath").font(.system(size: 9))
+                    Text(updated)
+                }
+                .ledgerMeta()
+                .help("Local fetch time. Cost Explorer doesn't report when AWS last refreshed the data.")
+            }
+
             if let profile = awsManager.selectedProfile, let region = profile.region {
                 Text(region).ledgerMeta()
             }
@@ -39,5 +48,16 @@ struct ProfileRow: View {
         .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
         .frame(height: 36)
         .ledgerSurface(.window)
+    }
+
+    // When the selected profile's cost data was last fetched. Cost Explorer
+    // returns no data-freshness timestamp, so this is our local fetch time.
+    private var lastUpdatedString: String? {
+        guard let profile = awsManager.selectedProfile,
+              let entry = awsManager.costCache[profile.name] else { return nil }
+        let fmt = DateFormatter()
+        fmt.timeStyle = .short
+        fmt.dateStyle = .none
+        return fmt.string(from: entry.fetchDate)
     }
 }
