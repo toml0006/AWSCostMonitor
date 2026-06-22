@@ -9,6 +9,7 @@ struct HeroSplit: View {
     let sparklineStartDate: Date?
     let leftRows: [KV]
     let rightRows: [KV]
+    var projectedColor: KV.KVColor = .accent
     let hideCents: Bool
     let isLoading: Bool
     @Binding var range: SparklineRange
@@ -47,7 +48,7 @@ struct HeroSplit: View {
                 column(
                     title: "MONTH TO DATE",
                     hero: formatted(mtd),
-                    heroColor: LedgerTokens.Color.inkPrimary(a),
+                    heroColor: LedgerTokens.Color.accent(a),
                     heroLoading: isLoading,
                     rows: leftRows
                 )
@@ -59,7 +60,7 @@ struct HeroSplit: View {
                 column(
                     title: "FORECAST",
                     hero: projected.map(formatted) ?? "—",
-                    heroColor: LedgerTokens.Color.accent(a),
+                    heroColor: color(for: projectedColor),
                     heroLoading: isLoading || projected == nil,
                     rows: rightRows
                 )
@@ -136,9 +137,13 @@ struct HeroSplit: View {
                 LoadingPulse()
                     .frame(height: LedgerTokens.Typography.heroPointSize(a) + 4)
             } else {
+                // Build the hero with the font directly instead of .ledgerHero()
+                // so the caller's signal color is honored — ledgerHero() bakes in
+                // an accent foregroundColor that would otherwise win.
                 Text(hero)
-                    .ledgerHero()
+                    .font(LedgerTokens.Typography.hero(a))
                     .foregroundColor(heroColor)
+                    .monospacedDigit()
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                     .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .leading)))
@@ -214,14 +219,16 @@ struct Sparkline: View {
     var highlightIndex: Int? = nil
     var startDate: Date? = nil
     var showMonthBoundaries: Bool = false
+    var barSpacing: CGFloat = 2
+    var minBarWidth: CGFloat = 2
     var onHover: ((Int?) -> Void)? = nil
     var onSelect: ((Int) -> Void)? = nil
 
     var body: some View {
         GeometryReader { geometry in
             let count = max(values.count, 1)
-            let spacing: CGFloat = 2
-            let barWidth = max(2, (geometry.size.width - spacing * CGFloat(count - 1)) / CGFloat(count))
+            let spacing: CGFloat = barSpacing
+            let barWidth = max(minBarWidth, (geometry.size.width - spacing * CGFloat(count - 1)) / CGFloat(count))
             let maxValue = max(values.max() ?? 0, 1)
             let highlight = highlightIndex ?? (values.count - 1)
             let step = barWidth + spacing

@@ -20,6 +20,7 @@ struct PopoverContentView: View {
                 sparklineStartDate: sparklineRange.startDate(),
                 leftRows: actualRows,
                 rightRows: forecastRows,
+                projectedColor: forecastSignal,
                 hideCents: hideCents,
                 isLoading: awsManager.isLoading,
                 range: Binding(
@@ -162,8 +163,8 @@ struct PopoverContentView: View {
         let mtdStr = CurrencyFormatter.format(mtd)
         let projStr = projectedDouble.map { CurrencyFormatter.format($0) } ?? mtdStr
         let heroChars = max(mtdStr.count, projStr.count)
-        let columnWidth = CGFloat(heroChars) * 20 + 28
-        return max(440, columnWidth * 2 + 1)
+        let columnWidth = CGFloat(heroChars) * 20 + 44
+        return max(500, columnWidth * 2 + 1)
     }
 
     private var burnPerDay: Double {
@@ -181,6 +182,22 @@ struct PopoverContentView: View {
 
     private var projectedDouble: Double? {
         awsManager.projectedMonthlyTotal.map { NSDecimalNumber(decimal: $0).doubleValue }
+    }
+
+    // Forecast anchor color = the verdict on where the month is heading.
+    // Over budget (or, absent a budget, trending above last month) is bad → red;
+    // comfortably under is good → green; unknown stays neutral accent.
+    private var forecastSignal: HeroSplit.KV.KVColor {
+        guard let projected = projectedDouble else { return .accent }
+        if let budget = monthlyBudget {
+            return projected > budget ? .over : .under
+        }
+        if let p = awsManager.selectedProfile,
+           let lastFull = awsManager.lastMonthData[p.name].map({ NSDecimalNumber(decimal: $0.amount).doubleValue }),
+           lastFull > 0 {
+            return projected > lastFull ? .over : .under
+        }
+        return .accent
     }
 
     // LEFT column — what already happened this month.
