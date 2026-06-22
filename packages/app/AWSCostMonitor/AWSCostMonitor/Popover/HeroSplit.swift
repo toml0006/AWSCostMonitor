@@ -3,10 +3,12 @@ import SwiftUI
 struct HeroSplit: View {
     @Environment(\.ledgerAppearance) private var a
     let mtd: Double
+    let projected: Double?
     let sparkline: [Double]
     let sparklineHighlightIndex: Int?
     let sparklineStartDate: Date?
-    let rows: [KV]
+    let leftRows: [KV]
+    let rightRows: [KV]
     let hideCents: Bool
     let isLoading: Bool
     @Binding var range: SparklineRange
@@ -14,10 +16,13 @@ struct HeroSplit: View {
 
     @State private var hoveredIndex: Int? = nil
 
-    private let kvColumns = [
-        GridItem(.flexible(), spacing: 14, alignment: .leading),
-        GridItem(.flexible(), spacing: 0, alignment: .leading)
-    ]
+    // Panel height grows with the taller of the two stat columns so neither
+    // overflows into the header. Shared with PopoverContentView's layout math.
+    static func panelHeight(leftCount: Int, rightCount: Int) -> CGFloat {
+        let maxRows = max(leftCount, rightCount, 1)
+        let columnContent: CGFloat = 12 + 44 + 6 + CGFloat(maxRows) * 19 + 24
+        return columnContent + 64 // caption + sparkline + bottom padding
+    }
 
     struct KV: Identifiable {
         let id = UUID()
@@ -35,57 +40,29 @@ struct HeroSplit: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Left column = what already happened (MTD actuals); right column =
+            // what's projected to happen (forecast). The split is by time
+            // orientation, not by number size.
             HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: LedgerTokens.Layout.unit(a) / 2) {
-                    Text("MTD").ledgerLabel()
-
-                    if isLoading {
-                        LoadingPulse()
-                            .frame(height: LedgerTokens.Typography.heroPointSize(a) + 4)
-                    } else {
-                        Text(formatted(mtd))
-                            .ledgerHero()
-                            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .leading)))
-                    }
-                }
-                .padding(LedgerTokens.Layout.unit(a) * 1.5)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                column(
+                    title: "MONTH TO DATE",
+                    hero: formatted(mtd),
+                    heroColor: LedgerTokens.Color.inkPrimary(a),
+                    heroLoading: isLoading,
+                    rows: leftRows
+                )
 
                 Rectangle()
                     .fill(LedgerTokens.Color.surfaceHairline(a))
                     .frame(width: LedgerTokens.Layout.hairlineWidth(a))
 
-                // Two-column stat grid. The KV list outgrew a single column and
-                // overflowed the fixed hero height, bleeding into the header above.
-                // A 2-up grid halves the row count so all stats fit, and balances
-                // the visual weight of the tall MTD value on the left.
-                LazyVGrid(columns: kvColumns, alignment: .leading, spacing: 7) {
-                    if isLoading {
-                        ForEach(0..<6, id: \.self) { _ in
-                            LoadingPulse()
-                                .frame(height: 26)
-                                .cornerRadius(3)
-                        }
-                    } else {
-                        ForEach(rows) { row in
-                            // Label stacked above value: the tracked small-caps
-                            // labels are too wide to sit beside the value in a
-                            // half-width column without truncating both.
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(row.label).ledgerLabel().lineLimit(1)
-                                Text(row.value)
-                                    .font(LedgerTokens.Typography.statValue(a))
-                                    .foregroundColor(color(for: row.color))
-                                    .monospacedDigit()
-                                    .lineLimit(1)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                }
-                .padding(LedgerTokens.Layout.unit(a) * 1.5)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .animation(.easeOut(duration: 0.35), value: isLoading)
+                column(
+                    title: "FORECAST",
+                    hero: projected.map(formatted) ?? "—",
+                    heroColor: LedgerTokens.Color.accent(a),
+                    heroLoading: isLoading || projected == nil,
+                    rows: rightRows
+                )
             }
 
             HStack(alignment: .center, spacing: 8) {
@@ -131,6 +108,8 @@ struct HeroSplit: View {
             Sparkline(
                 values: sparkline,
                 highlightIndex: hoveredIndex ?? sparklineHighlightIndex,
+                startDate: sparklineStartDate,
+                showMonthBoundaries: true,
                 onHover: { hoveredIndex = $0 },
                 onSelect: { idx in
                     guard let start = sparklineStartDate,
@@ -138,13 +117,52 @@ struct HeroSplit: View {
                     onSelectDay?(day)
                 }
             )
-            .frame(maxWidth: .infinity, minHeight: 36, maxHeight: 36)
+            .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 40)
             .opacity(isLoading ? 0.3 : 1)
             .animation(.easeOut(duration: 0.3), value: isLoading)
             .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.5)
             .padding(.bottom, LedgerTokens.Layout.unit(a))
         }
-        .frame(height: 184)
+        .frame(height: HeroSplit.panelHeight(leftCount: leftRows.count, rightCount: rightRows.count))
+    }
+
+    // One time-oriented column: section label, anchor number, then stat rows.
+    @ViewBuilder
+    private func column(title: String, hero: String, heroColor: SwiftUI.Color, heroLoading: Bool, rows: [KV]) -> some View {
+        VStack(alignment: .leading, spacing: LedgerTokens.Layout.unit(a) / 2) {
+            Text(title).ledgerLabel()
+
+            if heroLoading {
+                LoadingPulse()
+                    .frame(height: LedgerTokens.Typography.heroPointSize(a) + 4)
+            } else {
+                Text(hero)
+                    .ledgerHero()
+                    .foregroundColor(heroColor)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                    .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .leading)))
+            }
+
+            VStack(spacing: 3) {
+                ForEach(rows) { row in
+                    HStack(spacing: 6) {
+                        Text(row.label).ledgerLabel().lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(row.value)
+                            .font(LedgerTokens.Typography.statValue(a))
+                            .foregroundColor(color(for: row.color))
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
+                    .frame(height: 16)
+                }
+            }
+            .padding(.top, 4)
+        }
+        .padding(LedgerTokens.Layout.unit(a) * 1.5)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .animation(.easeOut(duration: 0.35), value: heroLoading)
     }
 
     private var hoverCaption: String {
@@ -194,6 +212,8 @@ struct Sparkline: View {
     @Environment(\.ledgerAppearance) private var a
     let values: [Double]
     var highlightIndex: Int? = nil
+    var startDate: Date? = nil
+    var showMonthBoundaries: Bool = false
     var onHover: ((Int?) -> Void)? = nil
     var onSelect: ((Int) -> Void)? = nil
 
@@ -206,6 +226,26 @@ struct Sparkline: View {
             let highlight = highlightIndex ?? (values.count - 1)
             let step = barWidth + spacing
             ZStack(alignment: .bottomLeading) {
+                // Month-boundary markers: a hairline + month label at each day-1,
+                // so the trend reads against the calendar instead of as one
+                // undivided run of bars.
+                if showMonthBoundaries {
+                    ForEach(monthBoundaries(), id: \.index) { boundary in
+                        let x = CGFloat(boundary.index) * step - spacing / 2
+                        ZStack(alignment: .topLeading) {
+                            Rectangle()
+                                .fill(LedgerTokens.Color.inkTertiary(a).opacity(0.5))
+                                .frame(width: 1, height: geometry.size.height)
+                            Text(boundary.label)
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                                .fixedSize()
+                                .offset(x: 3, y: -1)
+                        }
+                        .frame(maxHeight: .infinity, alignment: .bottom)
+                        .offset(x: x)
+                    }
+                }
                 ForEach(values.indices, id: \.self) { index in
                     let barHeight = max(2, CGFloat(values[index] / maxValue) * geometry.size.height)
                     let x = CGFloat(index) * (barWidth + spacing)
@@ -240,5 +280,21 @@ struct Sparkline: View {
         guard !values.isEmpty, step > 0 else { return nil }
         let raw = Int((x / step).rounded(.down))
         return max(0, min(values.count - 1, raw))
+    }
+
+    // Indices where a bar falls on the 1st of a month, with a short month label.
+    private func monthBoundaries() -> [(index: Int, label: String)] {
+        guard let start = startDate, values.count > 1 else { return [] }
+        let cal = Calendar.current
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM"
+        var result: [(index: Int, label: String)] = []
+        for i in 1..<values.count {
+            guard let day = cal.date(byAdding: .day, value: i, to: start) else { continue }
+            if cal.component(.day, from: day) == 1 {
+                result.append((i, fmt.string(from: day).uppercased()))
+            }
+        }
+        return result
     }
 }
