@@ -122,7 +122,8 @@ struct HelpView: View {
                 Text("   – ce:GetCostForecast (recommended: ML forecast)")
                 Text("   – ce:GetAnomalies (optional: AWS-detected spikes)")
                 Text("   – ce:GetReservationCoverage, ce:GetReservationUtilization (optional: RI)")
-                Text("   – ce:GetSavingsPlansCoverage, ce:GetSavingsPlansUtilization (optional: SP)")
+                Text("   – ce:GetSavingsPlansCoverage, ce:GetSavingsPlansUtilization (optional: SP coverage)")
+                Text("   – savingsplans:DescribeSavingsPlans (optional: confirms whether a Savings Plan actually exists)")
                     .padding(.bottom)
                 
                 Label("First Steps", systemImage: "1.circle")
@@ -181,6 +182,18 @@ struct HelpView: View {
                     ]
                 )
                 
+                FeatureSection(
+                    title: "Commitments & Savings Plans",
+                    icon: "lock.shield",
+                    features: [
+                        "SP cover: share of compute spend covered by a Savings Plan",
+                        "\"None\" means no active Savings Plan exists (confirmed via savingsplans:DescribeSavingsPlans, not inferred from 0% coverage)",
+                        "\"Active\" means a plan exists but coverage isn't reported yet",
+                        "Falls back to Reserved Instance (RI) coverage when the account uses reservations",
+                        "Existence check needs the savingsplans:DescribeSavingsPlans permission; without it the app shows Cost Explorer coverage only"
+                    ]
+                )
+
                 FeatureSection(
                     title: "Display Options",
                     icon: "textformat",

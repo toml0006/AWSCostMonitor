@@ -10,6 +10,7 @@
 		7A8F6BFD2E3D716300A26D48 /* AWSCostExplorer in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6BFC2E3D716300A26D48 /* AWSCostExplorer */; };
 		7A8F6BFF2E3D716300A26D48 /* AWSSTS in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6BFE2E3D716300A26D48 /* AWSSTS */; };
 		7A8F6C002E3D716400A26D48 /* AWSS3 in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6C012E3D716400A26D48 /* AWSS3 */; };
+		7A5A99022E3D716400A26D48 /* AWSSavingsplans in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5A99012E3D716400A26D48 /* AWSSavingsplans */; };
 		7AC2E7452E57A55900B1CF89 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AC2E7442E57A55900B1CF89 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
@@ -63,6 +64,7 @@
 				7A8F6BFD2E3D716300A26D48 /* AWSCostExplorer in Frameworks */,
 				7A8F6BFF2E3D716300A26D48 /* AWSSTS in Frameworks */,
 				7A8F6C002E3D716400A26D48 /* AWSS3 in Frameworks */,
+				7A5A99022E3D716400A26D48 /* AWSSavingsplans in Frameworks */,
 				7AC2E7452E57A55900B1CF89 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -136,6 +138,7 @@
 				7A8F6BFC2E3D716300A26D48 /* AWSCostExplorer */,
 				7A8F6BFE2E3D716300A26D48 /* AWSSTS */,
 				7A8F6C012E3D716400A26D48 /* AWSS3 */,
+				7A5A99012E3D716400A26D48 /* AWSSavingsplans */,
 			);
 			productName = AWSCostMonitor;
 			productReference = 7A8F6BD02E3D700F00A26D48 /* AWSCostMonitor.app */;
@@ -624,6 +627,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
 			productName = AWSS3;
+		};
+		7A5A99012E3D716400A26D48 /* AWSSavingsplans */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
+			productName = AWSSavingsplans;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

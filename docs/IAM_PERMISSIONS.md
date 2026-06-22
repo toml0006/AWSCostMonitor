@@ -45,12 +45,25 @@ For enhanced functionality, you may also want to include:
   "Action": [
     "ce:GetDimensionValues",
     "ce:GetTags",
+    "ce:GetAnomalies",
+    "ce:GetReservationCoverage",
     "ce:GetReservationUtilization",
-    "ce:GetSavingsPlansPurchaseRecommendation"
+    "ce:GetSavingsPlansCoverage",
+    "ce:GetSavingsPlansUtilization",
+    "ce:GetSavingsPlansPurchaseRecommendation",
+    "savingsplans:DescribeSavingsPlans"
   ],
   "Resource": "*"
 }
 ```
+
+**About `savingsplans:DescribeSavingsPlans`:** this is the only permission outside
+the `ce:` (Cost Explorer) namespace. The app uses it to determine whether a
+Savings Plan *actually exists*, so the popover can show "None" (no plan) versus a
+real coverage percentage. Cost Explorer's coverage figure alone can't tell these
+apart — it reads 0% both when no plan exists and when a plan exists but covers
+nothing. If you omit this permission, the app falls back to Cost Explorer
+coverage only and won't display the "None"/"Active" distinction.
 
 ## Team Cache Permissions
 
@@ -111,6 +124,19 @@ Here's a complete IAM policy that includes all permissions for full AWSCostMonit
       "Action": [
         "ce:GetCostAndUsage",
         "ce:GetCostForecast"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CommitmentInsights",
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetAnomalies",
+        "ce:GetReservationCoverage",
+        "ce:GetReservationUtilization",
+        "ce:GetSavingsPlansCoverage",
+        "ce:GetSavingsPlansUtilization",
+        "savingsplans:DescribeSavingsPlans"
       ],
       "Resource": "*"
     },

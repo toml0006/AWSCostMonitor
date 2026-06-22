@@ -219,12 +219,25 @@ struct PopoverContentView: View {
         if let p = awsManager.selectedProfile, let lastMTD = awsManager.lastMonthMTDData[p.name] {
             out.append(.init(label: "Last mo MTD", value: CurrencyFormatter.format(lastMTD.amount), color: .ink))
         }
-        // Savings Plans / RI coverage. Prefer SP; fall back to RI.
+        // Savings Plans coverage, backed by a real existence check.
+        // - existence known false → no plan at all ("None")
+        // - existence known true  → coverage % (or "Active" if CE hasn't reported)
+        // - existence unknown (call failed / no savingsplans permission) →
+        //   fall back to Cost Explorer coverage, preferring SP then RI.
         if let p = awsManager.selectedProfile,
-           let summary = awsManager.commitmentSummary[p.name],
-           let coverage = summary.preferredCoveragePercent {
-            let label = summary.spCoveragePercent != nil ? "SP cover" : "RI cover"
-            out.append(.init(label: label, value: String(format: "%.0f%%", coverage), color: .ink))
+           let summary = awsManager.commitmentSummary[p.name] {
+            switch summary.savingsPlansExist {
+            case .some(false):
+                out.append(.init(label: "SP cover", value: "None", color: .ink))
+            case .some(true):
+                let v = summary.spCoveragePercent.map { String(format: "%.0f%%", $0) } ?? "Active"
+                out.append(.init(label: "SP cover", value: v, color: .ink))
+            case .none:
+                if let coverage = summary.preferredCoveragePercent {
+                    let label = summary.spCoveragePercent != nil ? "SP cover" : "RI cover"
+                    out.append(.init(label: label, value: String(format: "%.0f%%", coverage), color: .ink))
+                }
+            }
         }
         // AWS-detected anomalies: show count + top-impact service when present.
         if let p = awsManager.selectedProfile,

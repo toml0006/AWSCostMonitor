@@ -10,6 +10,7 @@ import SwiftUI
 import OSLog
 import ObjectiveC
 import AWSCostExplorer
+import AWSSavingsplans
 import AWSSTS
 import AWSSDKIdentity
 import AWSClientRuntime
@@ -3091,19 +3092,38 @@ class AWSManager: ObservableObject {
 
             let (riCov, riU, spCov, spU) = await (riCoverage, riUtil, spCoverage, spUtil)
 
-            let summary = CommitmentSummary(
-                riCoveragePercent: riCov,
-                riUtilizationPercent: riU,
-                spCoveragePercent: spCov,
-                spUtilizationPercent: spU,
-                fetchDate: Date()
-            )
-
+            // Publish the Cost Explorer coverage summary immediately. The Savings
+            // Plans existence check (separate service) is layered on afterward so
+            // it can never block or fail the coverage numbers.
             await MainActor.run {
-                self.commitmentSummary[profile.name] = summary
+                self.commitmentSummary[profile.name] = CommitmentSummary(
+                    riCoveragePercent: riCov,
+                    riUtilizationPercent: riU,
+                    spCoveragePercent: spCov,
+                    spUtilizationPercent: spU,
+                    savingsPlansExist: nil,
+                    activeSavingsPlanCount: nil,
+                    fetchDate: Date()
+                )
                 let duration = Date().timeIntervalSince(startTime)
                 self.recordAPIRequest(profile: profile.name, endpoint: "CommitmentSummary", success: true, duration: duration)
                 self.log(.info, category: "API", "Commitment summary: RI cov=\(riCov ?? -1), RI util=\(riU ?? -1), SP cov=\(spCov ?? -1), SP util=\(spU ?? -1)")
+            }
+
+            // Authoritative existence check, then upgrade the summary in place.
+            if let spE = await fetchSavingsPlansExistence(for: profile) {
+                await MainActor.run {
+                    self.commitmentSummary[profile.name] = CommitmentSummary(
+                        riCoveragePercent: riCov,
+                        riUtilizationPercent: riU,
+                        spCoveragePercent: spCov,
+                        spUtilizationPercent: spU,
+                        savingsPlansExist: spE.exists,
+                        activeSavingsPlanCount: spE.count,
+                        fetchDate: Date()
+                    )
+                    self.log(.info, category: "API", "Savings Plans existence: exists=\(spE.exists) count=\(spE.count)")
+                }
             }
         } catch {
             let duration = Date().timeIntervalSince(startTime)
@@ -3183,6 +3203,32 @@ class AWSManager: ObservableObject {
             log(.debug, category: "API", "SP utilization unavailable: \(error.localizedDescription)")
         }
         return nil
+    }
+
+    /// Authoritative Savings Plans existence check via the Savings Plans service
+    /// (savingsplans:DescribeSavingsPlans) — distinct from Cost Explorer, which
+    /// only reports coverage/utilization. Returns whether any *active* plan
+    /// exists and the count, or nil when the call fails / lacks permission.
+    /// The Savings Plans API is global; it's pinned to us-east-1.
+    private func fetchSavingsPlansExistence(for profile: AWSProfile) async -> (exists: Bool, count: Int)? {
+        let startTime = Date()
+        do {
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let config = try await SavingsplansClient.SavingsplansClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
+                region: "us-east-1"
+            )
+            let client = SavingsplansClient(config: config)
+            let input = DescribeSavingsPlansInput(states: [.active])
+            let output = try await client.describeSavingsPlans(input: input)
+            let count = output.savingsPlans?.count ?? 0
+            recordAPIRequest(profile: profile.name, endpoint: "DescribeSavingsPlans", success: true, duration: Date().timeIntervalSince(startTime))
+            return (count > 0, count)
+        } catch {
+            recordAPIRequest(profile: profile.name, endpoint: "DescribeSavingsPlans", success: false, duration: Date().timeIntervalSince(startTime), error: error.localizedDescription)
+            log(.debug, category: "API", "Savings Plans existence check unavailable: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     // Fetch cost for a specific profile (used by Multi-Profile Dashboard)
