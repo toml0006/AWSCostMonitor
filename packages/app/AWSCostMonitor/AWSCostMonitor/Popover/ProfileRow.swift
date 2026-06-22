@@ -32,6 +32,8 @@ struct ProfileRow: View {
                     .foregroundColor(LedgerTokens.Color.accent(a))
             }
 
+            let region = awsManager.selectedProfile?.region
+
             if let updated = lastUpdatedString {
                 HStack(spacing: 3) {
                     Image(systemName: "clock.arrow.circlepath").font(.system(size: 9))
@@ -39,9 +41,15 @@ struct ProfileRow: View {
                 }
                 .ledgerMeta()
                 .help("Local fetch time. Cost Explorer doesn't report when AWS last refreshed the data.")
+
+                if region != nil {
+                    Text("·")
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkTertiary(a))
+                }
             }
 
-            if let profile = awsManager.selectedProfile, let region = profile.region {
+            if let region {
                 Text(region).ledgerMeta()
             }
         }
@@ -57,7 +65,9 @@ struct ProfileRow: View {
               let entry = awsManager.costCache[profile.name] else { return nil }
         let fmt = DateFormatter()
         fmt.timeStyle = .short
-        fmt.dateStyle = .none
+        // Include the date only when the data wasn't fetched today, so a stale
+        // (e.g. yesterday's) timestamp is obvious at a glance.
+        fmt.dateStyle = Calendar.current.isDateInToday(entry.fetchDate) ? .none : .medium
         return fmt.string(from: entry.fetchDate)
     }
 }
