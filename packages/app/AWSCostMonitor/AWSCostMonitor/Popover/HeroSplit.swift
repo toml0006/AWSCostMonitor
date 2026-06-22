@@ -14,6 +14,11 @@ struct HeroSplit: View {
 
     @State private var hoveredIndex: Int? = nil
 
+    private let kvColumns = [
+        GridItem(.flexible(), spacing: 14, alignment: .leading),
+        GridItem(.flexible(), spacing: 0, alignment: .leading)
+    ]
+
     struct KV: Identifiable {
         let id = UUID()
         let label: String
@@ -50,24 +55,31 @@ struct HeroSplit: View {
                     .fill(LedgerTokens.Color.surfaceHairline(a))
                     .frame(width: LedgerTokens.Layout.hairlineWidth(a))
 
-                VStack(alignment: .trailing, spacing: 3) {
+                // Two-column stat grid. The KV list outgrew a single column and
+                // overflowed the fixed hero height, bleeding into the header above.
+                // A 2-up grid halves the row count so all stats fit, and balances
+                // the visual weight of the tall MTD value on the left.
+                LazyVGrid(columns: kvColumns, alignment: .leading, spacing: 7) {
                     if isLoading {
-                        ForEach(0..<4, id: \.self) { _ in
+                        ForEach(0..<6, id: \.self) { _ in
                             LoadingPulse()
-                                .frame(height: 14)
+                                .frame(height: 26)
                                 .cornerRadius(3)
                         }
                     } else {
                         ForEach(rows) { row in
-                            HStack {
-                                Text(row.label).ledgerLabel()
-                                Spacer()
+                            // Label stacked above value: the tracked small-caps
+                            // labels are too wide to sit beside the value in a
+                            // half-width column without truncating both.
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(row.label).ledgerLabel().lineLimit(1)
                                 Text(row.value)
                                     .font(LedgerTokens.Typography.statValue(a))
                                     .foregroundColor(color(for: row.color))
                                     .monospacedDigit()
+                                    .lineLimit(1)
                             }
-                            .frame(height: 16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
@@ -132,7 +144,7 @@ struct HeroSplit: View {
             .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.5)
             .padding(.bottom, LedgerTokens.Layout.unit(a))
         }
-        .frame(height: 152)
+        .frame(height: 184)
     }
 
     private var hoverCaption: String {

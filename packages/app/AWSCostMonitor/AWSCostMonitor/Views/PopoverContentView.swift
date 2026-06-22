@@ -147,7 +147,7 @@ struct PopoverContentView: View {
         let rowH = LedgerTokens.Layout.rowHeight(appearance.appearance)
         return 36          // ProfileRow
              + 1           // hairline
-             + 152         // HeroSplit
+             + 184         // HeroSplit
              + 1           // hairline
              + CGFloat(serviceRowCount) * rowH
              + 1           // hairline
@@ -159,8 +159,8 @@ struct PopoverContentView: View {
         // At 34pt monospaced light, each character is ~20px wide.
         let heroStr = CurrencyFormatter.format(mtd)
         let leftPanel = CGFloat(heroStr.count) * 20 + 28  // content + horizontal padding
-        let rightPanel: CGFloat = 168                      // KV rows comfortably fit
-        return max(360, leftPanel + rightPanel + 1)
+        let rightPanel: CGFloat = 260                      // two-column stat grid
+        return max(420, leftPanel + rightPanel + 1)
     }
 
     private var heroRows: [HeroSplit.KV] {

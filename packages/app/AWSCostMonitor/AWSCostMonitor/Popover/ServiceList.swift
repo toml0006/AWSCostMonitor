@@ -41,30 +41,30 @@ struct ServiceList: View {
     private func row(for name: String, amount: Double) -> some View {
         let percentage = total > 0 ? amount / total : 0
         let series = sparklines[name] ?? []
-        return ZStack {
-            if !series.isEmpty {
-                Sparkline(values: series)
-                    .opacity(0.22)
-                    .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
-                    .padding(.vertical, 3)
-                    .allowsHitTesting(false)
-            }
-            HStack(spacing: 0) {
-                Text(name)
-                    .ledgerBody()
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 6)
-                Text(String(format: "%.0f%%", percentage * 100))
-                    .ledgerMeta()
-                    .frame(width: 36, alignment: .trailing)
-                Spacer().frame(width: 6)
-                Text(format(amount))
-                    .ledgerStatValue()
-                    .frame(minWidth: 72, alignment: .trailing)
-            }
-            .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
+        // The trend sparkline now lives in its own fixed column rather than as a
+        // faint full-width background. Behind the text it collided with the
+        // amount (the tallest, most-recent bar sat under the dollar figure);
+        // a dedicated column keeps both the chart and the numbers legible.
+        return HStack(spacing: 0) {
+            Text(name)
+                .ledgerBody()
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 10)
+            Sparkline(values: series)
+                .frame(width: 56, height: LedgerTokens.Layout.rowHeight(a) * 0.5)
+                .opacity(series.isEmpty ? 0 : 0.7)
+                .allowsHitTesting(false)
+            Spacer().frame(width: 12)
+            Text(String(format: "%.0f%%", percentage * 100))
+                .ledgerMeta()
+                .frame(width: 36, alignment: .trailing)
+            Spacer().frame(width: 6)
+            Text(format(amount))
+                .ledgerStatValue()
+                .frame(minWidth: 72, alignment: .trailing)
         }
+        .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
         .frame(height: LedgerTokens.Layout.rowHeight(a))
         .contentShape(Rectangle())
         .onTapGesture { onSelect(name) }
