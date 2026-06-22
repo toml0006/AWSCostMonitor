@@ -13,9 +13,10 @@ struct HeroSplit: View {
     let hideCents: Bool
     let isLoading: Bool
     @Binding var range: SparklineRange
+    // Day index hovered on the main sparkline, shared with the service list so
+    // both highlight the same day and show that day's figures. nil = no hover.
+    @Binding var hoveredIndex: Int?
     var onSelectDay: ((Date) -> Void)? = nil
-
-    @State private var hoveredIndex: Int? = nil
 
     // Panel height grows with the taller of the two stat columns so neither
     // overflows into the header. Shared with PopoverContentView's layout math.
@@ -44,10 +45,12 @@ struct HeroSplit: View {
             // Left column = what already happened (MTD actuals); right column =
             // what's projected to happen (forecast). The split is by time
             // orientation, not by number size.
-            HStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
+                // While scrubbing the sparkline, the left ("actual") column shows
+                // the hovered day instead of the month-to-date total.
                 column(
-                    title: "MONTH TO DATE",
-                    hero: formatted(mtd),
+                    title: hoveredDate.map(Self.dayTitle) ?? "MONTH TO DATE",
+                    hero: hoveredValue.map(formatted) ?? formatted(mtd),
                     heroColor: LedgerTokens.Color.accent(a),
                     heroLoading: isLoading,
                     rows: leftRows
@@ -111,6 +114,8 @@ struct HeroSplit: View {
                 highlightIndex: hoveredIndex ?? sparklineHighlightIndex,
                 startDate: sparklineStartDate,
                 showMonthBoundaries: true,
+                showMonthLabels: true,
+                showWeekLines: true,
                 onHover: { hoveredIndex = $0 },
                 onSelect: { idx in
                     guard let start = sparklineStartDate,
@@ -174,6 +179,22 @@ struct HeroSplit: View {
         .animation(.easeOut(duration: 0.35), value: heroLoading)
     }
 
+    // The hovered day's total spend (the main sparkline value at that index).
+    private var hoveredValue: Double? {
+        guard let i = hoveredIndex, i >= 0, i < sparkline.count else { return nil }
+        return sparkline[i]
+    }
+
+    private var hoveredDate: Date? {
+        guard let i = hoveredIndex, let start = sparklineStartDate else { return nil }
+        return Calendar.current.date(byAdding: .day, value: i, to: start)
+    }
+
+    private static func dayTitle(_ date: Date) -> String {
+        let fmt = DateFormatter(); fmt.dateFormat = "MMM d"
+        return fmt.string(from: date)
+    }
+
     private var hoverCaption: String {
         guard let idx = hoveredIndex, idx >= 0, idx < sparkline.count else { return "" }
         let value = sparkline[idx]
@@ -223,6 +244,8 @@ struct Sparkline: View {
     var highlightIndex: Int? = nil
     var startDate: Date? = nil
     var showMonthBoundaries: Bool = false
+    var showMonthLabels: Bool = true
+    var showWeekLines: Bool = false
     var barSpacing: CGFloat = 2
     var minBarWidth: CGFloat = 2
     var onHover: ((Int?) -> Void)? = nil
@@ -237,9 +260,19 @@ struct Sparkline: View {
             let highlight = highlightIndex ?? (values.count - 1)
             let step = barWidth + spacing
             ZStack(alignment: .bottomLeading) {
-                // Month-boundary markers: a hairline + month label at each day-1,
-                // so the trend reads against the calendar instead of as one
-                // undivided run of bars.
+                // Week-boundary lines: faint hairlines at each start-of-week, so
+                // the trend reads against the calendar grid. Drawn first (under
+                // the month lines and bars) and lighter.
+                if showWeekLines {
+                    ForEach(weekBoundaries(), id: \.self) { idx in
+                        Rectangle()
+                            .fill(LedgerTokens.Color.inkTertiary(a).opacity(0.22))
+                            .frame(width: 1, height: geometry.size.height)
+                            .offset(x: CGFloat(idx) * step - spacing / 2)
+                    }
+                }
+                // Month-boundary markers: a stronger hairline (and, in the hero,
+                // a month label) at each day-1, so months read distinctly.
                 if showMonthBoundaries {
                     ForEach(monthBoundaries(), id: \.index) { boundary in
                         let x = CGFloat(boundary.index) * step - spacing / 2
@@ -247,11 +280,13 @@ struct Sparkline: View {
                             Rectangle()
                                 .fill(LedgerTokens.Color.inkTertiary(a).opacity(0.5))
                                 .frame(width: 1, height: geometry.size.height)
-                            Text(boundary.label)
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundColor(LedgerTokens.Color.inkSecondary(a))
-                                .fixedSize()
-                                .offset(x: 3, y: -1)
+                            if showMonthLabels {
+                                Text(boundary.label)
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                                    .fixedSize()
+                                    .offset(x: 3, y: -1)
+                            }
                         }
                         .frame(maxHeight: .infinity, alignment: .bottom)
                         .offset(x: x)
@@ -304,6 +339,20 @@ struct Sparkline: View {
             guard let day = cal.date(byAdding: .day, value: i, to: start) else { continue }
             if cal.component(.day, from: day) == 1 {
                 result.append((i, fmt.string(from: day).uppercased()))
+            }
+        }
+        return result
+    }
+
+    // Indices that fall on the first day of a calendar week (locale-aware).
+    private func weekBoundaries() -> [Int] {
+        guard let start = startDate, values.count > 1 else { return [] }
+        let cal = Calendar.current
+        var result: [Int] = []
+        for i in 1..<values.count {
+            guard let day = cal.date(byAdding: .day, value: i, to: start) else { continue }
+            if cal.component(.weekday, from: day) == cal.firstWeekday {
+                result.append(i)
             }
         }
         return result

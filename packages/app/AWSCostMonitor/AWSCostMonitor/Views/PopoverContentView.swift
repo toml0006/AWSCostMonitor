@@ -5,6 +5,9 @@ struct PopoverContentView: View {
     @EnvironmentObject var awsManager: AWSManager
     @EnvironmentObject var appearance: AppearanceManager
     @AppStorage("SparklineRange") private var sparklineRangeRaw: String = SparklineRange.monthRolling.rawValue
+    // Shared sparkline scrub position: set by the hero sparkline, read by the
+    // hero (day value) and the service list (per-day amounts + highlight).
+    @State private var hoveredDayIndex: Int? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +30,7 @@ struct PopoverContentView: View {
                     get: { SparklineRange(rawValue: sparklineRangeRaw) ?? .monthRolling },
                     set: { sparklineRangeRaw = $0.rawValue }
                 ),
+                hoveredIndex: $hoveredDayIndex,
                 onSelectDay: { date in
                     CalendarWindowController.showCalendarWindow(awsManager: awsManager, initialDate: date)
                 }
@@ -40,6 +44,9 @@ struct PopoverContentView: View {
                 hideCents: hideCents,
                 isLoading: awsManager.isLoading,
                 sparklines: serviceSparklines,
+                hoveredDayIndex: hoveredDayIndex,
+                hoveredDayTotal: hoveredDayTotal,
+                sparklineStartDate: sparklineRange.startDate(),
                 onSelect: { service in
                     CalendarWindowController.showCalendarWindow(awsManager: awsManager, highlightedService: service)
                 }
@@ -103,6 +110,15 @@ struct PopoverContentView: View {
     private var sparklineSeries: (values: [Double], todayIndex: Int?) {
         let points = awsManager.dailyPointsForSelectedProfile ?? []
         return sparklineRange.series(from: points)
+    }
+
+    // Total spend on the scrubbed day (the main sparkline's value at that index),
+    // used to compute each service's share of that day.
+    private var hoveredDayTotal: Double? {
+        guard let i = hoveredDayIndex else { return nil }
+        let vals = sparklineSeries.values
+        guard i >= 0, i < vals.count else { return nil }
+        return vals[i]
     }
 
     // Per-service sparkline series aligned to the current sparkline range. Top 5 services
