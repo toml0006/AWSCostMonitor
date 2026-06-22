@@ -3500,12 +3500,16 @@ class AWSManager: ObservableObject {
         let calendar = Calendar.current
         let now = Date()
         
-        // Check if cached data exists and is from this month
+        // Check if cached data exists and is from today. We refetch once per day
+        // (not once per month) because lastMonthMTDData is a same-day MTD figure:
+        // a value fetched on the 1st only covers last month's day 1, so it must
+        // advance as the day-of-month advances to stay apples-to-apples.
         if !force,
            let lastFetchDate = lastMonthDataFetchDate[profileName],
-           calendar.isDate(lastFetchDate, equalTo: now, toGranularity: .month),
-           lastMonthData[profileName] != nil {
-            // We already fetched last month's data this month, no need to fetch again
+           calendar.isDate(lastFetchDate, equalTo: now, toGranularity: .day),
+           lastMonthData[profileName] != nil,
+           lastMonthMTDData[profileName] != nil {
+            // Already fetched last month's data today, no need to fetch again
             log(.info, category: "Cache", "Using cached last month data for \(profileName)")
             return
         }
@@ -4666,17 +4670,18 @@ class AWSManager: ObservableObject {
 
     // MARK: - Ledger menu bar derived values
 
-    // Projected-total delta vs last month's final total. Uses Cost Explorer's
-    // forecast via projectedMonthlyTotal (falls back to the local estimate when
-    // the API hasn't returned a value). Answers: "will this month beat last?"
+    // Apples-to-apples delta vs last month, using AWS-direct values only.
+    // Compares this month's MTD against last month's MTD through the same day
+    // (both raw GetCostAndUsage totals) — no local projection or forecast.
+    // Answers: "am I spending more than I had by this day last month?"
     var deltaFractionVsLastMonth: Double? {
-        guard let cost = costData.first,
-              let projected = projectedMonthlyTotal,
-              let lastMonthFull = lastMonthData[cost.profileName] else { return nil }
-        let lastMonthTotal = NSDecimalNumber(decimal: lastMonthFull.amount).doubleValue
+        let profileName = selectedProfile?.name
+        guard let cost = costData.first(where: { $0.profileName == profileName }) ?? costData.first,
+              let lastMonthMTD = lastMonthMTDData[cost.profileName] else { return nil }
+        let lastMonthTotal = NSDecimalNumber(decimal: lastMonthMTD.amount).doubleValue
         guard lastMonthTotal > 0 else { return nil }
-        let projectedDouble = NSDecimalNumber(decimal: projected).doubleValue
-        return (projectedDouble - lastMonthTotal) / lastMonthTotal
+        let currentTotal = NSDecimalNumber(decimal: cost.amount).doubleValue
+        return (currentTotal - lastMonthTotal) / lastMonthTotal
     }
 
     var budgetFraction: Double? {
