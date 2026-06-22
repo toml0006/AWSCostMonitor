@@ -153,7 +153,7 @@ struct HeroSplit: View {
                 ForEach(rows) { row in
                     HStack(spacing: 6) {
                         Text(row.label).ledgerLabel().lineLimit(1)
-                        Spacer(minLength: 4)
+                        Spacer(minLength: 8)
                         Text(row.value)
                             .font(LedgerTokens.Typography.statValue(a))
                             .foregroundColor(color(for: row.color))
@@ -163,6 +163,10 @@ struct HeroSplit: View {
                     .frame(height: 16)
                 }
             }
+            // Constrain the stat block to roughly the hero number's width and
+            // left-align it under the hero, so label→value gaps stay tight
+            // instead of stretching across the full half-panel to the edge.
+            .frame(width: 210, alignment: .leading)
             .padding(.top, 4)
         }
         .padding(LedgerTokens.Layout.unit(a) * 1.5)

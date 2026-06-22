@@ -41,29 +41,33 @@ struct ServiceList: View {
     private func row(for name: String, amount: Double) -> some View {
         let percentage = total > 0 ? amount / total : 0
         let series = sparklines[name] ?? []
-        // The trend sparkline now lives in its own fixed column rather than as a
-        // faint full-width background. Behind the text it collided with the
-        // amount (the tallest, most-recent bar sat under the dollar figure);
-        // a dedicated column keeps both the chart and the numbers legible.
-        return HStack(spacing: 0) {
-            Text(name)
-                .ledgerBody()
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 16)
-            Sparkline(values: series, barSpacing: 1, minBarWidth: 1)
-                .frame(width: 64, height: LedgerTokens.Layout.rowHeight(a) * 0.5)
-                .opacity(series.isEmpty ? 0 : 0.7)
-                .clipped()
-                .allowsHitTesting(false)
-            Spacer().frame(width: 20)
-            Text(String(format: "%.0f%%", percentage * 100))
-                .ledgerMeta()
-                .frame(width: 38, alignment: .trailing)
-            Spacer().frame(width: 14)
-            Text(format(amount))
-                .ledgerStatValue()
-                .frame(minWidth: 84, alignment: .trailing)
+        // Sparkline and percentage are combined: the trend is a faint background
+        // behind the name and its share %, with the % reading over it. The
+        // amount is held clear of the bars by reserving a trailing zone, so the
+        // dollar figure never sits under the tallest (most-recent) bar.
+        let amountZone: CGFloat = 96
+        return ZStack(alignment: .leading) {
+            if !series.isEmpty {
+                Sparkline(values: series)
+                    .opacity(0.25)
+                    .padding(.trailing, amountZone)
+                    .padding(.vertical, 4)
+                    .allowsHitTesting(false)
+            }
+            HStack(spacing: 0) {
+                Text(name)
+                    .ledgerBody()
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 8)
+                Text(String(format: "%.0f%%", percentage * 100))
+                    .ledgerMeta()
+                    .frame(width: 38, alignment: .trailing)
+                Spacer().frame(width: 16)
+                Text(format(amount))
+                    .ledgerStatValue()
+                    .frame(minWidth: 80, alignment: .trailing)
+            }
         }
         .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
         .frame(height: LedgerTokens.Layout.rowHeight(a))
