@@ -173,7 +173,12 @@ struct CalendarView: View {
                 }
                 .padding(12)
             }
-            
+
+            // Savings opportunity — the full breakdown behind the popover's
+            // one-line "SP save / mo" nudge. Only shown when AWS returns an
+            // actionable recommendation.
+            savingsOpportunityCard
+
             // Legend
             HStack(spacing: 20) {
                 HStack(spacing: 5) {
@@ -248,7 +253,71 @@ struct CalendarView: View {
             }
         }
     }
-    
+
+    // MARK: - Savings Opportunity
+
+    // Full breakdown of the AWS Savings Plans purchase recommendation. The
+    // popover shows only the headline monthly savings; here we expand it into
+    // the supporting metrics (commitment, savings %, ROI, terms).
+    @ViewBuilder
+    private var savingsOpportunityCard: some View {
+        if let profile = awsManager.selectedProfile,
+           let rec = awsManager.spRecommendation[profile.name],
+           rec.isWorthwhile {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(LedgerTokens.Color.signalUnder(a))
+                    Text("Savings opportunity")
+                        .ledgerStatValue()
+                        .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+                    Spacer()
+                    Text("est. ~\(CurrencyFormatter.format(Decimal(rec.estimatedMonthlySavings))) / mo")
+                        .ledgerStatValue()
+                        .foregroundColor(LedgerTokens.Color.signalUnder(a))
+                }
+
+                Text("Based on the last \(rec.lookbackDays) days, a \(rec.term) Compute Savings Plan (\(rec.paymentOption)) at \(CurrencyFormatter.format(Decimal(rec.hourlyCommitment)))/hr would cut on-demand spend.")
+                    .ledgerMeta()
+                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 24) {
+                    savingsMetric(label: "Commit", value: "\(CurrencyFormatter.format(Decimal(rec.hourlyCommitment)))/hr")
+                    if let pct = rec.estimatedSavingsPercentage {
+                        savingsMetric(label: "Savings", value: String(format: "%.0f%%", pct))
+                    }
+                    if let roi = rec.estimatedROI {
+                        savingsMetric(label: "ROI", value: String(format: "%.0f%%", roi))
+                    }
+                    savingsMetric(label: "Term", value: rec.term)
+                    Spacer()
+                }
+            }
+            .padding(12)
+            .background(LedgerTokens.Color.signalUnder(a).opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(LedgerTokens.Color.signalUnder(a).opacity(0.25), lineWidth: 1)
+            )
+            .cornerRadius(6)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+        }
+    }
+
+    private func savingsMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .ledgerMeta()
+                .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+            Text(value)
+                .ledgerBody()
+                .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+        }
+    }
+
     // MARK: - Helper Properties
     
     private var weekdaySymbols: [String] {

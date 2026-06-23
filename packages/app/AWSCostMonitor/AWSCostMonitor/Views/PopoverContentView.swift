@@ -254,6 +254,15 @@ struct PopoverContentView: View {
                     out.append(.init(label: label, value: String(format: "%.0f%%", coverage), color: .ink))
                 }
             }
+            // Lean actionable nudge: only when AWS says real money is on the
+            // table. The full breakdown lives in the Calendar window.
+            if let rec = awsManager.spRecommendation[p.name], rec.isWorthwhile {
+                out.append(.init(
+                    label: "SP save / mo",
+                    value: "~\(CurrencyFormatter.format(Decimal(rec.estimatedMonthlySavings)))",
+                    color: .under
+                ))
+            }
         }
         // AWS-detected anomalies: show count + top-impact service when present.
         if let p = awsManager.selectedProfile,

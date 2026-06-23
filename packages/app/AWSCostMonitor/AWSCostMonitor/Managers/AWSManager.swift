@@ -101,6 +101,9 @@ class AWSManager: ObservableObject {
     @Published var cloudAnomalyFetchDate: [String: Date] = [:]
     // Commitment coverage + utilization. Per-profile; nil = not fetched.
     @Published var commitmentSummary: [String: CommitmentSummary] = [:]
+    // AWS-computed Savings Plans purchase recommendation. Per-profile; nil = not
+    // fetched or AWS returned no actionable recommendation.
+    @Published var spRecommendation: [String: SavingsPlanRecommendation] = [:]
 
     // Account + region breakdown storage (Phase 2 breakdowns)
     @Published var accountCosts: [AccountCost] = []
@@ -3125,11 +3128,61 @@ class AWSManager: ObservableObject {
                     self.log(.info, category: "API", "Savings Plans existence: exists=\(spE.exists) count=\(spE.count)")
                 }
             }
+
+            // Layer on the AWS purchase recommendation last; it's the most
+            // expensive call and purely additive, so it must never block the
+            // coverage numbers above.
+            if let rec = await fetchSPPurchaseRecommendation(client: client, profile: profile) {
+                await MainActor.run {
+                    self.spRecommendation[profile.name] = rec
+                    self.log(.info, category: "API", "SP purchase rec: commit=\(rec.hourlyCommitment)/hr save=\(rec.estimatedMonthlySavings)/mo")
+                }
+            }
         } catch {
             let duration = Date().timeIntervalSince(startTime)
             let msg = error.localizedDescription
             log(.warning, category: "API", "Commitment summary unavailable: \(msg)")
             recordAPIRequest(profile: profile.name, endpoint: "CommitmentSummary", success: false, duration: duration, error: msg)
+        }
+    }
+
+    /// AWS-computed Savings Plans purchase recommendation
+    /// (ce:GetSavingsPlansPurchaseRecommendation). Defaults: Compute SP, 1-year
+    /// term, No Upfront, 30-day lookback — the lowest-friction option that fits
+    /// the developer / small-team persona (no capital outlay, flexible term).
+    /// Returns nil when the API is unavailable or the recommendation isn't
+    /// actionable.
+    private func fetchSPPurchaseRecommendation(client: CostExplorerClient, profile: AWSProfile) async -> SavingsPlanRecommendation? {
+        let startTime = Date()
+        do {
+            let input = GetSavingsPlansPurchaseRecommendationInput(
+                lookbackPeriodInDays: .thirtyDays,
+                paymentOption: .noUpfront,
+                savingsPlansType: .computeSp,
+                termInYears: .oneYear
+            )
+            let output = try await client.getSavingsPlansPurchaseRecommendation(input: input)
+            recordAPIRequest(profile: profile.name, endpoint: "SavingsPlansPurchaseRecommendation", success: true, duration: Date().timeIntervalSince(startTime))
+
+            guard let summary = output.savingsPlansPurchaseRecommendation?.savingsPlansPurchaseRecommendationSummary,
+                  let hourly = summary.hourlyCommitmentToPurchase.flatMap(Double.init),
+                  let monthlySavings = summary.estimatedMonthlySavingsAmount.flatMap(Double.init) else {
+                return nil
+            }
+            return SavingsPlanRecommendation(
+                hourlyCommitment: hourly,
+                estimatedMonthlySavings: monthlySavings,
+                estimatedSavingsPercentage: summary.estimatedSavingsPercentage.flatMap(Double.init),
+                estimatedROI: summary.estimatedROI.flatMap(Double.init),
+                term: "1 year",
+                paymentOption: "No Upfront",
+                lookbackDays: 30,
+                fetchDate: Date()
+            )
+        } catch {
+            recordAPIRequest(profile: profile.name, endpoint: "SavingsPlansPurchaseRecommendation", success: false, duration: Date().timeIntervalSince(startTime), error: error.localizedDescription)
+            log(.debug, category: "API", "SP purchase recommendation unavailable: \(error.localizedDescription)")
+            return nil
         }
     }
 

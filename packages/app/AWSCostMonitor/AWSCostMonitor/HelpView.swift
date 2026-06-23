@@ -123,6 +123,7 @@ struct HelpView: View {
                 Text("   – ce:GetAnomalies (optional: AWS-detected spikes)")
                 Text("   – ce:GetReservationCoverage, ce:GetReservationUtilization (optional: RI)")
                 Text("   – ce:GetSavingsPlansCoverage, ce:GetSavingsPlansUtilization (optional: SP coverage)")
+                Text("   – ce:GetSavingsPlansPurchaseRecommendation (optional: AWS savings recommendation)")
                 Text("   – savingsplans:DescribeSavingsPlans (optional: confirms whether a Savings Plan actually exists)")
                     .padding(.bottom)
                 
