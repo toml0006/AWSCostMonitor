@@ -18,6 +18,8 @@ struct CalendarView: View {
     @State private var selectedDayData: DailyCost?
     @State private var selectedDayServices: [ServiceCost] = []
     @State private var hoveredDate: Date?
+    @State private var breakdownSelection: CostBreakdownMode = .service
+    @State private var breakdownExpanded: Bool = false
 
     init(highlightedService: String? = nil, initialDate: Date? = nil) {
         self.highlightedService = highlightedService
@@ -179,6 +181,10 @@ struct CalendarView: View {
             // actionable recommendation.
             savingsOpportunityCard
 
+            // Cost breakdown by dimension — the detail the lean popover omits.
+            // Account / region / tag grouping the menu bar never shows.
+            costBreakdownSection
+
             // Legend
             HStack(spacing: 20) {
                 HStack(spacing: 5) {
@@ -251,6 +257,133 @@ struct CalendarView: View {
                 currentMonth = target
                 selectDay(target)
             }
+
+            // Mirror the manager's persisted breakdown preference, then load it.
+            breakdownSelection = awsManager.breakdownMode
+            if breakdownSelection != .service {
+                breakdownExpanded = true
+                Task { await awsManager.fetchBreakdownForCurrentMode() }
+            }
+        }
+    }
+
+    // MARK: - Cost Breakdown
+
+    // Group spend by a dimension the popover deliberately omits (account,
+    // region, tag value). Service is included for parity. Collapsed by default
+    // so it never crowds the calendar; expanding triggers the fetch.
+    @ViewBuilder
+    private var costBreakdownSection: some View {
+        DisclosureGroup(isExpanded: $breakdownExpanded) {
+            VStack(alignment: .leading, spacing: 10) {
+                Picker("", selection: $breakdownSelection) {
+                    ForEach(CostBreakdownMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: breakdownSelection) { _, newMode in
+                    Task { await awsManager.handleBreakdownModeChange(newMode) }
+                }
+
+                if breakdownSelection == .tag {
+                    HStack(spacing: 6) {
+                        Text("Tag key:")
+                            .ledgerMeta()
+                            .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                        TextField("e.g. Environment", text: $awsManager.costBreakdownTagKey)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 180)
+                            .onSubmit {
+                                Task { await awsManager.handleBreakdownTagKeyChange(awsManager.costBreakdownTagKey) }
+                            }
+                    }
+                }
+
+                breakdownList
+            }
+            .padding(.top, 8)
+        } label: {
+            Text("Cost breakdown by \(breakdownSelection.displayName)")
+                .ledgerStatValue()
+                .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+    }
+
+    // Normalized rows for the selected dimension, ranked, with a proportional
+    // bar relative to the largest entry.
+    @ViewBuilder
+    private var breakdownList: some View {
+        let rows = breakdownRows
+        if rows.isEmpty {
+            Text(breakdownSelection == .tag && awsManager.costBreakdownTagKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                 ? "Enter a tag key to view tag costs"
+                 : "No \(breakdownSelection.displayName.lowercased()) data available")
+                .ledgerMeta()
+                .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                .padding(.vertical, 4)
+        } else {
+            let maxAmount = rows.map(\.amount).max() ?? 1
+            VStack(spacing: 4) {
+                ForEach(rows.prefix(8)) { row in
+                    breakdownRow(row, maxAmount: maxAmount)
+                }
+                if rows.count > 8 {
+                    Text("+ \(rows.count - 8) more")
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    private func breakdownRow(_ row: BreakdownRow, maxAmount: Decimal) -> some View {
+        let fraction = maxAmount > 0
+            ? NSDecimalNumber(decimal: row.amount / maxAmount).doubleValue
+            : 0
+        return ZStack(alignment: .leading) {
+            GeometryReader { geo in
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(LedgerTokens.Color.accent(a).opacity(0.12))
+                    .frame(width: max(0, geo.size.width * fraction))
+            }
+            HStack {
+                Text(row.label)
+                    .ledgerBody()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+                    .lineLimit(1)
+                Spacer()
+                Text(CurrencyFormatter.format(row.amount))
+                    .ledgerBody()
+                    .monospacedDigit()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+            }
+            .padding(.horizontal, 8)
+        }
+        .frame(height: 24)
+    }
+
+    // A dimension-agnostic row so the list view doesn't branch per mode.
+    private struct BreakdownRow: Identifiable {
+        let id: String
+        let label: String
+        let amount: Decimal
+    }
+
+    private var breakdownRows: [BreakdownRow] {
+        switch breakdownSelection {
+        case .service:
+            return awsManager.serviceCosts.map { BreakdownRow(id: $0.serviceName, label: $0.serviceName, amount: $0.amount) }
+        case .tag:
+            return awsManager.tagCosts.map { BreakdownRow(id: $0.id.uuidString, label: $0.tagValue, amount: $0.amount) }
+        case .account:
+            return awsManager.accountCosts.map { BreakdownRow(id: $0.accountId, label: $0.displayName, amount: $0.amount) }
+        case .region:
+            return awsManager.regionCosts.map { BreakdownRow(id: $0.region, label: $0.region, amount: $0.amount) }
         }
     }
 
