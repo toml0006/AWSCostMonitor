@@ -104,6 +104,11 @@ struct CalendarView: View {
                             Task {
                                 await awsManager.fetchCostForSelectedProfile()
                             }
+                            // Keep the dimension breakdown in sync with the new
+                            // profile (account/region/tag are profile-specific).
+                            if breakdownExpanded && breakdownSelection != .service {
+                                Task { await awsManager.fetchBreakdownForCurrentMode(month: currentMonth) }
+                            }
                         }
                     )) {
                         ForEach(awsManager.profiles) { profile in

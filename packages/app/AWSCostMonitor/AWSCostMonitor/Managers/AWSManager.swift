@@ -2792,7 +2792,7 @@ class AWSManager: ObservableObject {
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: tagKey, type: .tag)],
-                metrics: ["UnblendedCost"],
+                metrics: ["AmortizedCost"],
                 timePeriod: .init(end: range.end, start: range.start)
             )
             
@@ -2816,7 +2816,7 @@ class AWSManager: ObservableObject {
                     }
                     
                     if let metrics = group.metrics,
-                       let unblendedCost = metrics["UnblendedCost"],
+                       let unblendedCost = metrics["AmortizedCost"],
                        let amountString = unblendedCost.amount,
                        let currency = unblendedCost.unit,
                        let amount = Decimal(string: amountString),
@@ -2879,7 +2879,7 @@ class AWSManager: ObservableObject {
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: "LINKED_ACCOUNT", type: .dimension)],
-                metrics: ["UnblendedCost"],
+                metrics: ["AmortizedCost"],
                 timePeriod: .init(end: range.end, start: range.start)
             )
 
@@ -2894,7 +2894,7 @@ class AWSManager: ObservableObject {
                     // intentionally skip to avoid extra API cost.
                     let accountId = group.keys?.first ?? ""
                     if let metrics = group.metrics,
-                       let unblended = metrics["UnblendedCost"],
+                       let unblended = metrics["AmortizedCost"],
                        let amountStr = unblended.amount,
                        let currency = unblended.unit,
                        let amount = Decimal(string: amountStr),
@@ -2947,7 +2947,7 @@ class AWSManager: ObservableObject {
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: "REGION", type: .dimension)],
-                metrics: ["UnblendedCost"],
+                metrics: ["AmortizedCost"],
                 timePeriod: .init(end: range.end, start: range.start)
             )
 
@@ -2961,7 +2961,7 @@ class AWSManager: ObservableObject {
                     // Cost Explorer returns "NoRegion" for region-less services (IAM, billing, etc.)
                     let label = rawRegion == "NoRegion" ? "Global" : rawRegion
                     if let metrics = group.metrics,
-                       let unblended = metrics["UnblendedCost"],
+                       let unblended = metrics["AmortizedCost"],
                        let amountStr = unblended.amount,
                        let currency = unblended.unit,
                        let amount = Decimal(string: amountStr),
@@ -3133,13 +3133,8 @@ class AWSManager: ObservableObject {
 
             // Layer on the AWS purchase recommendation last; it's the most
             // expensive call and purely additive, so it must never block the
-            // coverage numbers above.
-            if let rec = await fetchSPPurchaseRecommendation(client: client, profile: profile) {
-                await MainActor.run {
-                    self.spRecommendation[profile.name] = rec
-                    self.log(.info, category: "API", "SP purchase rec: commit=\(rec.hourlyCommitment)/hr save=\(rec.estimatedMonthlySavings)/mo")
-                }
-            }
+            // coverage numbers above. It publishes (or clears) its own store.
+            await fetchSPPurchaseRecommendation(client: client, profile: profile)
         } catch {
             let duration = Date().timeIntervalSince(startTime)
             let msg = error.localizedDescription
@@ -3152,9 +3147,11 @@ class AWSManager: ObservableObject {
     /// (ce:GetSavingsPlansPurchaseRecommendation). Defaults: Compute SP, 1-year
     /// term, No Upfront, 30-day lookback — the lowest-friction option that fits
     /// the developer / small-team persona (no capital outlay, flexible term).
-    /// Returns nil when the API is unavailable or the recommendation isn't
-    /// actionable.
-    private func fetchSPPurchaseRecommendation(client: CostExplorerClient, profile: AWSProfile) async -> SavingsPlanRecommendation? {
+    /// Publishes the recommendation into `spRecommendation`, or clears it when
+    /// AWS returns no actionable recommendation. On a transient API/permission
+    /// error it leaves any existing value untouched (rather than flickering the
+    /// nudge away on a one-off failure).
+    private func fetchSPPurchaseRecommendation(client: CostExplorerClient, profile: AWSProfile) async {
         let startTime = Date()
         do {
             let input = GetSavingsPlansPurchaseRecommendationInput(
@@ -3166,25 +3163,36 @@ class AWSManager: ObservableObject {
             let output = try await client.getSavingsPlansPurchaseRecommendation(input: input)
             recordAPIRequest(profile: profile.name, endpoint: "SavingsPlansPurchaseRecommendation", success: true, duration: Date().timeIntervalSince(startTime))
 
-            guard let summary = output.savingsPlansPurchaseRecommendation?.savingsPlansPurchaseRecommendationSummary,
-                  let hourly = summary.hourlyCommitmentToPurchase.flatMap(Double.init),
-                  let monthlySavings = summary.estimatedMonthlySavingsAmount.flatMap(Double.init) else {
-                return nil
+            // A successful call with no parseable summary means AWS isn't
+            // recommending a purchase — clear any stale nudge.
+            let rec: SavingsPlanRecommendation? = {
+                guard let summary = output.savingsPlansPurchaseRecommendation?.savingsPlansPurchaseRecommendationSummary,
+                      let hourly = summary.hourlyCommitmentToPurchase.flatMap(Double.init),
+                      let monthlySavings = summary.estimatedMonthlySavingsAmount.flatMap(Double.init) else {
+                    return nil
+                }
+                return SavingsPlanRecommendation(
+                    hourlyCommitment: hourly,
+                    estimatedMonthlySavings: monthlySavings,
+                    estimatedSavingsPercentage: summary.estimatedSavingsPercentage.flatMap(Double.init),
+                    estimatedROI: summary.estimatedROI.flatMap(Double.init),
+                    term: "1 year",
+                    paymentOption: "No Upfront",
+                    lookbackDays: 30,
+                    fetchDate: Date()
+                )
+            }()
+            await MainActor.run {
+                self.spRecommendation[profile.name] = rec
+                if let rec {
+                    self.log(.info, category: "API", "SP purchase rec: commit=\(rec.hourlyCommitment)/hr save=\(rec.estimatedMonthlySavings)/mo")
+                } else {
+                    self.log(.info, category: "API", "SP purchase rec: none recommended")
+                }
             }
-            return SavingsPlanRecommendation(
-                hourlyCommitment: hourly,
-                estimatedMonthlySavings: monthlySavings,
-                estimatedSavingsPercentage: summary.estimatedSavingsPercentage.flatMap(Double.init),
-                estimatedROI: summary.estimatedROI.flatMap(Double.init),
-                term: "1 year",
-                paymentOption: "No Upfront",
-                lookbackDays: 30,
-                fetchDate: Date()
-            )
         } catch {
             recordAPIRequest(profile: profile.name, endpoint: "SavingsPlansPurchaseRecommendation", success: false, duration: Date().timeIntervalSince(startTime), error: error.localizedDescription)
-            log(.debug, category: "API", "SP purchase recommendation unavailable: \(error.localizedDescription)")
-            return nil
+            log(.debug, category: "API", "SP purchase recommendation unavailable (keeping prior value): \(error.localizedDescription)")
         }
     }
 
@@ -3652,32 +3660,33 @@ class AWSManager: ObservableObject {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
             
-            // Fetch total cost for last month
+            // Fetch total cost for last month. AmortizedCost to match the
+            // current-month metric the forecast compares against.
             let costInput = GetCostAndUsageInput(
                 granularity: .monthly,
-                metrics: ["UnblendedCost"],
+                metrics: ["AmortizedCost"],
                 timePeriod: .init(
                     end: formatter.string(from: endOfLastMonth),
                     start: formatter.string(from: startOfLastMonth)
                 )
             )
-            
+
             // Record API call time BEFORE making the request
             await MainActor.run {
                 self.lastAPICallTime = Date()
             }
-            
+
             let costResponse = try await client.getCostAndUsage(input: costInput)
-            
+
             if let resultsByTime = costResponse.resultsByTime,
                let firstResult = resultsByTime.first,
-               let costString = firstResult.total?["UnblendedCost"]?.amount,
+               let costString = firstResult.total?["AmortizedCost"]?.amount,
                let costDecimal = Decimal(string: costString) {
-                
+
                 let costData = CostData(
                     profileName: profileName,
                     amount: costDecimal,
-                    currency: firstResult.total?["UnblendedCost"]?.unit ?? "USD"
+                    currency: firstResult.total?["AmortizedCost"]?.unit ?? "USD"
                 )
                 
                 await MainActor.run {
@@ -3743,10 +3752,13 @@ class AWSManager: ObservableObject {
             // Add one day to end date for AWS API (exclusive end)
             endOfLastMonthMTD = calendar.date(byAdding: .day, value: 1, to: endOfLastMonthMTD) ?? endOfLastMonthMTD
 
-            // Fetch MTD cost for last month
+            // Fetch MTD cost for last month. Use AmortizedCost to match the
+            // current-month MTD metric — the delta divides the two, so a
+            // metric mismatch (Unblended vs Amortized) skews accounts with
+            // SP/RI/credits.
             let mtdInput = GetCostAndUsageInput(
                 granularity: .monthly,
-                metrics: ["UnblendedCost"],
+                metrics: ["AmortizedCost"],
                 timePeriod: .init(
                     end: formatter.string(from: endOfLastMonthMTD),
                     start: formatter.string(from: startOfLastMonth)
@@ -3757,13 +3769,13 @@ class AWSManager: ObservableObject {
 
             if let resultsByTime = mtdResponse.resultsByTime,
                let firstResult = resultsByTime.first,
-               let costString = firstResult.total?["UnblendedCost"]?.amount,
+               let costString = firstResult.total?["AmortizedCost"]?.amount,
                let costDecimal = Decimal(string: costString) {
 
                 let mtdData = CostData(
                     profileName: profileName,
                     amount: costDecimal,
-                    currency: firstResult.total?["UnblendedCost"]?.unit ?? "USD"
+                    currency: firstResult.total?["AmortizedCost"]?.unit ?? "USD"
                 )
 
                 await MainActor.run {

@@ -244,7 +244,13 @@ struct PopoverContentView: View {
            let summary = awsManager.commitmentSummary[p.name] {
             switch summary.savingsPlansExist {
             case .some(false):
-                out.append(.init(label: "SP cover", value: "None", color: .ink))
+                // No Savings Plan — but the account may still have Reserved
+                // Instances, so fall back to RI coverage before declaring "None".
+                if let riCov = summary.riCoveragePercent {
+                    out.append(.init(label: "RI cover", value: String(format: "%.0f%%", riCov), color: .ink))
+                } else {
+                    out.append(.init(label: "SP cover", value: "None", color: .ink))
+                }
             case .some(true):
                 let v = summary.spCoveragePercent.map { String(format: "%.0f%%", $0) } ?? "Active"
                 out.append(.init(label: "SP cover", value: v, color: .ink))
