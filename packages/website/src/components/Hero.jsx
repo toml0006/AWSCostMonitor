@@ -16,8 +16,8 @@ const Hero = () => {
             className="hero-text"
           >
             <div className="hero-badge">
-              <span className="badge-primary">v1.5</span>
-              <span>Ledger — a refreshed visual identity</span>
+              <span className="badge-primary">v1.6</span>
+              <span>Savings recommendations & cost breakdowns</span>
             </div>
 
             <h1 className="hero-title">

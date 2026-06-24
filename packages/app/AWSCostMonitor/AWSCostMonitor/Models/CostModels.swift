@@ -235,6 +235,12 @@ struct CommitmentSummary: Codable {
     let riUtilizationPercent: Double?    // % of owned RI hours actually used
     let spCoveragePercent: Double?       // % of compute spend covered by Savings Plans
     let spUtilizationPercent: Double?    // % of SP commitment consumed
+    // Authoritative existence check via savingsplans:DescribeSavingsPlans.
+    // Cost Explorer's coverage % can read 0% whether a plan exists but covers
+    // nothing or no plan exists at all; this disambiguates the two. nil when the
+    // existence call didn't run or wasn't permitted.
+    let savingsPlansExist: Bool?
+    let activeSavingsPlanCount: Int?     // number of active Savings Plans, when known
     let fetchDate: Date
 
     /// Combined coverage: prefer Savings Plans when both present (modern AWS
@@ -248,6 +254,28 @@ struct CommitmentSummary: Codable {
             || riUtilizationPercent != nil
             || spCoveragePercent != nil
             || spUtilizationPercent != nil
+            || savingsPlansExist != nil
+    }
+}
+
+// AWS-computed Savings Plans purchase recommendation
+// (ce:GetSavingsPlansPurchaseRecommendation). All money values are monthly-
+// normalized USD. nil throughout when the API was unavailable or AWS returned
+// no recommendation (e.g. usage already well-covered).
+struct SavingsPlanRecommendation: Codable {
+    let hourlyCommitment: Double          // recommended $/hr commitment to purchase
+    let estimatedMonthlySavings: Double   // est. $ saved per month if purchased
+    let estimatedSavingsPercentage: Double? // est. % off on-demand over lookback
+    let estimatedROI: Double?             // est. return on investment %
+    let term: String                      // human-readable, e.g. "1 year"
+    let paymentOption: String             // human-readable, e.g. "No Upfront"
+    let lookbackDays: Int                 // usage window AWS analyzed, e.g. 30
+    let fetchDate: Date
+
+    // Only surface a recommendation that saves a non-trivial amount; AWS will
+    // sometimes return a near-zero commitment for already-covered accounts.
+    var isWorthwhile: Bool {
+        hourlyCommitment > 0 && estimatedMonthlySavings >= 1.0
     }
 }
 

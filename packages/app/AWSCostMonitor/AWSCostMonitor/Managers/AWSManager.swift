@@ -10,6 +10,7 @@ import SwiftUI
 import OSLog
 import ObjectiveC
 import AWSCostExplorer
+import AWSSavingsplans
 import AWSSTS
 import AWSSDKIdentity
 import AWSClientRuntime
@@ -100,6 +101,9 @@ class AWSManager: ObservableObject {
     @Published var cloudAnomalyFetchDate: [String: Date] = [:]
     // Commitment coverage + utilization. Per-profile; nil = not fetched.
     @Published var commitmentSummary: [String: CommitmentSummary] = [:]
+    // AWS-computed Savings Plans purchase recommendation. Per-profile; nil = not
+    // fetched or AWS returned no actionable recommendation.
+    @Published var spRecommendation: [String: SavingsPlanRecommendation] = [:]
 
     // Account + region breakdown storage (Phase 2 breakdowns)
     @Published var accountCosts: [AccountCost] = []
@@ -2582,30 +2586,33 @@ class AWSManager: ObservableObject {
         }
     }
 
-    func handleBreakdownModeChange(_ mode: CostBreakdownMode) async {
+    func handleBreakdownModeChange(_ mode: CostBreakdownMode, month: Date? = nil) async {
         breakdownMode = mode
-        await fetchBreakdownForCurrentMode()
+        await fetchBreakdownForCurrentMode(month: month)
     }
-    
-    func handleBreakdownTagKeyChange(_ key: String) async {
+
+    func handleBreakdownTagKeyChange(_ key: String, month: Date? = nil) async {
         costBreakdownTagKey = key
         if breakdownMode == .tag {
-            await fetchTagBreakdown()
+            await fetchTagBreakdown(month: month)
         }
     }
-    
-    func fetchBreakdownForCurrentMode() async {
+
+    // `month` scopes the account/region/tag breakdowns to the calendar's
+    // selected month. Service is derived locally from cached daily data, so it
+    // ignores `month` here (only the MTD popover store is refreshed).
+    func fetchBreakdownForCurrentMode(month: Date? = nil) async {
         switch breakdownMode {
         case .service:
             if serviceCosts.isEmpty {
                 await fetchServiceBreakdown()
             }
         case .tag:
-            await fetchTagBreakdown()
+            await fetchTagBreakdown(month: month)
         case .account:
-            await fetchAccountBreakdown()
+            await fetchAccountBreakdown(month: month)
         case .region:
-            await fetchRegionBreakdown()
+            await fetchRegionBreakdown(month: month)
         }
     }
     
@@ -2731,7 +2738,23 @@ class AWSManager: ObservableObject {
     }
 
     // Fetch cost breakdown by tag
-    func fetchTagBreakdown() async {
+    /// Date range (yyyy-MM-dd) for a breakdown over `month`. nil = current
+    /// month-to-date. A past month spans its full extent; the current month
+    /// ends tomorrow (today inclusive) so it matches the menu-bar MTD figure.
+    private func breakdownDateRange(for month: Date?) -> (start: String, end: String) {
+        let cal = Calendar.current
+        let now = Date()
+        let target = month ?? now
+        let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: target))!
+        let startOfNextMonth = cal.date(byAdding: .month, value: 1, to: startOfMonth)!
+        let end = cal.isDate(target, equalTo: now, toGranularity: .month)
+            ? cal.date(byAdding: .day, value: 1, to: now)!   // today inclusive
+            : startOfNextMonth                                // full past month
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        return (df.string(from: startOfMonth), df.string(from: end))
+    }
+
+    func fetchTagBreakdown(month: Date? = nil) async {
         guard let profile = selectedProfile else { return }
         let tagKey = costBreakdownTagKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !tagKey.isEmpty else {
@@ -2764,22 +2787,13 @@ class AWSManager: ObservableObject {
             )
             let client = CostExplorerClient(config: config)
             
-            let calendar = Calendar.current
-            let now = Date()
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            let endOfToday = calendar.date(byAdding: .day, value: 1, to: now)!
-            
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            
+            let range = breakdownDateRange(for: month)
+
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: tagKey, type: .tag)],
-                metrics: ["UnblendedCost"],
-                timePeriod: .init(
-                    end: dateFormatter.string(from: endOfToday),
-                    start: dateFormatter.string(from: startOfMonth)
-                )
+                metrics: ["AmortizedCost"],
+                timePeriod: .init(end: range.end, start: range.start)
             )
             
             await MainActor.run {
@@ -2802,7 +2816,7 @@ class AWSManager: ObservableObject {
                     }
                     
                     if let metrics = group.metrics,
-                       let unblendedCost = metrics["UnblendedCost"],
+                       let unblendedCost = metrics["AmortizedCost"],
                        let amountString = unblendedCost.amount,
                        let currency = unblendedCost.unit,
                        let amount = Decimal(string: amountString),
@@ -2839,7 +2853,7 @@ class AWSManager: ObservableObject {
     // MARK: - Account / Region breakdowns (Phase 2)
 
     /// Fetch MTD cost grouped by AWS linked account. Populates `accountCosts`.
-    func fetchAccountBreakdown() async {
+    func fetchAccountBreakdown(month: Date? = nil) async {
         guard let profile = selectedProfile else { return }
         if !canMakeAPICall() {
             log(.warning, category: "API", "Proceeding with account breakdown even though rate limiter is active")
@@ -2860,17 +2874,13 @@ class AWSManager: ObservableObject {
             )
             let client = CostExplorerClient(config: config)
 
-            let cal = Calendar.current
-            let now = Date()
-            let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: now))!
-            let endOfToday = cal.date(byAdding: .day, value: 1, to: now)!
-            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            let range = breakdownDateRange(for: month)
 
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: "LINKED_ACCOUNT", type: .dimension)],
-                metrics: ["UnblendedCost"],
-                timePeriod: .init(end: df.string(from: endOfToday), start: df.string(from: startOfMonth))
+                metrics: ["AmortizedCost"],
+                timePeriod: .init(end: range.end, start: range.start)
             )
 
             await MainActor.run { self.lastAPICallTime = Date() }
@@ -2884,7 +2894,7 @@ class AWSManager: ObservableObject {
                     // intentionally skip to avoid extra API cost.
                     let accountId = group.keys?.first ?? ""
                     if let metrics = group.metrics,
-                       let unblended = metrics["UnblendedCost"],
+                       let unblended = metrics["AmortizedCost"],
                        let amountStr = unblended.amount,
                        let currency = unblended.unit,
                        let amount = Decimal(string: amountStr),
@@ -2911,7 +2921,7 @@ class AWSManager: ObservableObject {
     }
 
     /// Fetch MTD cost grouped by AWS region. Populates `regionCosts`.
-    func fetchRegionBreakdown() async {
+    func fetchRegionBreakdown(month: Date? = nil) async {
         guard let profile = selectedProfile else { return }
         if !canMakeAPICall() {
             log(.warning, category: "API", "Proceeding with region breakdown even though rate limiter is active")
@@ -2932,17 +2942,13 @@ class AWSManager: ObservableObject {
             )
             let client = CostExplorerClient(config: config)
 
-            let cal = Calendar.current
-            let now = Date()
-            let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: now))!
-            let endOfToday = cal.date(byAdding: .day, value: 1, to: now)!
-            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            let range = breakdownDateRange(for: month)
 
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: "REGION", type: .dimension)],
-                metrics: ["UnblendedCost"],
-                timePeriod: .init(end: df.string(from: endOfToday), start: df.string(from: startOfMonth))
+                metrics: ["AmortizedCost"],
+                timePeriod: .init(end: range.end, start: range.start)
             )
 
             await MainActor.run { self.lastAPICallTime = Date() }
@@ -2955,7 +2961,7 @@ class AWSManager: ObservableObject {
                     // Cost Explorer returns "NoRegion" for region-less services (IAM, billing, etc.)
                     let label = rawRegion == "NoRegion" ? "Global" : rawRegion
                     if let metrics = group.metrics,
-                       let unblended = metrics["UnblendedCost"],
+                       let unblended = metrics["AmortizedCost"],
                        let amountStr = unblended.amount,
                        let currency = unblended.unit,
                        let amount = Decimal(string: amountStr),
@@ -3091,25 +3097,102 @@ class AWSManager: ObservableObject {
 
             let (riCov, riU, spCov, spU) = await (riCoverage, riUtil, spCoverage, spUtil)
 
-            let summary = CommitmentSummary(
-                riCoveragePercent: riCov,
-                riUtilizationPercent: riU,
-                spCoveragePercent: spCov,
-                spUtilizationPercent: spU,
-                fetchDate: Date()
-            )
-
+            // Publish the Cost Explorer coverage summary immediately. The Savings
+            // Plans existence check (separate service) is layered on afterward so
+            // it can never block or fail the coverage numbers.
             await MainActor.run {
-                self.commitmentSummary[profile.name] = summary
+                self.commitmentSummary[profile.name] = CommitmentSummary(
+                    riCoveragePercent: riCov,
+                    riUtilizationPercent: riU,
+                    spCoveragePercent: spCov,
+                    spUtilizationPercent: spU,
+                    savingsPlansExist: nil,
+                    activeSavingsPlanCount: nil,
+                    fetchDate: Date()
+                )
                 let duration = Date().timeIntervalSince(startTime)
                 self.recordAPIRequest(profile: profile.name, endpoint: "CommitmentSummary", success: true, duration: duration)
                 self.log(.info, category: "API", "Commitment summary: RI cov=\(riCov ?? -1), RI util=\(riU ?? -1), SP cov=\(spCov ?? -1), SP util=\(spU ?? -1)")
             }
+
+            // Authoritative existence check, then upgrade the summary in place.
+            if let spE = await fetchSavingsPlansExistence(for: profile) {
+                await MainActor.run {
+                    self.commitmentSummary[profile.name] = CommitmentSummary(
+                        riCoveragePercent: riCov,
+                        riUtilizationPercent: riU,
+                        spCoveragePercent: spCov,
+                        spUtilizationPercent: spU,
+                        savingsPlansExist: spE.exists,
+                        activeSavingsPlanCount: spE.count,
+                        fetchDate: Date()
+                    )
+                    self.log(.info, category: "API", "Savings Plans existence: exists=\(spE.exists) count=\(spE.count)")
+                }
+            }
+
+            // Layer on the AWS purchase recommendation last; it's the most
+            // expensive call and purely additive, so it must never block the
+            // coverage numbers above. It publishes (or clears) its own store.
+            await fetchSPPurchaseRecommendation(client: client, profile: profile)
         } catch {
             let duration = Date().timeIntervalSince(startTime)
             let msg = error.localizedDescription
             log(.warning, category: "API", "Commitment summary unavailable: \(msg)")
             recordAPIRequest(profile: profile.name, endpoint: "CommitmentSummary", success: false, duration: duration, error: msg)
+        }
+    }
+
+    /// AWS-computed Savings Plans purchase recommendation
+    /// (ce:GetSavingsPlansPurchaseRecommendation). Defaults: Compute SP, 1-year
+    /// term, No Upfront, 30-day lookback — the lowest-friction option that fits
+    /// the developer / small-team persona (no capital outlay, flexible term).
+    /// Publishes the recommendation into `spRecommendation`, or clears it when
+    /// AWS returns no actionable recommendation. On a transient API/permission
+    /// error it leaves any existing value untouched (rather than flickering the
+    /// nudge away on a one-off failure).
+    private func fetchSPPurchaseRecommendation(client: CostExplorerClient, profile: AWSProfile) async {
+        let startTime = Date()
+        do {
+            let input = GetSavingsPlansPurchaseRecommendationInput(
+                lookbackPeriodInDays: .thirtyDays,
+                paymentOption: .noUpfront,
+                savingsPlansType: .computeSp,
+                termInYears: .oneYear
+            )
+            let output = try await client.getSavingsPlansPurchaseRecommendation(input: input)
+            recordAPIRequest(profile: profile.name, endpoint: "SavingsPlansPurchaseRecommendation", success: true, duration: Date().timeIntervalSince(startTime))
+
+            // A successful call with no parseable summary means AWS isn't
+            // recommending a purchase — clear any stale nudge.
+            let rec: SavingsPlanRecommendation? = {
+                guard let summary = output.savingsPlansPurchaseRecommendation?.savingsPlansPurchaseRecommendationSummary,
+                      let hourly = summary.hourlyCommitmentToPurchase.flatMap(Double.init),
+                      let monthlySavings = summary.estimatedMonthlySavingsAmount.flatMap(Double.init) else {
+                    return nil
+                }
+                return SavingsPlanRecommendation(
+                    hourlyCommitment: hourly,
+                    estimatedMonthlySavings: monthlySavings,
+                    estimatedSavingsPercentage: summary.estimatedSavingsPercentage.flatMap(Double.init),
+                    estimatedROI: summary.estimatedROI.flatMap(Double.init),
+                    term: "1 year",
+                    paymentOption: "No Upfront",
+                    lookbackDays: 30,
+                    fetchDate: Date()
+                )
+            }()
+            await MainActor.run {
+                self.spRecommendation[profile.name] = rec
+                if let rec {
+                    self.log(.info, category: "API", "SP purchase rec: commit=\(rec.hourlyCommitment)/hr save=\(rec.estimatedMonthlySavings)/mo")
+                } else {
+                    self.log(.info, category: "API", "SP purchase rec: none recommended")
+                }
+            }
+        } catch {
+            recordAPIRequest(profile: profile.name, endpoint: "SavingsPlansPurchaseRecommendation", success: false, duration: Date().timeIntervalSince(startTime), error: error.localizedDescription)
+            log(.debug, category: "API", "SP purchase recommendation unavailable (keeping prior value): \(error.localizedDescription)")
         }
     }
 
@@ -3183,6 +3266,32 @@ class AWSManager: ObservableObject {
             log(.debug, category: "API", "SP utilization unavailable: \(error.localizedDescription)")
         }
         return nil
+    }
+
+    /// Authoritative Savings Plans existence check via the Savings Plans service
+    /// (savingsplans:DescribeSavingsPlans) — distinct from Cost Explorer, which
+    /// only reports coverage/utilization. Returns whether any *active* plan
+    /// exists and the count, or nil when the call fails / lacks permission.
+    /// The Savings Plans API is global; it's pinned to us-east-1.
+    private func fetchSavingsPlansExistence(for profile: AWSProfile) async -> (exists: Bool, count: Int)? {
+        let startTime = Date()
+        do {
+            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let config = try await SavingsplansClient.SavingsplansClientConfiguration(
+                awsCredentialIdentityResolver: credentialsProvider,
+                region: "us-east-1"
+            )
+            let client = SavingsplansClient(config: config)
+            let input = DescribeSavingsPlansInput(states: [.active])
+            let output = try await client.describeSavingsPlans(input: input)
+            let count = output.savingsPlans?.count ?? 0
+            recordAPIRequest(profile: profile.name, endpoint: "DescribeSavingsPlans", success: true, duration: Date().timeIntervalSince(startTime))
+            return (count > 0, count)
+        } catch {
+            recordAPIRequest(profile: profile.name, endpoint: "DescribeSavingsPlans", success: false, duration: Date().timeIntervalSince(startTime), error: error.localizedDescription)
+            log(.debug, category: "API", "Savings Plans existence check unavailable: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     // Fetch cost for a specific profile (used by Multi-Profile Dashboard)
@@ -3500,12 +3609,16 @@ class AWSManager: ObservableObject {
         let calendar = Calendar.current
         let now = Date()
         
-        // Check if cached data exists and is from this month
+        // Check if cached data exists and is from today. We refetch once per day
+        // (not once per month) because lastMonthMTDData is a same-day MTD figure:
+        // a value fetched on the 1st only covers last month's day 1, so it must
+        // advance as the day-of-month advances to stay apples-to-apples.
         if !force,
            let lastFetchDate = lastMonthDataFetchDate[profileName],
-           calendar.isDate(lastFetchDate, equalTo: now, toGranularity: .month),
-           lastMonthData[profileName] != nil {
-            // We already fetched last month's data this month, no need to fetch again
+           calendar.isDate(lastFetchDate, equalTo: now, toGranularity: .day),
+           lastMonthData[profileName] != nil,
+           lastMonthMTDData[profileName] != nil {
+            // Already fetched last month's data today, no need to fetch again
             log(.info, category: "Cache", "Using cached last month data for \(profileName)")
             return
         }
@@ -3547,32 +3660,33 @@ class AWSManager: ObservableObject {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
             
-            // Fetch total cost for last month
+            // Fetch total cost for last month. AmortizedCost to match the
+            // current-month metric the forecast compares against.
             let costInput = GetCostAndUsageInput(
                 granularity: .monthly,
-                metrics: ["UnblendedCost"],
+                metrics: ["AmortizedCost"],
                 timePeriod: .init(
                     end: formatter.string(from: endOfLastMonth),
                     start: formatter.string(from: startOfLastMonth)
                 )
             )
-            
+
             // Record API call time BEFORE making the request
             await MainActor.run {
                 self.lastAPICallTime = Date()
             }
-            
+
             let costResponse = try await client.getCostAndUsage(input: costInput)
-            
+
             if let resultsByTime = costResponse.resultsByTime,
                let firstResult = resultsByTime.first,
-               let costString = firstResult.total?["UnblendedCost"]?.amount,
+               let costString = firstResult.total?["AmortizedCost"]?.amount,
                let costDecimal = Decimal(string: costString) {
-                
+
                 let costData = CostData(
                     profileName: profileName,
                     amount: costDecimal,
-                    currency: firstResult.total?["UnblendedCost"]?.unit ?? "USD"
+                    currency: firstResult.total?["AmortizedCost"]?.unit ?? "USD"
                 )
                 
                 await MainActor.run {
@@ -3638,10 +3752,13 @@ class AWSManager: ObservableObject {
             // Add one day to end date for AWS API (exclusive end)
             endOfLastMonthMTD = calendar.date(byAdding: .day, value: 1, to: endOfLastMonthMTD) ?? endOfLastMonthMTD
 
-            // Fetch MTD cost for last month
+            // Fetch MTD cost for last month. Use AmortizedCost to match the
+            // current-month MTD metric — the delta divides the two, so a
+            // metric mismatch (Unblended vs Amortized) skews accounts with
+            // SP/RI/credits.
             let mtdInput = GetCostAndUsageInput(
                 granularity: .monthly,
-                metrics: ["UnblendedCost"],
+                metrics: ["AmortizedCost"],
                 timePeriod: .init(
                     end: formatter.string(from: endOfLastMonthMTD),
                     start: formatter.string(from: startOfLastMonth)
@@ -3652,13 +3769,13 @@ class AWSManager: ObservableObject {
 
             if let resultsByTime = mtdResponse.resultsByTime,
                let firstResult = resultsByTime.first,
-               let costString = firstResult.total?["UnblendedCost"]?.amount,
+               let costString = firstResult.total?["AmortizedCost"]?.amount,
                let costDecimal = Decimal(string: costString) {
 
                 let mtdData = CostData(
                     profileName: profileName,
                     amount: costDecimal,
-                    currency: firstResult.total?["UnblendedCost"]?.unit ?? "USD"
+                    currency: firstResult.total?["AmortizedCost"]?.unit ?? "USD"
                 )
 
                 await MainActor.run {
@@ -4666,17 +4783,18 @@ class AWSManager: ObservableObject {
 
     // MARK: - Ledger menu bar derived values
 
-    // Projected-total delta vs last month's final total. Uses Cost Explorer's
-    // forecast via projectedMonthlyTotal (falls back to the local estimate when
-    // the API hasn't returned a value). Answers: "will this month beat last?"
+    // Apples-to-apples delta vs last month, using AWS-direct values only.
+    // Compares this month's MTD against last month's MTD through the same day
+    // (both raw GetCostAndUsage totals) — no local projection or forecast.
+    // Answers: "am I spending more than I had by this day last month?"
     var deltaFractionVsLastMonth: Double? {
-        guard let cost = costData.first,
-              let projected = projectedMonthlyTotal,
-              let lastMonthFull = lastMonthData[cost.profileName] else { return nil }
-        let lastMonthTotal = NSDecimalNumber(decimal: lastMonthFull.amount).doubleValue
+        let profileName = selectedProfile?.name
+        guard let cost = costData.first(where: { $0.profileName == profileName }) ?? costData.first,
+              let lastMonthMTD = lastMonthMTDData[cost.profileName] else { return nil }
+        let lastMonthTotal = NSDecimalNumber(decimal: lastMonthMTD.amount).doubleValue
         guard lastMonthTotal > 0 else { return nil }
-        let projectedDouble = NSDecimalNumber(decimal: projected).doubleValue
-        return (projectedDouble - lastMonthTotal) / lastMonthTotal
+        let currentTotal = NSDecimalNumber(decimal: cost.amount).doubleValue
+        return (currentTotal - lastMonthTotal) / lastMonthTotal
     }
 
     var budgetFraction: Double? {

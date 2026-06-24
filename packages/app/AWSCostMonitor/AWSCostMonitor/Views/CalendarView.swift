@@ -18,6 +18,8 @@ struct CalendarView: View {
     @State private var selectedDayData: DailyCost?
     @State private var selectedDayServices: [ServiceCost] = []
     @State private var hoveredDate: Date?
+    @State private var breakdownSelection: CostBreakdownMode = .service
+    @State private var breakdownExpanded: Bool = false
 
     init(highlightedService: String? = nil, initialDate: Date? = nil) {
         self.highlightedService = highlightedService
@@ -102,6 +104,11 @@ struct CalendarView: View {
                             Task {
                                 await awsManager.fetchCostForSelectedProfile()
                             }
+                            // Keep the dimension breakdown in sync with the new
+                            // profile (account/region/tag are profile-specific).
+                            if breakdownExpanded && breakdownSelection != .service {
+                                Task { await awsManager.fetchBreakdownForCurrentMode(month: currentMonth) }
+                            }
                         }
                     )) {
                         ForEach(awsManager.profiles) { profile in
@@ -173,7 +180,16 @@ struct CalendarView: View {
                 }
                 .padding(12)
             }
-            
+
+            // Savings opportunity — the full breakdown behind the popover's
+            // one-line "SP save / mo" nudge. Only shown when AWS returns an
+            // actionable recommendation.
+            savingsOpportunityCard
+
+            // Cost breakdown by dimension — the detail the lean popover omits.
+            // Account / region / tag grouping the menu bar never shows.
+            costBreakdownSection
+
             // Legend
             HStack(spacing: 20) {
                 HStack(spacing: 5) {
@@ -246,9 +262,234 @@ struct CalendarView: View {
                 currentMonth = target
                 selectDay(target)
             }
+
+            // Mirror the manager's persisted breakdown preference, then load it.
+            breakdownSelection = awsManager.breakdownMode
+            if breakdownSelection != .service {
+                breakdownExpanded = true
+                Task { await awsManager.fetchBreakdownForCurrentMode(month: currentMonth) }
+            }
         }
     }
-    
+
+    // MARK: - Cost Breakdown
+
+    // Group spend by a dimension the popover deliberately omits (account,
+    // region, tag value). Service is included for parity. Collapsed by default
+    // so it never crowds the calendar; expanding triggers the fetch.
+    @ViewBuilder
+    private var costBreakdownSection: some View {
+        DisclosureGroup(isExpanded: $breakdownExpanded) {
+            VStack(alignment: .leading, spacing: 10) {
+                Picker("", selection: $breakdownSelection) {
+                    ForEach(CostBreakdownMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: breakdownSelection) { _, newMode in
+                    Task { await awsManager.handleBreakdownModeChange(newMode, month: currentMonth) }
+                }
+
+                if breakdownSelection == .tag {
+                    HStack(spacing: 6) {
+                        Text("Tag key:")
+                            .ledgerMeta()
+                            .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                        TextField("e.g. Environment", text: $awsManager.costBreakdownTagKey)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 180)
+                            .onSubmit {
+                                Task { await awsManager.handleBreakdownTagKeyChange(awsManager.costBreakdownTagKey, month: currentMonth) }
+                            }
+                    }
+                }
+
+                breakdownList
+            }
+            .padding(.top, 8)
+        } label: {
+            Text("Cost breakdown by \(breakdownSelection.displayName)")
+                .ledgerStatValue()
+                .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+        // Re-scope account/region/tag to the newly selected month. Service is a
+        // computed view over cached daily data, so it refreshes on its own.
+        .onChange(of: currentMonth) { _, newMonth in
+            guard breakdownExpanded, breakdownSelection != .service else { return }
+            Task { await awsManager.fetchBreakdownForCurrentMode(month: newMonth) }
+        }
+        .onChange(of: breakdownExpanded) { _, expanded in
+            guard expanded, breakdownSelection != .service else { return }
+            Task { await awsManager.fetchBreakdownForCurrentMode(month: currentMonth) }
+        }
+    }
+
+    // Normalized rows for the selected dimension, ranked, with a proportional
+    // bar relative to the largest entry.
+    @ViewBuilder
+    private var breakdownList: some View {
+        let rows = breakdownRows
+        if rows.isEmpty {
+            Text(breakdownSelection == .tag && awsManager.costBreakdownTagKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                 ? "Enter a tag key to view tag costs"
+                 : "No \(breakdownSelection.displayName.lowercased()) data available")
+                .ledgerMeta()
+                .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                .padding(.vertical, 4)
+        } else {
+            let maxAmount = rows.map(\.amount).max() ?? 1
+            VStack(spacing: 4) {
+                ForEach(rows.prefix(8)) { row in
+                    breakdownRow(row, maxAmount: maxAmount)
+                }
+                if rows.count > 8 {
+                    Text("+ \(rows.count - 8) more")
+                        .ledgerMeta()
+                        .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    private func breakdownRow(_ row: BreakdownRow, maxAmount: Decimal) -> some View {
+        let fraction = maxAmount > 0
+            ? NSDecimalNumber(decimal: row.amount / maxAmount).doubleValue
+            : 0
+        return ZStack(alignment: .leading) {
+            GeometryReader { geo in
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(LedgerTokens.Color.accent(a).opacity(0.12))
+                    .frame(width: max(0, geo.size.width * fraction))
+            }
+            HStack {
+                Text(row.label)
+                    .ledgerBody()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+                    .lineLimit(1)
+                Spacer()
+                Text(CurrencyFormatter.format(row.amount))
+                    .ledgerBody()
+                    .monospacedDigit()
+                    .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+            }
+            .padding(.horizontal, 8)
+        }
+        .frame(height: 24)
+    }
+
+    // A dimension-agnostic row so the list view doesn't branch per mode.
+    private struct BreakdownRow: Identifiable {
+        let id: String
+        let label: String
+        let amount: Decimal
+    }
+
+    private var breakdownRows: [BreakdownRow] {
+        switch breakdownSelection {
+        case .service:
+            // Derived from cached per-day service costs for the visible month,
+            // so it tracks calendar navigation without an extra API call and
+            // stays consistent with the grid.
+            return monthServiceRows
+        case .tag:
+            return awsManager.tagCosts.map { BreakdownRow(id: $0.id.uuidString, label: $0.tagValue, amount: $0.amount) }
+        case .account:
+            return awsManager.accountCosts.map { BreakdownRow(id: $0.accountId, label: $0.displayName, amount: $0.amount) }
+        case .region:
+            return awsManager.regionCosts.map { BreakdownRow(id: $0.region, label: $0.region, amount: $0.amount) }
+        }
+    }
+
+    // Service breakdown for the visible month, aggregated from cached daily
+    // service costs. Account/region/tag have no daily cache, so they fetch
+    // per-month on demand instead.
+    private var monthServiceRows: [BreakdownRow] {
+        guard let profile = awsManager.selectedProfile,
+              let daily = awsManager.dailyServiceCostsByProfile[profile.name] else { return [] }
+        var totals: [String: Decimal] = [:]
+        for entry in daily where calendar.isDate(entry.date, equalTo: currentMonth, toGranularity: .month) {
+            totals[entry.serviceName, default: 0] += entry.amount
+        }
+        return totals
+            .map { BreakdownRow(id: $0.key, label: $0.key, amount: $0.value) }
+            .sorted { $0.amount > $1.amount }
+    }
+
+    // MARK: - Savings Opportunity
+
+    // Full breakdown of the AWS Savings Plans purchase recommendation. The
+    // popover shows only the headline monthly savings; here we expand it into
+    // the supporting metrics (commitment, savings %, ROI, terms).
+    @ViewBuilder
+    private var savingsOpportunityCard: some View {
+        if let profile = awsManager.selectedProfile,
+           let rec = awsManager.spRecommendation[profile.name],
+           rec.isWorthwhile {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(LedgerTokens.Color.signalUnder(a))
+                    Text("Savings opportunity")
+                        .ledgerStatValue()
+                        .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+                    Spacer()
+                    Text("est. ~\(CurrencyFormatter.format(Decimal(rec.estimatedMonthlySavings))) / mo")
+                        .ledgerStatValue()
+                        .foregroundColor(LedgerTokens.Color.signalUnder(a))
+                }
+
+                Text("Based on the last \(rec.lookbackDays) days, a \(rec.term) Compute Savings Plan (\(rec.paymentOption)) at \(hourlyCommitText(rec.hourlyCommitment))/hr would cut on-demand spend.")
+                    .ledgerMeta()
+                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 24) {
+                    savingsMetric(label: "Commit", value: "\(hourlyCommitText(rec.hourlyCommitment))/hr")
+                    if let pct = rec.estimatedSavingsPercentage {
+                        savingsMetric(label: "Savings", value: String(format: "%.0f%%", pct))
+                    }
+                    if let roi = rec.estimatedROI {
+                        savingsMetric(label: "ROI", value: String(format: "%.0f%%", roi))
+                    }
+                    savingsMetric(label: "Term", value: rec.term)
+                    Spacer()
+                }
+            }
+            .padding(12)
+            .background(LedgerTokens.Color.signalUnder(a).opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(LedgerTokens.Color.signalUnder(a).opacity(0.25), lineWidth: 1)
+            )
+            .cornerRadius(6)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+        }
+    }
+
+    // Hourly commitment is typically well under $1, so it needs cents — the
+    // app's default whole-dollar currency format would render it as "$0/hr".
+    private func hourlyCommitText(_ value: Double) -> String {
+        String(format: "$%.2f", value)
+    }
+
+    private func savingsMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .ledgerMeta()
+                .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+            Text(value)
+                .ledgerBody()
+                .foregroundColor(LedgerTokens.Color.inkPrimary(a))
+        }
+    }
+
     // MARK: - Helper Properties
     
     private var weekdaySymbols: [String] {

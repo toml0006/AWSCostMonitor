@@ -5,6 +5,9 @@ struct PopoverContentView: View {
     @EnvironmentObject var awsManager: AWSManager
     @EnvironmentObject var appearance: AppearanceManager
     @AppStorage("SparklineRange") private var sparklineRangeRaw: String = SparklineRange.monthRolling.rawValue
+    // Shared sparkline scrub position: set by the hero sparkline, read by the
+    // hero (day value) and the service list (per-day amounts + highlight).
+    @State private var hoveredDayIndex: Int? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,16 +17,20 @@ struct PopoverContentView: View {
 
             HeroSplit(
                 mtd: mtd,
+                projected: awsManager.projectedMonthlyTotal.map { NSDecimalNumber(decimal: $0).doubleValue },
                 sparkline: sparklineSeries.values,
                 sparklineHighlightIndex: sparklineSeries.todayIndex,
                 sparklineStartDate: sparklineRange.startDate(),
-                rows: heroRows,
+                leftRows: actualRows,
+                rightRows: forecastRows,
+                projectedColor: forecastSignal,
                 hideCents: hideCents,
                 isLoading: awsManager.isLoading,
                 range: Binding(
                     get: { SparklineRange(rawValue: sparklineRangeRaw) ?? .monthRolling },
                     set: { sparklineRangeRaw = $0.rawValue }
                 ),
+                hoveredIndex: $hoveredDayIndex,
                 onSelectDay: { date in
                     CalendarWindowController.showCalendarWindow(awsManager: awsManager, initialDate: date)
                 }
@@ -37,6 +44,9 @@ struct PopoverContentView: View {
                 hideCents: hideCents,
                 isLoading: awsManager.isLoading,
                 sparklines: serviceSparklines,
+                hoveredDayIndex: hoveredDayIndex,
+                hoveredDayTotal: hoveredDayTotal,
+                sparklineStartDate: sparklineRange.startDate(),
                 onSelect: { service in
                     CalendarWindowController.showCalendarWindow(awsManager: awsManager, highlightedService: service)
                 }
@@ -102,6 +112,15 @@ struct PopoverContentView: View {
         return sparklineRange.series(from: points)
     }
 
+    // Total spend on the scrubbed day (the main sparkline's value at that index),
+    // used to compute each service's share of that day.
+    private var hoveredDayTotal: Double? {
+        guard let i = hoveredDayIndex else { return nil }
+        let vals = sparklineSeries.values
+        guard i >= 0, i < vals.count else { return nil }
+        return vals[i]
+    }
+
     // Per-service sparkline series aligned to the current sparkline range. Top 5 services
     // by MTD cost get their own day-aligned series; remaining services are aggregated
     // into an "Other" series so the row beneath "Other" also shows its trend.
@@ -147,7 +166,7 @@ struct PopoverContentView: View {
         let rowH = LedgerTokens.Layout.rowHeight(appearance.appearance)
         return 36          // ProfileRow
              + 1           // hairline
-             + 152         // HeroSplit
+             + HeroSplit.panelHeight(leftCount: actualRows.count, rightCount: forecastRows.count)
              + 1           // hairline
              + CGFloat(serviceRowCount) * rowH
              + 1           // hairline
@@ -155,15 +174,50 @@ struct PopoverContentView: View {
     }
 
     private var windowWidth: CGFloat {
-        // Size the window so the hero value never truncates.
-        // At 34pt monospaced light, each character is ~20px wide.
-        let heroStr = CurrencyFormatter.format(mtd)
-        let leftPanel = CGFloat(heroStr.count) * 20 + 28  // content + horizontal padding
-        let rightPanel: CGFloat = 168                      // KV rows comfortably fit
-        return max(360, leftPanel + rightPanel + 1)
+        // Two mirrored hero columns (actual | forecast). Size each so neither
+        // anchor number truncates; at 34pt monospaced ~20px per character.
+        let mtdStr = CurrencyFormatter.format(mtd)
+        let projStr = projectedDouble.map { CurrencyFormatter.format($0) } ?? mtdStr
+        let heroChars = max(mtdStr.count, projStr.count)
+        let columnWidth = CGFloat(heroChars) * 20 + 44
+        return max(500, columnWidth * 2 + 1)
     }
 
-    private var heroRows: [HeroSplit.KV] {
+    private var burnPerDay: Double {
+        guard mtd > 0 else { return 0 }
+        let daysElapsed = max(1.0, Double(Calendar.current.component(.day, from: Date())))
+        return mtd / daysElapsed
+    }
+
+    private var monthlyBudget: Double? {
+        guard let p = awsManager.selectedProfile,
+              let b = awsManager.getBudget(for: p.name).monthlyBudget else { return nil }
+        let v = NSDecimalNumber(decimal: b).doubleValue
+        return v > 0 ? v : nil
+    }
+
+    private var projectedDouble: Double? {
+        awsManager.projectedMonthlyTotal.map { NSDecimalNumber(decimal: $0).doubleValue }
+    }
+
+    // Forecast anchor color = the verdict on where the month is heading.
+    // Over budget (or, absent a budget, trending above last month) is bad → red;
+    // comfortably under is good → green; unknown stays neutral accent.
+    private var forecastSignal: HeroSplit.KV.KVColor {
+        guard let projected = projectedDouble else { return .accent }
+        if let budget = monthlyBudget {
+            return projected > budget ? .over : .under
+        }
+        if let p = awsManager.selectedProfile,
+           let lastFull = awsManager.lastMonthData[p.name].map({ NSDecimalNumber(decimal: $0.amount).doubleValue }),
+           lastFull > 0 {
+            return projected > lastFull ? .over : .under
+        }
+        return .accent
+    }
+
+    // LEFT column — what already happened this month.
+    private var actualRows: [HeroSplit.KV] {
         var out: [HeroSplit.KV] = []
         if let delta = awsManager.deltaFractionVsLastMonth {
             let sign = delta >= 0 ? "▲" : "▼"
@@ -173,35 +227,48 @@ struct PopoverContentView: View {
                 color: delta >= 0 ? .over : .under
             ))
         }
-        // Forecast: prefer Cost Explorer's GetCostForecast (ML model with
-        // day-of-week seasonality, RI amortization, etc.). Falls back to a
-        // local linear extrapolation when the API hasn't returned a value.
-        if let projected = awsManager.projectedMonthlyTotal {
-            out.append(.init(label: "Forecast", value: CurrencyFormatter.format(projected), color: .accent))
+        if burnPerDay > 0 {
+            out.append(.init(label: "Burn / day", value: CurrencyFormatter.format(burnPerDay), color: .ink))
         }
-        if let p = awsManager.selectedProfile, let last = awsManager.lastMonthData[p.name] {
-            out.append(.init(label: "Last mo", value: CurrencyFormatter.format(last.amount), color: .ink))
+        // Last month through the same day — the apples-to-apples basis for the
+        // delta above, so both numbers describe the same elapsed window.
+        if let p = awsManager.selectedProfile, let lastMTD = awsManager.lastMonthMTDData[p.name] {
+            out.append(.init(label: "Last mo MTD", value: CurrencyFormatter.format(lastMTD.amount), color: .ink))
         }
-        if mtd > 0 {
-            let daysElapsed = max(1.0, Double(Calendar.current.component(.day, from: Date())))
-            let burn = mtd / daysElapsed
-            out.append(.init(label: "Burn / day", value: CurrencyFormatter.format(burn), color: .ink))
-        }
-        if let f = awsManager.budgetFraction {
-            out.append(.init(
-                label: "Budget",
-                value: String(format: "%.0f%%", f * 100),
-                color: f > 1.0 ? .over : .ink
-            ))
-        }
-        // Savings Plans / RI coverage. Prefer SP when both available since
-        // modern AWS accounts use SP; fall back to RI when the account only
-        // has reservations.
+        // Savings Plans coverage, backed by a real existence check.
+        // - existence known false → no plan at all ("None")
+        // - existence known true  → coverage % (or "Active" if CE hasn't reported)
+        // - existence unknown (call failed / no savingsplans permission) →
+        //   fall back to Cost Explorer coverage, preferring SP then RI.
         if let p = awsManager.selectedProfile,
-           let summary = awsManager.commitmentSummary[p.name],
-           let coverage = summary.preferredCoveragePercent {
-            let label = summary.spCoveragePercent != nil ? "SP cover" : "RI cover"
-            out.append(.init(label: label, value: String(format: "%.0f%%", coverage), color: .ink))
+           let summary = awsManager.commitmentSummary[p.name] {
+            switch summary.savingsPlansExist {
+            case .some(false):
+                // No Savings Plan — but the account may still have Reserved
+                // Instances, so fall back to RI coverage before declaring "None".
+                if let riCov = summary.riCoveragePercent {
+                    out.append(.init(label: "RI cover", value: String(format: "%.0f%%", riCov), color: .ink))
+                } else {
+                    out.append(.init(label: "SP cover", value: "None", color: .ink))
+                }
+            case .some(true):
+                let v = summary.spCoveragePercent.map { String(format: "%.0f%%", $0) } ?? "Active"
+                out.append(.init(label: "SP cover", value: v, color: .ink))
+            case .none:
+                if let coverage = summary.preferredCoveragePercent {
+                    let label = summary.spCoveragePercent != nil ? "SP cover" : "RI cover"
+                    out.append(.init(label: label, value: String(format: "%.0f%%", coverage), color: .ink))
+                }
+            }
+            // Lean actionable nudge: only when AWS says real money is on the
+            // table. The full breakdown lives in the Calendar window.
+            if let rec = awsManager.spRecommendation[p.name], rec.isWorthwhile {
+                out.append(.init(
+                    label: "SP save / mo",
+                    value: "~\(CurrencyFormatter.format(Decimal(rec.estimatedMonthlySavings)))",
+                    color: .under
+                ))
+            }
         }
         // AWS-detected anomalies: show count + top-impact service when present.
         if let p = awsManager.selectedProfile,
@@ -212,9 +279,48 @@ struct PopoverContentView: View {
             let value = top?.topService ?? CurrencyFormatter.format(top?.totalImpact ?? 0)
             out.append(.init(label: label, value: value, color: .over))
         }
-        if let p = awsManager.selectedProfile, let entry = awsManager.costCache[p.name] {
-            let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
-            out.append(.init(label: "Updated", value: fmt.string(from: entry.fetchDate), color: .ink))
+        return out
+    }
+
+    // RIGHT column — what's projected to happen by month end. The forecast hero
+    // ($ projection) lives in HeroSplit; these are its supporting projections.
+    private var forecastRows: [HeroSplit.KV] {
+        var out: [HeroSplit.KV] = []
+        // Projected month-end vs last month's full total.
+        if let projected = projectedDouble,
+           let p = awsManager.selectedProfile,
+           let lastFull = awsManager.lastMonthData[p.name].map({ NSDecimalNumber(decimal: $0.amount).doubleValue }),
+           lastFull > 0 {
+            let d = (projected - lastFull) / lastFull
+            let sign = d >= 0 ? "▲" : "▼"
+            out.append(.init(
+                label: "vs last mo",
+                value: "\(sign) \(String(format: "%.0f", abs(d * 100)))%",
+                color: d >= 0 ? .over : .under
+            ))
+        }
+        if let projected = projectedDouble, let budget = monthlyBudget {
+            let pct = projected / budget * 100
+            out.append(.init(
+                label: "vs budget",
+                value: pct >= 1000 ? ">999%" : String(format: "%.0f%%", pct),
+                color: projected > budget ? .over : .under
+            ))
+            let left = budget - projected
+            out.append(.init(
+                label: "Budget left",
+                value: CurrencyFormatter.format(left),
+                color: left < 0 ? .over : .ink
+            ))
+        }
+        // Projected exhaustion date — only meaningful when on track to exceed.
+        if let budget = monthlyBudget, burnPerDay > 0, mtd < budget,
+           let projected = projectedDouble, projected >= budget {
+            let daysLeft = (budget - mtd) / burnPerDay
+            if let date = Calendar.current.date(byAdding: .day, value: Int(daysLeft.rounded()), to: Date()) {
+                let fmt = DateFormatter(); fmt.dateFormat = "MMM d"
+                out.append(.init(label: "Exhausts", value: fmt.string(from: date), color: .over))
+            }
         }
         return out
     }

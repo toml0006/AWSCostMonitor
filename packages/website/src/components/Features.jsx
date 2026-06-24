@@ -15,11 +15,32 @@ import {
   PieChart,
   Palette,
   Activity,
-  Sliders
+  Sliders,
+  Lightbulb,
+  Layers
 } from 'lucide-react'
 
 const features = [
-  // v1.5.0 - Latest (Ledger redesign)
+  // v1.6.0 - Latest
+  {
+    icon: Lightbulb,
+    title: 'Savings Plan Recommendations',
+    description: 'Surfaces AWS\'s own Savings Plan purchase recommendation — a one-line "save / mo" nudge in the menu bar, with commitment, estimated savings, ROI, and term in the calendar window',
+    color: 'primary',
+    badge: 'v1.6.0',
+    version: '1.6.0',
+    badgeColor: 'primary'
+  },
+  {
+    icon: Layers,
+    title: 'Account, Region & Tag Breakdowns',
+    description: 'Break spend down by linked account, region, or cost-allocation tag for any selected month — right alongside the calendar',
+    color: 'secondary',
+    badge: 'v1.6.0',
+    version: '1.6.0',
+    badgeColor: 'secondary'
+  },
+  // v1.5.0 (Ledger redesign)
   {
     icon: Palette,
     title: 'Ledger Design System',

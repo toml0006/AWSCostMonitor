@@ -7,6 +7,11 @@ struct ServiceList: View {
     let hideCents: Bool
     let isLoading: Bool
     let sparklines: [String: [Double]]
+    // Day scrubbed on the main sparkline (shared). When set, rows show that
+    // day's per-service amount/share and highlight the day in their sparkline.
+    var hoveredDayIndex: Int? = nil
+    var hoveredDayTotal: Double? = nil
+    var sparklineStartDate: Date? = nil
     let onSelect: (String) -> Void
 
     var body: some View {
@@ -39,32 +44,52 @@ struct ServiceList: View {
     }
 
     private func row(for name: String, amount: Double) -> some View {
-        let percentage = total > 0 ? amount / total : 0
         let series = sparklines[name] ?? []
-        return ZStack {
+        // When scrubbing a day, swap the month-to-date amount/share for that
+        // single day's figures (per-service value ÷ that day's total).
+        let dayAmount: Double? = {
+            guard let i = hoveredDayIndex, i >= 0, i < series.count else { return nil }
+            return series[i]
+        }()
+        let displayAmount = dayAmount ?? amount
+        let displayTotal = dayAmount != nil ? (hoveredDayTotal ?? total) : total
+        let percentage = displayTotal > 0 ? displayAmount / displayTotal : 0
+        // Sparkline and percentage are combined: the trend is a faint background
+        // behind the name and its share %, with the % reading over it. The
+        // amount is held clear of the bars by reserving a trailing zone, so the
+        // dollar figure never sits under the tallest (most-recent) bar.
+        let amountZone: CGFloat = 96
+        return ZStack(alignment: .leading) {
             if !series.isEmpty {
-                Sparkline(values: series)
-                    .opacity(0.22)
-                    .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
-                    .padding(.vertical, 3)
-                    .allowsHitTesting(false)
+                Sparkline(
+                    values: series,
+                    highlightIndex: hoveredDayIndex,
+                    startDate: sparklineStartDate,
+                    showMonthBoundaries: true,
+                    showMonthLabels: false,
+                    showWeekLines: true
+                )
+                .opacity(0.3)
+                .padding(.trailing, amountZone)
+                .padding(.vertical, 4)
+                .allowsHitTesting(false)
             }
             HStack(spacing: 0) {
                 Text(name)
                     .ledgerBody()
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Spacer(minLength: 6)
+                Spacer(minLength: 8)
                 Text(String(format: "%.0f%%", percentage * 100))
                     .ledgerMeta()
-                    .frame(width: 36, alignment: .trailing)
-                Spacer().frame(width: 6)
-                Text(format(amount))
+                    .frame(width: 38, alignment: .trailing)
+                Spacer().frame(width: 16)
+                Text(format(displayAmount))
                     .ledgerStatValue()
-                    .frame(minWidth: 72, alignment: .trailing)
+                    .frame(minWidth: 80, alignment: .trailing)
             }
-            .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
         }
+        .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
         .frame(height: LedgerTokens.Layout.rowHeight(a))
         .contentShape(Rectangle())
         .onTapGesture { onSelect(name) }

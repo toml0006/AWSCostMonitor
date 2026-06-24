@@ -26,6 +26,42 @@ import {
 
 const releases = [
   {
+    version: '1.6.0',
+    date: 'June 24, 2026',
+    title: 'Savings Insights & Cost Breakdowns',
+    icon: Sparkles,
+    color: 'primary',
+    highlights: [
+      'Savings Plan purchase recommendation — a lean "SP save / mo" nudge in the popover, expanded into a full savings card (commitment, savings %, ROI, term) in the calendar window',
+      'Cost breakdown by account, region, and cost-allocation tag, scoped to the selected month',
+      'Popover split into month-to-date actuals and a month-end forecast, with sparkline scrubbing and cross-highlighted per-service rows',
+      'Month-over-month delta fixed — now AWS-direct MTD-vs-MTD on matching metrics'
+    ],
+    features: [
+      {
+        icon: TrendingUp,
+        title: 'Savings Plan recommendation',
+        description: 'Surfaces AWS\'s own GetSavingsPlansPurchaseRecommendation. The menu bar shows the estimated monthly savings; the calendar window breaks down the recommended hourly commitment, savings %, ROI, and term.'
+      },
+      {
+        icon: Layers,
+        title: 'Account / region / tag breakdowns',
+        description: 'A breakdown switcher in the calendar window groups spend by linked account, region, or tag value for whichever month you\'re viewing.'
+      },
+      {
+        icon: Shield,
+        title: 'Real Savings Plan existence check',
+        description: 'DescribeSavingsPlans disambiguates "no plan" from "0% covered," so coverage reads None / Active / % correctly.'
+      }
+    ],
+    bugFixes: [
+      'Month-over-month delta now uses AWS-reported month-to-date vs last month-to-date on matching metrics (AmortizedCost on both sides), so accounts with Savings Plans, Reserved Instances, or credits no longer show skewed deltas',
+      'Calendar cost breakdown follows the selected month instead of always showing the current month',
+      'RI-only accounts fall back to Reserved Instance coverage instead of reading "SP cover None"',
+      'All cost metrics standardized on AmortizedCost across current month, last month, and every breakdown dimension'
+    ]
+  },
+  {
     version: '1.5.3',
     date: 'May 7, 2026',
     title: 'Combine Deadlock Fix',
