@@ -2,6 +2,36 @@
 
 All notable changes to AWS Cost Monitor will be documented in this file.
 
+## [1.6.0] - 2026-06-24
+
+### What's New
+
+**Sharper cost intelligence — and the menu bar tells you what to do about it.**
+
+v1.6 splits the popover into what already happened and what's coming, surfaces AWS's own savings recommendation, and adds account / region / tag breakdowns to the calendar — while fixing the month-over-month delta so the numbers actually line up.
+
+### Features Added
+
+- **Savings Plan purchase recommendation** — the popover shows a lean "SP save / mo" nudge when AWS recommends a purchase; the Calendar window expands it into a full "Savings opportunity" card (commitment, estimated savings %, ROI, term)
+- **Real Savings Plan existence check** — `DescribeSavingsPlans` disambiguates "no plan" from "0% covered," so SP cover reads None / Active / % correctly
+- **Cost breakdown by account, region, and tag** — a new breakdown switcher in the Calendar window, scoped to the selected month
+- **Past / forecast hero split** — the popover separates month-to-date actuals (left) from the month-end forecast (right), with budget moved to the forecast column
+- **Sparkline scrubbing** — hover the main sparkline to read any day's total; per-service rows cross-highlight and update to that day, with week and month grid lines
+- **Last-updated time** in the popover header
+
+### Improvements
+
+- Forecast carries a good/bad signal color; month boundaries are marked in all sparklines
+- Tighter hero stat spacing and a recombined service-row sparkline / percentage
+- Cost metrics standardized on AmortizedCost across current month, last month, and every breakdown dimension for consistent totals
+
+### Bug Fixes
+
+- **Month-over-month delta is now AWS-direct MTD-vs-MTD** instead of a locally computed projection, and compares like metrics (AmortizedCost on both sides) — accounts with Savings Plans, Reserved Instances, or credits no longer show skewed deltas
+- Calendar cost breakdown follows the selected month instead of always showing the current month
+- RI-only accounts fall back to RI coverage instead of reading "SP cover None"
+- Savings recommendation nudge clears when AWS stops recommending a purchase
+
 ## [1.5.0] - 2026-04-19
 
 ### What's New
