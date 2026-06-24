@@ -2586,30 +2586,33 @@ class AWSManager: ObservableObject {
         }
     }
 
-    func handleBreakdownModeChange(_ mode: CostBreakdownMode) async {
+    func handleBreakdownModeChange(_ mode: CostBreakdownMode, month: Date? = nil) async {
         breakdownMode = mode
-        await fetchBreakdownForCurrentMode()
+        await fetchBreakdownForCurrentMode(month: month)
     }
-    
-    func handleBreakdownTagKeyChange(_ key: String) async {
+
+    func handleBreakdownTagKeyChange(_ key: String, month: Date? = nil) async {
         costBreakdownTagKey = key
         if breakdownMode == .tag {
-            await fetchTagBreakdown()
+            await fetchTagBreakdown(month: month)
         }
     }
-    
-    func fetchBreakdownForCurrentMode() async {
+
+    // `month` scopes the account/region/tag breakdowns to the calendar's
+    // selected month. Service is derived locally from cached daily data, so it
+    // ignores `month` here (only the MTD popover store is refreshed).
+    func fetchBreakdownForCurrentMode(month: Date? = nil) async {
         switch breakdownMode {
         case .service:
             if serviceCosts.isEmpty {
                 await fetchServiceBreakdown()
             }
         case .tag:
-            await fetchTagBreakdown()
+            await fetchTagBreakdown(month: month)
         case .account:
-            await fetchAccountBreakdown()
+            await fetchAccountBreakdown(month: month)
         case .region:
-            await fetchRegionBreakdown()
+            await fetchRegionBreakdown(month: month)
         }
     }
     
@@ -2735,7 +2738,23 @@ class AWSManager: ObservableObject {
     }
 
     // Fetch cost breakdown by tag
-    func fetchTagBreakdown() async {
+    /// Date range (yyyy-MM-dd) for a breakdown over `month`. nil = current
+    /// month-to-date. A past month spans its full extent; the current month
+    /// ends tomorrow (today inclusive) so it matches the menu-bar MTD figure.
+    private func breakdownDateRange(for month: Date?) -> (start: String, end: String) {
+        let cal = Calendar.current
+        let now = Date()
+        let target = month ?? now
+        let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: target))!
+        let startOfNextMonth = cal.date(byAdding: .month, value: 1, to: startOfMonth)!
+        let end = cal.isDate(target, equalTo: now, toGranularity: .month)
+            ? cal.date(byAdding: .day, value: 1, to: now)!   // today inclusive
+            : startOfNextMonth                                // full past month
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        return (df.string(from: startOfMonth), df.string(from: end))
+    }
+
+    func fetchTagBreakdown(month: Date? = nil) async {
         guard let profile = selectedProfile else { return }
         let tagKey = costBreakdownTagKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !tagKey.isEmpty else {
@@ -2768,22 +2787,13 @@ class AWSManager: ObservableObject {
             )
             let client = CostExplorerClient(config: config)
             
-            let calendar = Calendar.current
-            let now = Date()
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            let endOfToday = calendar.date(byAdding: .day, value: 1, to: now)!
-            
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            
+            let range = breakdownDateRange(for: month)
+
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: tagKey, type: .tag)],
                 metrics: ["UnblendedCost"],
-                timePeriod: .init(
-                    end: dateFormatter.string(from: endOfToday),
-                    start: dateFormatter.string(from: startOfMonth)
-                )
+                timePeriod: .init(end: range.end, start: range.start)
             )
             
             await MainActor.run {
@@ -2843,7 +2853,7 @@ class AWSManager: ObservableObject {
     // MARK: - Account / Region breakdowns (Phase 2)
 
     /// Fetch MTD cost grouped by AWS linked account. Populates `accountCosts`.
-    func fetchAccountBreakdown() async {
+    func fetchAccountBreakdown(month: Date? = nil) async {
         guard let profile = selectedProfile else { return }
         if !canMakeAPICall() {
             log(.warning, category: "API", "Proceeding with account breakdown even though rate limiter is active")
@@ -2864,17 +2874,13 @@ class AWSManager: ObservableObject {
             )
             let client = CostExplorerClient(config: config)
 
-            let cal = Calendar.current
-            let now = Date()
-            let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: now))!
-            let endOfToday = cal.date(byAdding: .day, value: 1, to: now)!
-            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            let range = breakdownDateRange(for: month)
 
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: "LINKED_ACCOUNT", type: .dimension)],
                 metrics: ["UnblendedCost"],
-                timePeriod: .init(end: df.string(from: endOfToday), start: df.string(from: startOfMonth))
+                timePeriod: .init(end: range.end, start: range.start)
             )
 
             await MainActor.run { self.lastAPICallTime = Date() }
@@ -2915,7 +2921,7 @@ class AWSManager: ObservableObject {
     }
 
     /// Fetch MTD cost grouped by AWS region. Populates `regionCosts`.
-    func fetchRegionBreakdown() async {
+    func fetchRegionBreakdown(month: Date? = nil) async {
         guard let profile = selectedProfile else { return }
         if !canMakeAPICall() {
             log(.warning, category: "API", "Proceeding with region breakdown even though rate limiter is active")
@@ -2936,17 +2942,13 @@ class AWSManager: ObservableObject {
             )
             let client = CostExplorerClient(config: config)
 
-            let cal = Calendar.current
-            let now = Date()
-            let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: now))!
-            let endOfToday = cal.date(byAdding: .day, value: 1, to: now)!
-            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            let range = breakdownDateRange(for: month)
 
             let input = GetCostAndUsageInput(
                 granularity: .monthly,
                 groupBy: [.init(key: "REGION", type: .dimension)],
                 metrics: ["UnblendedCost"],
-                timePeriod: .init(end: df.string(from: endOfToday), start: df.string(from: startOfMonth))
+                timePeriod: .init(end: range.end, start: range.start)
             )
 
             await MainActor.run { self.lastAPICallTime = Date() }

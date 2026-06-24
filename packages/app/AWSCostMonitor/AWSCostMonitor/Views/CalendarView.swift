@@ -262,7 +262,7 @@ struct CalendarView: View {
             breakdownSelection = awsManager.breakdownMode
             if breakdownSelection != .service {
                 breakdownExpanded = true
-                Task { await awsManager.fetchBreakdownForCurrentMode() }
+                Task { await awsManager.fetchBreakdownForCurrentMode(month: currentMonth) }
             }
         }
     }
@@ -284,7 +284,7 @@ struct CalendarView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .onChange(of: breakdownSelection) { _, newMode in
-                    Task { await awsManager.handleBreakdownModeChange(newMode) }
+                    Task { await awsManager.handleBreakdownModeChange(newMode, month: currentMonth) }
                 }
 
                 if breakdownSelection == .tag {
@@ -296,7 +296,7 @@ struct CalendarView: View {
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 180)
                             .onSubmit {
-                                Task { await awsManager.handleBreakdownTagKeyChange(awsManager.costBreakdownTagKey) }
+                                Task { await awsManager.handleBreakdownTagKeyChange(awsManager.costBreakdownTagKey, month: currentMonth) }
                             }
                     }
                 }
@@ -311,6 +311,16 @@ struct CalendarView: View {
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 4)
+        // Re-scope account/region/tag to the newly selected month. Service is a
+        // computed view over cached daily data, so it refreshes on its own.
+        .onChange(of: currentMonth) { _, newMonth in
+            guard breakdownExpanded, breakdownSelection != .service else { return }
+            Task { await awsManager.fetchBreakdownForCurrentMode(month: newMonth) }
+        }
+        .onChange(of: breakdownExpanded) { _, expanded in
+            guard expanded, breakdownSelection != .service else { return }
+            Task { await awsManager.fetchBreakdownForCurrentMode(month: currentMonth) }
+        }
     }
 
     // Normalized rows for the selected dimension, ranked, with a proportional
@@ -377,7 +387,10 @@ struct CalendarView: View {
     private var breakdownRows: [BreakdownRow] {
         switch breakdownSelection {
         case .service:
-            return awsManager.serviceCosts.map { BreakdownRow(id: $0.serviceName, label: $0.serviceName, amount: $0.amount) }
+            // Derived from cached per-day service costs for the visible month,
+            // so it tracks calendar navigation without an extra API call and
+            // stays consistent with the grid.
+            return monthServiceRows
         case .tag:
             return awsManager.tagCosts.map { BreakdownRow(id: $0.id.uuidString, label: $0.tagValue, amount: $0.amount) }
         case .account:
@@ -385,6 +398,21 @@ struct CalendarView: View {
         case .region:
             return awsManager.regionCosts.map { BreakdownRow(id: $0.region, label: $0.region, amount: $0.amount) }
         }
+    }
+
+    // Service breakdown for the visible month, aggregated from cached daily
+    // service costs. Account/region/tag have no daily cache, so they fetch
+    // per-month on demand instead.
+    private var monthServiceRows: [BreakdownRow] {
+        guard let profile = awsManager.selectedProfile,
+              let daily = awsManager.dailyServiceCostsByProfile[profile.name] else { return [] }
+        var totals: [String: Decimal] = [:]
+        for entry in daily where calendar.isDate(entry.date, equalTo: currentMonth, toGranularity: .month) {
+            totals[entry.serviceName, default: 0] += entry.amount
+        }
+        return totals
+            .map { BreakdownRow(id: $0.key, label: $0.key, amount: $0.value) }
+            .sorted { $0.amount > $1.amount }
     }
 
     // MARK: - Savings Opportunity
@@ -411,13 +439,13 @@ struct CalendarView: View {
                         .foregroundColor(LedgerTokens.Color.signalUnder(a))
                 }
 
-                Text("Based on the last \(rec.lookbackDays) days, a \(rec.term) Compute Savings Plan (\(rec.paymentOption)) at \(CurrencyFormatter.format(Decimal(rec.hourlyCommitment)))/hr would cut on-demand spend.")
+                Text("Based on the last \(rec.lookbackDays) days, a \(rec.term) Compute Savings Plan (\(rec.paymentOption)) at \(hourlyCommitText(rec.hourlyCommitment))/hr would cut on-demand spend.")
                     .ledgerMeta()
                     .foregroundColor(LedgerTokens.Color.inkSecondary(a))
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 24) {
-                    savingsMetric(label: "Commit", value: "\(CurrencyFormatter.format(Decimal(rec.hourlyCommitment)))/hr")
+                    savingsMetric(label: "Commit", value: "\(hourlyCommitText(rec.hourlyCommitment))/hr")
                     if let pct = rec.estimatedSavingsPercentage {
                         savingsMetric(label: "Savings", value: String(format: "%.0f%%", pct))
                     }
@@ -438,6 +466,12 @@ struct CalendarView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 4)
         }
+    }
+
+    // Hourly commitment is typically well under $1, so it needs cents — the
+    // app's default whole-dollar currency format would render it as "$0/hr".
+    private func hourlyCommitText(_ value: Double) -> String {
+        String(format: "$%.2f", value)
     }
 
     private func savingsMetric(label: String, value: String) -> some View {
