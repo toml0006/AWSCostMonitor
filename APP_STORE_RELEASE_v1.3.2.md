@@ -13,12 +13,6 @@ xcodebuild -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -configurati
 xcodebuild -exportArchive -archivePath build/AWSCostMonitor-v1.3.2.xcarchive -exportPath build/AppStore-v1.3.2 -exportOptionsPlist ExportOptions-AppStore.plist
 ```
 
-## Using Fastlane (if configured)
-
-```bash
-bundle exec fastlane mac release
-```
-
 ## Manual Upload via Xcode
 
 1. Open Xcode
