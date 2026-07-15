@@ -5,6 +5,9 @@ struct PopoverContentView: View {
     @EnvironmentObject var awsManager: AWSManager
     @EnvironmentObject var appearance: AppearanceManager
     @AppStorage("SparklineRange") private var sparklineRangeRaw: String = SparklineRange.monthRolling.rawValue
+    // Max on-screen width published by StatusBarController before each show, so
+    // the popover clamps itself to the display and never clips off an edge.
+    @AppStorage("popover.availableWidth") private var availableWidth: Double = 0
     // Shared sparkline scrub position: set by the hero sparkline, read by the
     // hero (day value) and the service list (per-day amounts + highlight).
     @State private var hoveredDayIndex: Int? = nil
@@ -180,7 +183,11 @@ struct PopoverContentView: View {
         let projStr = projectedDouble.map { CurrencyFormatter.format($0) } ?? mtdStr
         let heroChars = max(mtdStr.count, projStr.count)
         let columnWidth = CGFloat(heroChars) * 20 + 44
-        return max(500, columnWidth * 2 + 1)
+        let ideal = max(500, columnWidth * 2 + 1)
+        // Clamp to the on-screen width published by StatusBarController so the
+        // popover never runs off the display when the status item sits near an
+        // edge. 0 (unset) means no constraint yet — use the ideal width.
+        return availableWidth > 0 ? min(ideal, CGFloat(availableWidth)) : ideal
     }
 
     private var burnPerDay: Double {
