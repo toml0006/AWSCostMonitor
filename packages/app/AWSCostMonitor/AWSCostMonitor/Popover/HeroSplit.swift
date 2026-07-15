@@ -151,6 +151,7 @@ struct HeroSplit: View {
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
+                    .spectrumGlow(heroColor)
                     .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .leading)))
             }
 
@@ -292,14 +293,17 @@ struct Sparkline: View {
                         .offset(x: x)
                     }
                 }
-                ForEach(values.indices, id: \.self) { index in
-                    let barHeight = max(2, CGFloat(values[index] / maxValue) * geometry.size.height)
-                    let x = CGFloat(index) * (barWidth + spacing)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(LedgerTokens.Color.accent(a).opacity(index == highlight ? 1.0 : 0.5))
-                        .frame(width: barWidth, height: barHeight)
-                        .offset(x: x, y: 0)
+                Group {
+                    ForEach(values.indices, id: \.self) { index in
+                        let barHeight = max(2, CGFloat(values[index] / maxValue) * geometry.size.height)
+                        let x = CGFloat(index) * (barWidth + spacing)
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(barColor(at: index, count: count).opacity(index == highlight ? 1.0 : 0.5))
+                            .frame(width: barWidth, height: barHeight)
+                            .offset(x: x, y: 0)
+                    }
                 }
+                .spectrumGlow(LedgerTokens.Color.accent(a))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             .contentShape(Rectangle())
@@ -320,6 +324,16 @@ struct Sparkline: View {
                     }
             )
         }
+    }
+
+    // Per-bar fill: the Spectrum accent samples its gradient by position along
+    // the range (oldest→newest); every other accent uses its solid color.
+    private func barColor(at index: Int, count: Int) -> SwiftUI.Color {
+        guard LedgerTokens.Color.accentGradient(a) != nil else {
+            return LedgerTokens.Color.accent(a)
+        }
+        let fraction = count > 1 ? Double(index) / Double(count - 1) : 1
+        return LedgerTokens.Color.spectrumColor(at: fraction)
     }
 
     private func index(for x: CGFloat, step: CGFloat) -> Int? {
