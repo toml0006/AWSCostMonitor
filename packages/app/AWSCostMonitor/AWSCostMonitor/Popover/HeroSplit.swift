@@ -138,22 +138,29 @@ struct HeroSplit: View {
         VStack(alignment: .leading, spacing: LedgerTokens.Layout.unit(a) / 2) {
             Text(title).ledgerLabel()
 
-            if heroLoading {
-                LoadingPulse()
-                    .frame(height: LedgerTokens.Typography.heroPointSize(a) + 4)
-            } else {
-                // Build the hero with the font directly instead of .ledgerHero()
-                // so the caller's signal color is honored — ledgerHero() bakes in
-                // an accent foregroundColor that would otherwise win.
-                Text(hero)
-                    .font(LedgerTokens.Typography.hero(a))
-                    .foregroundColor(heroColor)
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-                    .spectrumGlow(heroColor)
-                    .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .leading)))
+            // Glow is applied to this stable container, NOT the inner Text.
+            // The Text is swapped with a scale transition on every hover-scrub;
+            // keeping the shadow layer mounted on the wrapper avoids re-creating
+            // a glowing, animating layer each update — the churn that can trip an
+            // AppKit popover-animation over-release on teardown.
+            Group {
+                if heroLoading {
+                    LoadingPulse()
+                        .frame(height: LedgerTokens.Typography.heroPointSize(a) + 4)
+                } else {
+                    // Build the hero with the font directly instead of .ledgerHero()
+                    // so the caller's signal color is honored — ledgerHero() bakes in
+                    // an accent foregroundColor that would otherwise win.
+                    Text(hero)
+                        .font(LedgerTokens.Typography.hero(a))
+                        .foregroundColor(heroColor)
+                        .monospacedDigit()
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                        .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .leading)))
+                }
             }
+            .spectrumGlow(heroColor)
 
             VStack(spacing: 3) {
                 ForEach(rows) { row in
