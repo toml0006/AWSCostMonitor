@@ -11,7 +11,10 @@ struct PopoverContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ProfileRow(teamCacheOn: teamCacheEnabled)
+            ProfileRow(
+                teamCacheOn: teamCacheEnabled,
+                onRefresh: { Task { await awsManager.fetchCostForSelectedProfile(force: true) } }
+            )
 
             LedgerHairlineDivider()
 
@@ -55,10 +58,11 @@ struct PopoverContentView: View {
             LedgerHairlineDivider()
 
             FooterActions(
-                onRefresh: { Task { await awsManager.fetchCostForSelectedProfile(force: true) } },
+                version: appVersion,
                 onCalendar: { CalendarWindowController.showCalendarWindow(awsManager: awsManager) },
                 onConsole: { openConsole() },
-                onOverflow: { openOverflowMenu() }
+                onSettings: { showSettingsWindowForApp(awsManager: awsManager) },
+                onQuit: { NSApp.terminate(nil) }
             )
         }
         .frame(width: windowWidth, height: totalHeight)
@@ -102,6 +106,10 @@ struct PopoverContentView: View {
     }
 
     private var hideCents: Bool { MenuBarOptions().hideCents }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+    }
 
     private var sparklineRange: SparklineRange {
         SparklineRange(rawValue: sparklineRangeRaw) ?? .monthRolling
@@ -170,7 +178,7 @@ struct PopoverContentView: View {
              + 1           // hairline
              + CGFloat(serviceRowCount) * rowH
              + 1           // hairline
-             + 44          // FooterActions
+             + 40          // FooterActions
     }
 
     private var windowWidth: CGFloat {
@@ -333,34 +341,6 @@ struct PopoverContentView: View {
         }
     }
 
-    private func openOverflowMenu() {
-        let handler = MenuActionHandler()
-        handler.onSettings = { showSettingsWindowForApp(awsManager: self.awsManager) }
-
-        let settingsItem = NSMenuItem(title: "Settings", action: #selector(MenuActionHandler.openSettings), keyEquivalent: ",")
-        settingsItem.target = handler
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApp.terminate(_:)), keyEquivalent: "q")
-
-        let menu = NSMenu()
-        menu.addItem(settingsItem)
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(quitItem)
-
-        // Retain handler for the menu's lifetime
-        objc_setAssociatedObject(menu, &MenuActionHandler.key, handler, .OBJC_ASSOCIATION_RETAIN)
-
-        if let event = NSApp.currentEvent {
-            NSMenu.popUpContextMenu(menu, with: event, for: NSApp.keyWindow?.contentView ?? NSView())
-        }
-    }
-}
-
-// MARK: - Menu Action Handler
-
-private final class MenuActionHandler: NSObject {
-    static var key = "MenuActionHandlerKey"
-    var onSettings: (() -> Void)?
-    @objc func openSettings() { onSettings?() }
 }
 
 // MARK: - Day Detail Data Structure

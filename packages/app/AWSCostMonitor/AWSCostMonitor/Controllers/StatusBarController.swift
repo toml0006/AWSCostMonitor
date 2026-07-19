@@ -34,19 +34,25 @@ class StatusBarController: NSObject {
         // Create status item
         // Create popover with SwiftUI content
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 360, height: 500)
         // `.transient` closes the popover the moment any element outside its bounds
         // receives a mouseDown — including the NSMenu spawned by SwiftUI's Picker.
         // That killed the first profile-switch click. We dismiss via the global
         // event monitor (outside-app clicks) and explicit togglePopover instead.
         popover.behavior = .applicationDefined
         popover.animates = true
-        popover.contentViewController = NSHostingController(
+        let hostingController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(awsManager)
                 .environmentObject(appearance)
                 .environment(\.ledgerAppearance, appearance.appearance)
         )
+        // Publish the SwiftUI view's true fitting size to the popover. Without this,
+        // NSPopover positions itself using a stale hardcoded contentSize; when the
+        // real (wider) content renders, its right edge spills off-screen for status
+        // items near the right of the menu bar. Sizing from the content lets
+        // NSPopover keep itself fully on-screen (sliding the arrow as needed).
+        hostingController.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = hostingController
         
         updateStatusItemView()
         
