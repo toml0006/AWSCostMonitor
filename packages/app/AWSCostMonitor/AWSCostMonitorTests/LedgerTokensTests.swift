@@ -15,6 +15,7 @@ final class LedgerTokensTests: XCTestCase {
         XCTAssertEqual(LedgerAccent.mint.rawValue, "mint")
         XCTAssertEqual(LedgerAccent.plasma.rawValue, "plasma")
         XCTAssertEqual(LedgerAccent.bone.rawValue, "bone")
+        XCTAssertEqual(LedgerAccent.spectrum.rawValue, "spectrum")
     }
 
     func testSurfaceColorsDark() {
@@ -57,6 +58,39 @@ final class LedgerTokensTests: XCTestCase {
         let l = LedgerAppearance(colorScheme: .light, accent: .bone, density: .comfortable, contrast: .standard)
         XCTAssertEqual(LedgerTokens.Color.accent(d).nsHex, "E7E2D2")
         XCTAssertEqual(LedgerTokens.Color.accent(l).nsHex, "4A443A")
+    }
+
+    func testAccentSpectrumBothSchemes() {
+        let d = LedgerAppearance(colorScheme: .dark,  accent: .spectrum, density: .comfortable, contrast: .standard)
+        let l = LedgerAppearance(colorScheme: .light, accent: .spectrum, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.accent(d).nsHex, "FF2D9B")
+        XCTAssertEqual(LedgerTokens.Color.accent(l).nsHex, "B0186A")
+    }
+
+    func testAccentGradientOnlyForSpectrum() {
+        let spectrum = LedgerAppearance(colorScheme: .dark, accent: .spectrum, density: .comfortable, contrast: .standard)
+        let amber    = LedgerAppearance(colorScheme: .dark, accent: .amber,    density: .comfortable, contrast: .standard)
+        let stops = LedgerTokens.Color.accentGradient(spectrum)
+        XCTAssertEqual(stops?.count, 4)
+        XCTAssertEqual(stops?.map { $0.nsHex }, ["5FE39A", "FFD84D", "F5A623", "FF2D9B"])
+        XCTAssertNil(LedgerTokens.Color.accentGradient(amber))
+    }
+
+    func testSpectrumColorSamplesEndpoints() {
+        // fraction 0 → first stop, 1 → last stop; midpoint stays on the ramp.
+        XCTAssertEqual(LedgerTokens.Color.spectrumColor(at: 0).nsHex, "5FE39A")
+        XCTAssertEqual(LedgerTokens.Color.spectrumColor(at: 1).nsHex, "FF2D9B")
+        XCTAssertEqual(LedgerTokens.Color.spectrumColor(at: -1).nsHex, "5FE39A") // clamped
+        XCTAssertEqual(LedgerTokens.Color.spectrumColor(at: 2).nsHex, "FF2D9B")  // clamped
+    }
+
+    func testSignalsSpectrumNeonBranch() {
+        let d = LedgerAppearance(colorScheme: .dark,  accent: .spectrum, density: .comfortable, contrast: .standard)
+        let l = LedgerAppearance(colorScheme: .light, accent: .spectrum, density: .comfortable, contrast: .standard)
+        XCTAssertEqual(LedgerTokens.Color.signalOver(d).nsHex,  "FF3B6B")
+        XCTAssertEqual(LedgerTokens.Color.signalUnder(d).nsHex, "3DE8A0")
+        XCTAssertEqual(LedgerTokens.Color.signalOver(l).nsHex,  "C21F4E")
+        XCTAssertEqual(LedgerTokens.Color.signalUnder(l).nsHex, "12875A")
     }
 
     func testSignalsAndInkDark() {

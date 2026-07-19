@@ -126,9 +126,9 @@ private struct AccentSwatch: View {
         )
 
         return VStack(spacing: 6) {
-            Circle()
-                .fill(LedgerTokens.Color.accent(previewAppearance))
+            swatchFill(previewAppearance)
                 .frame(width: 32, height: 32)
+                .clipShape(Circle())
                 .overlay(
                     Circle().stroke(
                         selected ? LedgerTokens.Color.inkPrimary(appearance) : .clear,
@@ -137,6 +137,16 @@ private struct AccentSwatch: View {
                 )
 
             Text(accent.displayName).ledgerMeta()
+        }
+    }
+
+    // Spectrum previews its multi-hue gradient; every other accent is a solid disc.
+    @ViewBuilder
+    private func swatchFill(_ previewAppearance: LedgerAppearance) -> some View {
+        if let stops = LedgerTokens.Color.accentGradient(previewAppearance) {
+            LinearGradient(colors: stops, startPoint: .leading, endPoint: .trailing)
+        } else {
+            LedgerTokens.Color.accent(previewAppearance)
         }
     }
 }

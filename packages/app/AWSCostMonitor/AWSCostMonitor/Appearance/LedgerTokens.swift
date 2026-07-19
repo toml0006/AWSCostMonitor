@@ -22,14 +22,53 @@ enum LedgerTokens {
             case (.plasma, .light): return .hex(0x0B6A90)
             case (.bone,   .dark):  return .hex(0xE7E2D2)
             case (.bone,   .light): return .hex(0x4A443A)
+            case (.spectrum, .dark):  return .hex(0xFF2D9B)
+            case (.spectrum, .light): return .hex(0xB0186A)
             case (.system, _):      return SwiftUI.Color(nsColor: .controlAccentColor)
             }
         }
+        /// Raw stops for the icon-matching Spectrum gradient, oldest→newest
+        /// (left→right on the sparkline): the icon's rising line runs
+        /// green → yellow → orange → hot-magenta.
+        static let spectrumStops: [UInt32] = [0x5FE39A, 0xFFD84D, 0xF5A623, 0xFF2D9B]
+
+        /// Multi-hue gradient stops for the Spectrum accent as SwiftUI colors,
+        /// or `nil` for every other accent — callers fall back to the solid
+        /// `accent()` fill.
+        static func accentGradient(_ a: LedgerAppearance) -> [SwiftUI.Color]? {
+            guard a.accent == .spectrum else { return nil }
+            return spectrumStops.map { .hex($0) }
+        }
+
+        /// Samples the Spectrum gradient at `fraction` (0…1) by linearly
+        /// interpolating RGB between adjacent stops. Used to color each
+        /// sparkline bar by its position along the range.
+        static func spectrumColor(at fraction: Double) -> SwiftUI.Color {
+            let stops = spectrumStops
+            let clamped = min(max(fraction, 0), 1)
+            let scaled = clamped * Double(stops.count - 1)
+            let lo = Int(scaled.rounded(.down))
+            let hi = min(lo + 1, stops.count - 1)
+            let t = scaled - Double(lo)
+            func channel(_ hex: UInt32, _ shift: UInt32) -> Double {
+                Double((hex >> shift) & 0xFF)
+            }
+            let r = channel(stops[lo], 16) + (channel(stops[hi], 16) - channel(stops[lo], 16)) * t
+            let g = channel(stops[lo], 8)  + (channel(stops[hi], 8)  - channel(stops[lo], 8))  * t
+            let b = channel(stops[lo], 0)  + (channel(stops[hi], 0)  - channel(stops[lo], 0))  * t
+            return SwiftUI.Color(red: r / 255, green: g / 255, blue: b / 255)
+        }
         static func signalOver(_ a: LedgerAppearance) -> SwiftUI.Color {
-            a.colorScheme == .dark ? .hex(0xFF7A7A) : .hex(0xB02020)
+            if a.accent == .spectrum {
+                return a.colorScheme == .dark ? .hex(0xFF3B6B) : .hex(0xC21F4E)
+            }
+            return a.colorScheme == .dark ? .hex(0xFF7A7A) : .hex(0xB02020)
         }
         static func signalUnder(_ a: LedgerAppearance) -> SwiftUI.Color {
-            a.colorScheme == .dark ? .hex(0x4AD6A3) : .hex(0x2F9E6B)
+            if a.accent == .spectrum {
+                return a.colorScheme == .dark ? .hex(0x3DE8A0) : .hex(0x12875A)
+            }
+            return a.colorScheme == .dark ? .hex(0x4AD6A3) : .hex(0x2F9E6B)
         }
         static func inkPrimary(_ a: LedgerAppearance) -> SwiftUI.Color {
             a.colorScheme == .dark ? .hex(0xE7E9EC) : .hex(0x1B1A17)

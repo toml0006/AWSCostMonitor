@@ -40,13 +40,12 @@ class StatusBarController: NSObject {
         // event monitor (outside-app clicks) and explicit togglePopover instead.
         popover.behavior = .applicationDefined
         popover.animates = true
-        // NOTE: we deliberately do NOT use sizingOptions:.preferredContentSize to
-        // keep the popover sized to its content. That makes NSPopover animate a live
-        // window resize whenever the SwiftUI content re-lays-out while open (e.g. a
-        // theme change), and that resize animation over-releases an
+        // Do NOT set sizingOptions:.preferredContentSize. It makes NSPopover animate a
+        // live window resize whenever the SwiftUI content re-lays-out while open (e.g. a
+        // theme change); that resize animation over-releases an
         // `_NSWindowTransformAnimation` in the CoreAnimation commit → EXC_BAD_ACCESS.
-        // Instead we size the popover once, at show time (see showPopover()), which
-        // fixes right-edge clipping without any live-resize animation.
+        // Right-edge clipping is handled instead by clamping the content width to the
+        // available on-screen width (see updateAvailableWidth(for:)).
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(awsManager)
@@ -141,21 +140,35 @@ class StatusBarController: NSObject {
     
     func showPopover() {
         if let button = statusItem.button {
-            // Size the popover to its SwiftUI content *before* showing, so NSPopover's
-            // on-screen positioning uses the true width. Otherwise it positions from a
-            // stale contentSize and the wider content spills off the right edge when the
-            // status item sits near the screen edge. Setting contentSize while the
-            // popover is closed does not animate, so it avoids the resize-animation
-            // crash described in init().
-            if let content = popover.contentViewController?.view {
-                content.layoutSubtreeIfNeeded()
-                let size = content.fittingSize
-                if size.width > 0, size.height > 0 {
-                    popover.contentSize = size
-                }
-            }
+            updateAvailableWidth(for: button)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
+    }
+
+    /// The popover anchors its arrow under the status item and (with
+    /// `.applicationDefined` behavior) does not reliably shift to stay on
+    /// screen, so a wide popover under an item near the right edge clips off
+    /// the display. Publish the widest the content may be while remaining fully
+    /// on screen, centered on the item; `PopoverContentView` clamps to it.
+    private func updateAvailableWidth(for button: NSStatusBarButton) {
+        let margin: CGFloat = 12
+        let itemCenterX: CGFloat
+        let visible: NSRect
+        if let window = button.window {
+            let screenRect = window.convertToScreen(button.convert(button.bounds, to: nil))
+            itemCenterX = screenRect.midX
+            visible = (window.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
+        } else {
+            visible = NSScreen.main?.visibleFrame ?? .zero
+            itemCenterX = visible.midX
+        }
+        // Centered on the arrow, the popover needs half its width on each side;
+        // the tighter side (the right edge, for a menu-bar item) governs.
+        let rightGap = visible.maxX - itemCenterX
+        let leftGap  = itemCenterX - visible.minX
+        let centeredFit = 2 * min(rightGap, leftGap) - margin
+        let available = max(360, min(visible.width - 2 * margin, centeredFit))
+        UserDefaults.standard.set(Double(available), forKey: "popover.availableWidth")
     }
     
     func closePopover() {
