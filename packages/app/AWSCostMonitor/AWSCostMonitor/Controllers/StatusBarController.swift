@@ -64,6 +64,10 @@ class StatusBarController: NSObject {
         if let button = statusItem.button {
             button.action = #selector(togglePopover)
             button.target = self
+            // Suppress implicit animations on the status item's hosting window; a
+            // theme change re-renders the button and can otherwise spin up an
+            // _NSWindowTransformAnimation that is over-released on the CA commit.
+            button.window?.animationBehavior = .none
         }
         
         // All render-triggering signals funnel into one debounced publisher so
@@ -102,6 +106,7 @@ class StatusBarController: NSObject {
                 self?.closePopover()
             }
         }
+
     }
     
     deinit {
