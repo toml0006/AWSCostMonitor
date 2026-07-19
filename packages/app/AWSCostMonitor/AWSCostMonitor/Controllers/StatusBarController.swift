@@ -40,19 +40,19 @@ class StatusBarController: NSObject {
         // event monitor (outside-app clicks) and explicit togglePopover instead.
         popover.behavior = .applicationDefined
         popover.animates = true
-        let hostingController = NSHostingController(
+        // NOTE: we deliberately do NOT use sizingOptions:.preferredContentSize to
+        // keep the popover sized to its content. That makes NSPopover animate a live
+        // window resize whenever the SwiftUI content re-lays-out while open (e.g. a
+        // theme change), and that resize animation over-releases an
+        // `_NSWindowTransformAnimation` in the CoreAnimation commit → EXC_BAD_ACCESS.
+        // Instead we size the popover once, at show time (see showPopover()), which
+        // fixes right-edge clipping without any live-resize animation.
+        popover.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(awsManager)
                 .environmentObject(appearance)
                 .environment(\.ledgerAppearance, appearance.appearance)
         )
-        // Publish the SwiftUI view's true fitting size to the popover. Without this,
-        // NSPopover positions itself using a stale hardcoded contentSize; when the
-        // real (wider) content renders, its right edge spills off-screen for status
-        // items near the right of the menu bar. Sizing from the content lets
-        // NSPopover keep itself fully on-screen (sliding the arrow as needed).
-        hostingController.sizingOptions = [.preferredContentSize]
-        popover.contentViewController = hostingController
         
         updateStatusItemView()
         
@@ -141,6 +141,19 @@ class StatusBarController: NSObject {
     
     func showPopover() {
         if let button = statusItem.button {
+            // Size the popover to its SwiftUI content *before* showing, so NSPopover's
+            // on-screen positioning uses the true width. Otherwise it positions from a
+            // stale contentSize and the wider content spills off the right edge when the
+            // status item sits near the screen edge. Setting contentSize while the
+            // popover is closed does not animate, so it avoids the resize-animation
+            // crash described in init().
+            if let content = popover.contentViewController?.view {
+                content.layoutSubtreeIfNeeded()
+                let size = content.fittingSize
+                if size.width > 0, size.height > 0 {
+                    popover.contentSize = size
+                }
+            }
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }
