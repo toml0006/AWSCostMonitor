@@ -30,6 +30,19 @@ struct FooterActions: View {
     }
 
     private func link(label: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        LedgerLink(label: label, systemImage: systemImage, action: action)
+    }
+}
+
+// A quiet footer link that brightens on hover.
+private struct LedgerLink: View {
+    @Environment(\.ledgerAppearance) private var a
+    let label: String
+    let systemImage: String
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: systemImage)
@@ -37,9 +50,10 @@ struct FooterActions: View {
                 Text(label)
                     .font(LedgerTokens.Typography.meta(a))
             }
-            .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+            .foregroundColor(hovered ? LedgerTokens.Color.inkPrimary(a) : LedgerTokens.Color.inkSecondary(a))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hovered = $0 }
     }
 }

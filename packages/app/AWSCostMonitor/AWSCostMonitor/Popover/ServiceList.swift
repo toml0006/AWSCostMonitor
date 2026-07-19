@@ -14,6 +14,8 @@ struct ServiceList: View {
     var sparklineStartDate: Date? = nil
     let onSelect: (String) -> Void
 
+    @State private var hoveredRow: String? = nil
+
     var body: some View {
         let topServices = Array(services.prefix(5))
         let otherTotal = services
@@ -54,44 +56,45 @@ struct ServiceList: View {
         let displayAmount = dayAmount ?? amount
         let displayTotal = dayAmount != nil ? (hoveredDayTotal ?? total) : total
         let percentage = displayTotal > 0 ? displayAmount / displayTotal : 0
-        // Sparkline and percentage are combined: the trend is a faint background
-        // behind the name and its share %, with the % reading over it. The
-        // amount is held clear of the bars by reserving a trailing zone, so the
-        // dollar figure never sits under the tallest (most-recent) bar.
-        let amountZone: CGFloat = 96
-        return ZStack(alignment: .leading) {
+        // Row reads left-to-right as: name | trend | share % | amount. The
+        // sparkline lives in its own fixed lane rather than behind the name, so
+        // long service names stay fully legible while the trend still shows.
+        let isHovered = hoveredRow == name
+        return HStack(spacing: 10) {
+            Text(name)
+                .ledgerBody()
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 8)
             if !series.isEmpty {
                 Sparkline(
                     values: series,
                     highlightIndex: hoveredDayIndex,
                     startDate: sparklineStartDate,
-                    showMonthBoundaries: true,
+                    showMonthBoundaries: false,
                     showMonthLabels: false,
-                    showWeekLines: true
+                    showWeekLines: false
                 )
-                .opacity(0.3)
-                .padding(.trailing, amountZone)
-                .padding(.vertical, 4)
+                .opacity(0.55)
+                .frame(width: 72)
+                .padding(.vertical, 5)
                 .allowsHitTesting(false)
             }
-            HStack(spacing: 0) {
-                Text(name)
-                    .ledgerBody()
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 8)
-                Text(String(format: "%.0f%%", percentage * 100))
-                    .ledgerMeta()
-                    .frame(width: 38, alignment: .trailing)
-                Spacer().frame(width: 16)
-                Text(format(displayAmount))
-                    .ledgerStatValue()
-                    .frame(minWidth: 80, alignment: .trailing)
-            }
+            Text(String(format: "%.0f%%", percentage * 100))
+                .ledgerMeta()
+                .frame(width: 34, alignment: .trailing)
+            Text(format(displayAmount))
+                .ledgerStatValue()
+                .frame(minWidth: 78, alignment: .trailing)
         }
         .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
         .frame(height: LedgerTokens.Layout.rowHeight(a))
+        .background(
+            LedgerTokens.Color.inkPrimary(a)
+                .opacity(isHovered ? 0.05 : 0)
+        )
         .contentShape(Rectangle())
+        .onHover { hovering in hoveredRow = hovering ? name : (hoveredRow == name ? nil : hoveredRow) }
         .onTapGesture { onSelect(name) }
     }
 

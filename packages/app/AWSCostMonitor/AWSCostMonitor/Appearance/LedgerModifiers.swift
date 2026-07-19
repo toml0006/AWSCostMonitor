@@ -34,19 +34,19 @@ struct LedgerHairlineDivider: View {
     }
 }
 
-/// Spectrum-accent emphasis. Historically a `.shadow` neon bloom, but a shadow
-/// CALayer on views that also run transition/scale animations inside the popover
-/// reliably trips an AppKit window-animation over-release on teardown — the app
-/// crashes (EXC_BAD_ACCESS in -[_NSWindowTransformAnimation dealloc]) when the
-/// Spectrum accent is selected. Debouncing, single-shadow, a stable wrapper, and
-/// disabling popover window animations all only reduced the odds; the shadow-layer
-/// teardown itself is the trigger. So the bloom is dropped: Spectrum stays
-/// identifiable by its cyan accent color everywhere, without the crashing shadow.
-/// Kept as a modifier (a no-op now) so call sites and the API stay unchanged.
+/// Neon bloom for the Spectrum accent — a single soft shadow in the accent color.
+/// No-op for every other accent, so callers can apply it unconditionally.
+/// (Note: an earlier theory blamed this shadow for a crash; the real cause was an
+/// unrelated NSWindow double-free on Settings close, so the bloom is safe.)
 struct SpectrumGlowModifier: ViewModifier {
     let color: SwiftUI.Color
+    @Environment(\.ledgerAppearance) private var a
     func body(content: Content) -> some View {
-        content
+        if a.accent == .spectrum {
+            content.shadow(color: color.opacity(0.55), radius: 5)
+        } else {
+            content
+        }
     }
 }
 

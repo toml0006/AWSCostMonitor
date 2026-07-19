@@ -314,6 +314,24 @@ struct PopoverContentView: View {
                 color: d >= 0 ? .over : .under
             ))
         }
+        // Without a budget the right column is otherwise sparse, so surface two
+        // lightweight month-end projections to balance the split with the left.
+        if monthlyBudget == nil {
+            let cal = Calendar.current
+            let now = Date()
+            if let range = cal.range(of: .day, in: .month, for: now) {
+                let daysInMonth = range.count
+                let daysLeft = max(0, daysInMonth - cal.component(.day, from: now))
+                out.append(.init(label: "Days left", value: "\(daysLeft)", color: .ink))
+                if let projected = projectedDouble, daysInMonth > 0 {
+                    out.append(.init(
+                        label: "Proj / day",
+                        value: CurrencyFormatter.format(projected / Double(daysInMonth)),
+                        color: .ink
+                    ))
+                }
+            }
+        }
         if let projected = projectedDouble, let budget = monthlyBudget {
             let pct = projected / budget * 100
             out.append(.init(

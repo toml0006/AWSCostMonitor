@@ -39,15 +39,9 @@ class StatusBarController: NSObject {
         // That killed the first profile-switch click. We dismiss via the global
         // event monitor (outside-app clicks) and explicit togglePopover instead.
         popover.behavior = .applicationDefined
-        // Animations OFF, deliberately. The popover's show/hide/resize uses an
-        // `_NSWindowTransformAnimation`; when the SwiftUI content churns layers
-        // mid-flight (e.g. selecting the Spectrum theme repaints glow shadows), that
-        // window animation gets over-released in the CoreAnimation commit and crashes
-        // (EXC_BAD_ACCESS in -[_NSWindowTransformAnimation dealloc]). Showing instantly
-        // removes the animation object entirely, so the crash cannot occur. It also
-        // makes the post-show frame clamp in showPopover() reliable (no in-flight
-        // window animation to fight). Reads as native for a menu-bar popover.
-        popover.animates = false
+        // Native fade on show/hide. (The theme-switch crash was an unrelated NSWindow
+        // double-free on Settings close, not popover animation, so the fade is safe.)
+        popover.animates = true
         // Right-edge clipping is handled by clamping the content width
         // (updateAvailableWidth) and, as a timing-independent safety net, clamping the
         // popover window onto the screen after show (clampPopoverOnScreen).
@@ -152,14 +146,6 @@ class StatusBarController: NSObject {
         if let button = statusItem.button {
             updateAvailableWidth(for: button)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            // Kill implicit window animations on the popover's own window. NSPopover
-            // animates a window *resize* whenever its SwiftUI content re-lays-out while
-            // open (e.g. selecting the Spectrum theme), independent of `popover.animates`.
-            // That `_NSWindowTransformAnimation` gets over-released in the CoreAnimation
-            // commit → EXC_BAD_ACCESS. animationBehavior = .none suppresses AppKit's
-            // automatic window animations, so the resize applies instantly with no
-            // animation object to over-release.
-            popover.contentViewController?.view.window?.animationBehavior = .none
             clampPopoverOnScreen()
         }
     }
