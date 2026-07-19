@@ -39,13 +39,18 @@ class StatusBarController: NSObject {
         // That killed the first profile-switch click. We dismiss via the global
         // event monitor (outside-app clicks) and explicit togglePopover instead.
         popover.behavior = .applicationDefined
-        popover.animates = true
-        // Do NOT set sizingOptions:.preferredContentSize. It makes NSPopover animate a
-        // live window resize whenever the SwiftUI content re-lays-out while open (e.g. a
-        // theme change); that resize animation over-releases an
-        // `_NSWindowTransformAnimation` in the CoreAnimation commit → EXC_BAD_ACCESS.
-        // Right-edge clipping is handled instead by clamping the content width to the
-        // available on-screen width (see updateAvailableWidth(for:)).
+        // Animations OFF, deliberately. The popover's show/hide/resize uses an
+        // `_NSWindowTransformAnimation`; when the SwiftUI content churns layers
+        // mid-flight (e.g. selecting the Spectrum theme repaints glow shadows), that
+        // window animation gets over-released in the CoreAnimation commit and crashes
+        // (EXC_BAD_ACCESS in -[_NSWindowTransformAnimation dealloc]). Showing instantly
+        // removes the animation object entirely, so the crash cannot occur. It also
+        // makes the post-show frame clamp in showPopover() reliable (no in-flight
+        // window animation to fight). Reads as native for a menu-bar popover.
+        popover.animates = false
+        // Right-edge clipping is handled by clamping the content width
+        // (updateAvailableWidth) and, as a timing-independent safety net, clamping the
+        // popover window onto the screen after show (clampPopoverOnScreen).
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(awsManager)
@@ -142,6 +147,38 @@ class StatusBarController: NSObject {
         if let button = statusItem.button {
             updateAvailableWidth(for: button)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            // Kill implicit window animations on the popover's own window. NSPopover
+            // animates a window *resize* whenever its SwiftUI content re-lays-out while
+            // open (e.g. selecting the Spectrum theme), independent of `popover.animates`.
+            // That `_NSWindowTransformAnimation` gets over-released in the CoreAnimation
+            // commit → EXC_BAD_ACCESS. animationBehavior = .none suppresses AppKit's
+            // automatic window animations, so the resize applies instantly with no
+            // animation object to over-release.
+            popover.contentViewController?.view.window?.animationBehavior = .none
+            clampPopoverOnScreen()
+        }
+    }
+
+    /// Timing-independent safety net for right-edge clipping. The content-width
+    /// clamp (updateAvailableWidth) flows through UserDefaults → @AppStorage →
+    /// SwiftUI relayout, which is async, while NSPopover measures its content
+    /// synchronously at show() — so a given show can use the previous show's
+    /// width and still run off the display. Once the popover window exists, nudge
+    /// it fully onto the screen. With animations off the window is already at its
+    /// final frame here, so this is a stable, one-shot adjustment.
+    private func clampPopoverOnScreen() {
+        guard let win = popover.contentViewController?.view.window else { return }
+        let visible = (win.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
+        let margin: CGFloat = 8
+        var frame = win.frame
+        if frame.maxX > visible.maxX - margin {
+            frame.origin.x = visible.maxX - margin - frame.width
+        }
+        if frame.minX < visible.minX + margin {
+            frame.origin.x = visible.minX + margin
+        }
+        if frame.origin.x != win.frame.origin.x {
+            win.setFrame(frame, display: true)
         }
     }
 
