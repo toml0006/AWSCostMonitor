@@ -135,8 +135,35 @@ class StatusBarController: NSObject {
     
     func showPopover() {
         if let button = statusItem.button {
+            updateAvailableWidth(for: button)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
+    }
+
+    /// The popover anchors its arrow under the status item and (with
+    /// `.applicationDefined` behavior) does not reliably shift to stay on
+    /// screen, so a wide popover under an item near the right edge clips off
+    /// the display. Publish the widest the content may be while remaining fully
+    /// on screen, centered on the item; `PopoverContentView` clamps to it.
+    private func updateAvailableWidth(for button: NSStatusBarButton) {
+        let margin: CGFloat = 12
+        let itemCenterX: CGFloat
+        let visible: NSRect
+        if let window = button.window {
+            let screenRect = window.convertToScreen(button.convert(button.bounds, to: nil))
+            itemCenterX = screenRect.midX
+            visible = (window.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
+        } else {
+            visible = NSScreen.main?.visibleFrame ?? .zero
+            itemCenterX = visible.midX
+        }
+        // Centered on the arrow, the popover needs half its width on each side;
+        // the tighter side (the right edge, for a menu-bar item) governs.
+        let rightGap = visible.maxX - itemCenterX
+        let leftGap  = itemCenterX - visible.minX
+        let centeredFit = 2 * min(rightGap, leftGap) - margin
+        let available = max(360, min(visible.width - 2 * margin, centeredFit))
+        UserDefaults.standard.set(Double(available), forKey: "popover.availableWidth")
     }
     
     func closePopover() {

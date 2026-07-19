@@ -34,9 +34,31 @@ struct LedgerHairlineDivider: View {
     }
 }
 
+/// Neon bloom for the Spectrum accent. A single shadow keeps the transient
+/// CALayer count low — stacking multiple shadows on views that also run
+/// transition/scale animations inside the popover can trip an AppKit
+/// window-animation over-release on teardown. No-op for every other accent,
+/// so callers can apply it unconditionally.
+struct SpectrumGlowModifier: ViewModifier {
+    let color: SwiftUI.Color
+    @Environment(\.ledgerAppearance) private var a
+    func body(content: Content) -> some View {
+        if a.accent == .spectrum {
+            content.shadow(color: color.opacity(0.55), radius: 5)
+        } else {
+            content
+        }
+    }
+}
+
 extension View {
     func ledgerSurface(_ s: LedgerSurface) -> some View {
         modifier(LedgerSurfaceModifier(surface: s))
+    }
+
+    /// Applies a neon bloom only when the Spectrum accent is active.
+    func spectrumGlow(_ color: SwiftUI.Color) -> some View {
+        modifier(SpectrumGlowModifier(color: color))
     }
 
     func ledgerHero() -> some View {
