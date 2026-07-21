@@ -849,6 +849,7 @@ func showHelpWindow() {
     )
     window.contentViewController = hostingController
     window.title = "Help"
+    window.isReleasedWhenClosed = false
     window.center()
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
@@ -881,6 +882,9 @@ func showMultiProfileDashboard(awsManager: AWSManager) {
     )
     window.contentViewController = hostingController
     window.title = "Multi-Profile Dashboard"
+    // ARC owns the lifetime via globalDashboardWindow; without this the window
+    // also releases itself on close → over-release crash (see Settings window).
+    window.isReleasedWhenClosed = false
     window.center()
     
     globalDashboardWindow = window

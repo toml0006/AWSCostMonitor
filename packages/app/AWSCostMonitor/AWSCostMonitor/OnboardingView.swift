@@ -505,6 +505,7 @@ func showOnboardingWindow(awsManager: AWSManager) {
     )
     window.contentViewController = hostingController
     window.title = "Welcome to AWSCostMonitor"
+    window.isReleasedWhenClosed = false
     window.isMovableByWindowBackground = true
     window.center()
     window.makeKeyAndOrderFront(nil)

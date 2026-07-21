@@ -32,6 +32,7 @@ func showWhatsNewV15IfNeeded(appearance: AppearanceManager) {
         let window = NSWindow(contentViewController: controller)
         window.title = "What's New"
         window.styleMask = [.titled, .closable]
+        window.isReleasedWhenClosed = false
         window.setContentSize(NSSize(width: 440, height: 340))
         window.center()
         globalWhatsNewWindow = window
@@ -79,6 +80,7 @@ func showExportWindow(awsManager: AWSManager) {
     )
     window.contentViewController = hostingController
     window.title = "Export Cost Data"
+    window.isReleasedWhenClosed = false
     window.center()
     
     globalExportWindow = window
@@ -121,6 +123,16 @@ func showSettingsWindowForApp(awsManager: AWSManager, selectedTab: String = "Gen
         )
         window.contentViewController = controller
         window.title = "AWSCostMonitor Settings"
+        // CRITICAL: a programmatically-created NSWindow defaults to
+        // isReleasedWhenClosed = true, so closing it sends the window a release.
+        // But we also hold it via the strong `globalSettingsWindow` reference (and
+        // ARC releases that in the willClose handler below), so closing the window
+        // over-releases it → EXC_BAD_ACCESS during the autorelease-pool drain
+        // (crash on closing Settings, intermittent). Let ARC own the lifetime.
+        window.isReleasedWhenClosed = false
+        // Also disable implicit window animations (no close/transform animation to
+        // mismanage on teardown).
+        window.animationBehavior = .none
         window.center()
         
         // Clean up reference when window closes

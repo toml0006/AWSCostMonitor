@@ -34,13 +34,17 @@ class StatusBarController: NSObject {
         // Create status item
         // Create popover with SwiftUI content
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 360, height: 500)
         // `.transient` closes the popover the moment any element outside its bounds
         // receives a mouseDown — including the NSMenu spawned by SwiftUI's Picker.
         // That killed the first profile-switch click. We dismiss via the global
         // event monitor (outside-app clicks) and explicit togglePopover instead.
         popover.behavior = .applicationDefined
+        // Native fade on show/hide. (The theme-switch crash was an unrelated NSWindow
+        // double-free on Settings close, not popover animation, so the fade is safe.)
         popover.animates = true
+        // Right-edge clipping is handled by clamping the content width
+        // (updateAvailableWidth) and, as a timing-independent safety net, clamping the
+        // popover window onto the screen after show (clampPopoverOnScreen).
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(awsManager)
@@ -54,6 +58,10 @@ class StatusBarController: NSObject {
         if let button = statusItem.button {
             button.action = #selector(togglePopover)
             button.target = self
+            // Suppress implicit animations on the status item's hosting window; a
+            // theme change re-renders the button and can otherwise spin up an
+            // _NSWindowTransformAnimation that is over-released on the CA commit.
+            button.window?.animationBehavior = .none
         }
         
         // All render-triggering signals funnel into one debounced publisher so
@@ -92,6 +100,7 @@ class StatusBarController: NSObject {
                 self?.closePopover()
             }
         }
+
     }
     
     deinit {
@@ -137,6 +146,30 @@ class StatusBarController: NSObject {
         if let button = statusItem.button {
             updateAvailableWidth(for: button)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            clampPopoverOnScreen()
+        }
+    }
+
+    /// Timing-independent safety net for right-edge clipping. The content-width
+    /// clamp (updateAvailableWidth) flows through UserDefaults → @AppStorage →
+    /// SwiftUI relayout, which is async, while NSPopover measures its content
+    /// synchronously at show() — so a given show can use the previous show's
+    /// width and still run off the display. Once the popover window exists, nudge
+    /// it fully onto the screen. With animations off the window is already at its
+    /// final frame here, so this is a stable, one-shot adjustment.
+    private func clampPopoverOnScreen() {
+        guard let win = popover.contentViewController?.view.window else { return }
+        let visible = (win.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
+        let margin: CGFloat = 8
+        var frame = win.frame
+        if frame.maxX > visible.maxX - margin {
+            frame.origin.x = visible.maxX - margin - frame.width
+        }
+        if frame.minX < visible.minX + margin {
+            frame.origin.x = visible.minX + margin
+        }
+        if frame.origin.x != win.frame.origin.x {
+            win.setFrame(frame, display: true)
         }
     }
 

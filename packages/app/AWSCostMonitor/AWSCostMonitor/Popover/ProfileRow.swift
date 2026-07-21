@@ -4,6 +4,7 @@ struct ProfileRow: View {
     @EnvironmentObject var awsManager: AWSManager
     @Environment(\.ledgerAppearance) private var a
     var teamCacheOn: Bool
+    var onRefresh: () -> Void
 
     var body: some View {
         HStack(spacing: LedgerTokens.Layout.unit(a)) {
@@ -52,6 +53,23 @@ struct ProfileRow: View {
             if let region {
                 Text(region).ledgerMeta()
             }
+
+            Button(action: onRefresh) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(LedgerTokens.Color.inkSecondary(a))
+                    .rotationEffect(.degrees(awsManager.isLoading ? 360 : 0))
+                    .animation(
+                        awsManager.isLoading
+                            ? .linear(duration: 0.9).repeatForever(autoreverses: false)
+                            : .default,
+                        value: awsManager.isLoading
+                    )
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(awsManager.isLoading)
+            .help("Refresh cost data")
         }
         .padding(.horizontal, LedgerTokens.Layout.unit(a) * 1.75)
         .frame(height: 36)

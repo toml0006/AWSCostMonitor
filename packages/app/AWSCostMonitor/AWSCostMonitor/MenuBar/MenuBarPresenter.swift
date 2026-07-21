@@ -25,6 +25,31 @@ final class MenuBarPresenter {
         let plainTextColor: NSColor = isOver ? overBudget : .labelColor
         let text = MenuBarFormatter.format(amount: amount, options: options, delta: delta)
 
+        // Mutate the status button inside a zero-duration, no-implicit-animation
+        // context. Changing the button image/title can otherwise let AppKit spin up
+        // an implicit `_NSWindowTransformAnimation` on the status item's hosting
+        // window (menu-bar layout/resize), which is over-released on the CoreAnimation
+        // commit and crashes the app (EXC_BAD_ACCESS) — intermittently, on theme
+        // changes that re-render the button. Suppressing the animation removes the
+        // object entirely.
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0
+            ctx.allowsImplicitAnimation = false
+            Self.applyButton(button, text: text, plainTextColor: plainTextColor,
+                             accentColor: accentColor, options: options,
+                             sparkline: sparkline, sparklineHighlightIndex: sparklineHighlightIndex)
+        }
+    }
+
+    private static func applyButton(
+        _ button: NSStatusBarButton,
+        text: String,
+        plainTextColor: NSColor,
+        accentColor: NSColor,
+        options: MenuBarOptions,
+        sparkline: [Double],
+        sparklineHighlightIndex: Int?
+    ) {
         let needsImage = options.showSparkline || options.pillBackground
         if needsImage {
             let newImage: NSImage

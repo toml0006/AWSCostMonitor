@@ -40,25 +40,44 @@ final class AppearanceManager: ObservableObject {
         )
     }
 
+    // Apply an appearance change out of the triggering SwiftUI control's action
+    // and without animation.
+    //
+    // These setters are called from Buttons in the Settings window. Mutating the
+    // @Published appearance synchronously inside that button action animates the
+    // recolor at the window level, and AppKit over-releases the resulting
+    // `_NSWindowTransformAnimation` on the CoreAnimation commit — the app crashes
+    // (EXC_BAD_ACCESS) on any theme switch. The system-appearance path
+    // (systemAppearanceDidChange) never crashes precisely because it arrives via a
+    // Combine sink, outside any control's animation transaction. Mirror that here:
+    // hop to a fresh main-runloop turn and disable animation on the mutation.
+    private func applyAppearanceChange(_ mutate: @escaping @MainActor () -> Void) {
+        Task { @MainActor in
+            var tx = Transaction()
+            tx.disablesAnimations = true
+            withTransaction(tx, mutate)
+        }
+    }
+
     func setSchemePreference(_ p: LedgerSchemePreference) {
         schemePreference = p
         defaults.set(p.rawValue, forKey: Keys.scheme)
-        appearance.colorScheme = Self.resolve(scheme: p, systemIsDark: systemIsDark)
+        applyAppearanceChange { self.appearance.colorScheme = Self.resolve(scheme: p, systemIsDark: self.systemIsDark) }
     }
 
     func setAccent(_ v: LedgerAccent) {
         defaults.set(v.rawValue, forKey: Keys.accent)
-        appearance.accent = v
+        applyAppearanceChange { self.appearance.accent = v }
     }
 
     func setDensity(_ v: LedgerDensity) {
         defaults.set(v.rawValue, forKey: Keys.density)
-        appearance.density = v
+        applyAppearanceChange { self.appearance.density = v }
     }
 
     func setContrast(_ v: LedgerContrast) {
         defaults.set(v.rawValue, forKey: Keys.contrast)
-        appearance.contrast = v
+        applyAppearanceChange { self.appearance.contrast = v }
     }
 
     /// Called by the app root when NSApp.effectiveAppearance publishes a change.
