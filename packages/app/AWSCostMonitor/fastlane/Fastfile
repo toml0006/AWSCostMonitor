@@ -1,0 +1,125 @@
+# App Store Connect operations for AWSCostMonitor (macOS).
+#
+# Binaries are built and uploaded by Xcode Cloud — these lanes do NOT build or
+# upload a binary. They cover the ASC-side operations: check review status,
+# submit an already-uploaded build for review, and push/pull metadata.
+#
+# Auth: App Store Connect API key. Set these env vars (see .env.example) — the
+# repo never stores the .p8 or the issuer ID:
+#   ASC_KEY_ID     default: A883B9G6LZ
+#   ASC_ISSUER_ID  required — your ASC API issuer UUID
+#   ASC_KEY_PATH   default: ~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8
+
+require "json"
+require "shellwords"
+
+APP_IDENTIFIER = "middleout.AWSCostMonitor".freeze
+
+default_platform(:mac)
+
+# Resolve API-key params from the environment (issuer is required).
+def asc_params
+  key_id = ENV.fetch("ASC_KEY_ID", "A883B9G6LZ")
+  {
+    key_id: key_id,
+    issuer_id: ENV.fetch("ASC_ISSUER_ID") do
+      UI.user_error!("Set ASC_ISSUER_ID (App Store Connect API issuer UUID). See fastlane/.env.example.")
+    end,
+    key_filepath: File.expand_path(ENV.fetch("ASC_KEY_PATH", "~/.appstoreconnect/private_keys/AuthKey_#{key_id}.p8"))
+  }
+end
+
+# Register the API key for both fastlane actions (deliver) and Spaceship (status).
+def asc_login
+  p = asc_params
+  app_store_connect_api_key(
+    key_id: p[:key_id],
+    issuer_id: p[:issuer_id],
+    key_filepath: p[:key_filepath],
+    in_house: false
+  )
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(
+    key_id: p[:key_id], issuer_id: p[:issuer_id], filepath: p[:key_filepath]
+  )
+end
+
+platform :mac do
+  desc "Show App Store version states, attached build, and any open review submission"
+  lane :status do
+    asc_login
+    app = Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
+    UI.header("#{app.name} (#{app.id})")
+    app.get_app_store_versions(
+      filter: { platform: "MAC_OS" }, includes: "build", limit: 5
+    ).each do |v|
+      build = v.build
+      UI.message("  #{v.version_string.to_s.ljust(8)} #{v.app_store_state.to_s.ljust(26)} build #{build&.version || '—'}")
+    end
+    subs = app.get_review_submissions(filter: { platform: "MAC_OS" })
+    open = subs.reject { |s| %w[COMPLETE CANCELING].include?(s.state) }
+    if open.empty?
+      UI.success("No in-flight review submission.")
+    else
+      open.each { |s| UI.important("Review submission #{s.id}: #{s.state}") }
+    end
+  end
+
+  desc "Submit an already-uploaded build for review. Usage: fastlane mac submit version:1.7.0 build:109"
+  lane :submit do |opts|
+    UI.user_error!("Pass version:X.Y.Z") unless opts[:version]
+    asc_login
+    deliver(
+      app_version: opts[:version].to_s,
+      build_number: opts[:build]&.to_s,
+      submit_for_review: true,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      force: true, # no interactive HTML preview
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        export_compliance_uses_encryption: false,
+        add_id_info_uses_idfa: false
+      }
+    )
+  end
+
+  desc "Push release notes / metadata for a version without submitting. Usage: fastlane mac notes version:1.7.0"
+  lane :notes do |opts|
+    UI.user_error!("Pass version:X.Y.Z") unless opts[:version]
+    asc_login
+    deliver(
+      app_version: opts[:version].to_s,
+      submit_for_review: false,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      force: true
+    )
+  end
+
+  desc "Download current App Store metadata into fastlane/metadata for editing"
+  lane :pull_metadata do
+    p = asc_params
+    # deliver's download runs as a CLI subcommand; invoke it with the API key so
+    # the current metadata (incl. release notes) lands in fastlane/metadata.
+    sh("cd #{File.expand_path('..', __dir__).shellescape} && " \
+       "fastlane deliver download_metadata " \
+       "--api_key_path #{asc_key_json_path.shellescape} " \
+       "--app_identifier #{APP_IDENTIFIER}")
+  end
+end
+
+# Write a temporary ASC API key JSON (for CLI subcommands that take --api_key_path)
+# and return its path. Lives under fastlane/ and is gitignored.
+def asc_key_json_path
+  p = asc_params
+  path = File.expand_path("asc_api_key.json", __dir__)
+  File.write(path, JSON.pretty_generate(
+    "key_id" => p[:key_id],
+    "issuer_id" => p[:issuer_id],
+    "key" => File.read(p[:key_filepath]),
+    "in_house" => false
+  ))
+  path
+end
