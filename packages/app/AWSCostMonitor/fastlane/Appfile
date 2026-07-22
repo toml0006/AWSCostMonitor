@@ -1,0 +1,4 @@
+app_identifier("middleout.AWSCostMonitor")
+
+# Authentication uses an App Store Connect API key, not Apple ID login — see the
+# Fastfile (asc_login) and .env.example. No apple_id / team_id needed here.

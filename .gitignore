@@ -78,3 +78,8 @@ marketing-materials/
 
 # Git worktrees (local only)
 .worktrees/
+# fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/asc_api_key.json
+**/fastlane/test_output
