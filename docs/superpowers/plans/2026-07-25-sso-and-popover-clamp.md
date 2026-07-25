@@ -2182,7 +2182,18 @@ Add to the Derived section:
 
 - [ ] **Step 4: Stub the sign-in entry point**
 
-`signInToSSO(session:)` is implemented in Task 12. Add a stub to `AWSManager` now so this task compiles and can be committed independently:
+`signInToSSO(session:)` is implemented in Task 12. Add a stub to `AWSManager` now so this task compiles and can be committed independently.
+
+**Precedence bug — the stub's message is unreachable as written.** `bannerContent` checks `credentialError` before falling through to `errorMessage`, so the stub's "run `aws sso login`" text can never render: the `.ssoNotLoggedIn` branch that produced the button still matches. The banner's action must clear `credentialError` after invoking the stub:
+
+```swift
+action: {
+    Task {
+        await awsManager.signInToSSO(session: session)
+        awsManager.credentialError = nil
+    }
+}
+```
 
 ```swift
     /// Implemented in Task 12 (SSOLoginService). Until then, direct the user to
