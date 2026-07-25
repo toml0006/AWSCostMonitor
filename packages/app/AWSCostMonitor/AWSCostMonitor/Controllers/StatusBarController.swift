@@ -22,6 +22,8 @@ class StatusBarController: NSObject {
     private let presenter: MenuBarPresenter
     let appearance: AppearanceManager
     private var options = MenuBarOptions()
+    private let sizing = PopoverSizing()
+    private var hostingController: NSHostingController<AnyView>!
 
     init(awsManager: AWSManager, appearance: AppearanceManager) {
         self.awsManager = awsManager
@@ -42,15 +44,26 @@ class StatusBarController: NSObject {
         // Native fade on show/hide. (The theme-switch crash was an unrelated NSWindow
         // double-free on Settings close, not popover animation, so the fade is safe.)
         popover.animates = true
-        // Right-edge clipping is handled by clamping the content width
-        // (updateAvailableWidth) and, as a timing-independent safety net, clamping the
-        // popover window onto the screen after show (clampPopoverOnScreen).
-        popover.contentViewController = NSHostingController(
-            rootView: PopoverContentView()
-                .environmentObject(awsManager)
-                .environmentObject(appearance)
-                .environment(\.ledgerAppearance, appearance.appearance)
+        // popoverDidShow fires after the presentation animation settles, so the
+        // on-screen clamp no longer depends on `animates` being false. cb744d1
+        // tied those together in a comment only, and 9f1c3c9 restored the fade
+        // and silently broke the clamp.
+        popover.delegate = self
+        // Right-edge clipping is handled by measuring content against the screen
+        // before show (syncContentSize) and moving the window onto the screen in
+        // popoverDidShow. The popover is never shrunk to fit.
+        // Retained: showPopover() must measure this view's fittingSize before
+        // handing a size to NSPopover.
+        hostingController = NSHostingController(
+            rootView: AnyView(
+                PopoverContentView()
+                    .environmentObject(awsManager)
+                    .environmentObject(appearance)
+                    .environmentObject(sizing)
+                    .environment(\.ledgerAppearance, appearance.appearance)
+            )
         )
+        popover.contentViewController = hostingController
         
         updateStatusItemView()
         
@@ -92,6 +105,26 @@ class StatusBarController: NSObject {
         Publishers.MergeMany(signals)
             .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in self?.renderStatusItem() }
+            .store(in: &cancellables)
+
+        // A profile switch can change the hero digit count and therefore the
+        // popover width while it is open. Re-measure and re-anchor; show() on an
+        // already-visible popover re-positions without replaying the fade.
+        Publishers.MergeMany(signals)
+            .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, self.popover.isShown, let button = self.statusItem.button else { return }
+                self.syncContentSize(on: button.window?.screen ?? NSScreen.main)
+                self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default
+            .publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .sink { [weak self] _ in
+                guard let self, let button = self.statusItem.button else { return }
+                self.syncContentSize(on: button.window?.screen ?? NSScreen.main)
+            }
             .store(in: &cancellables)
         
         // Monitor for clicks outside popover
@@ -143,64 +176,42 @@ class StatusBarController: NSObject {
     }
     
     func showPopover() {
-        if let button = statusItem.button {
-            updateAvailableWidth(for: button)
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            clampPopoverOnScreen()
-        }
+        guard let button = statusItem.button else { return }
+        syncContentSize(on: button.window?.screen ?? NSScreen.main)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
 
-    /// Timing-independent safety net for right-edge clipping. The content-width
-    /// clamp (updateAvailableWidth) flows through UserDefaults → @AppStorage →
-    /// SwiftUI relayout, which is async, while NSPopover measures its content
-    /// synchronously at show() — so a given show can use the previous show's
-    /// width and still run off the display. Once the popover window exists, nudge
-    /// it fully onto the screen. With animations off the window is already at its
-    /// final frame here, so this is a stable, one-shot adjustment.
-    private func clampPopoverOnScreen() {
-        guard let win = popover.contentViewController?.view.window else { return }
-        let visible = (win.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
-        let margin: CGFloat = 8
-        var frame = win.frame
-        if frame.maxX > visible.maxX - margin {
-            frame.origin.x = visible.maxX - margin - frame.width
-        }
-        if frame.minX < visible.minX + margin {
-            frame.origin.x = visible.minX + margin
-        }
-        if frame.origin.x != win.frame.origin.x {
-            win.setFrame(frame, display: true)
-        }
+    /// Publish the screen constraint, force a synchronous relayout against it,
+    /// then hand NSPopover the true content size. Without the relayout,
+    /// fittingSize reports the previous pass and NSPopover clamps against a
+    /// stale size — the original bug by another route.
+    private func syncContentSize(on screen: NSScreen?) {
+        sizing.availableWidth = PopoverGeometry.availableWidth(
+            screenWidth: screen?.visibleFrame.width ?? 1440
+        )
+        hostingController.view.layoutSubtreeIfNeeded()
+        popover.contentSize = hostingController.view.fittingSize
     }
 
-    /// The popover anchors its arrow under the status item and (with
-    /// `.applicationDefined` behavior) does not reliably shift to stay on
-    /// screen, so a wide popover under an item near the right edge clips off
-    /// the display. Publish the widest the content may be while remaining fully
-    /// on screen, centered on the item; `PopoverContentView` clamps to it.
-    private func updateAvailableWidth(for button: NSStatusBarButton) {
-        let margin: CGFloat = 12
-        let itemCenterX: CGFloat
-        let visible: NSRect
-        if let window = button.window {
-            let screenRect = window.convertToScreen(button.convert(button.bounds, to: nil))
-            itemCenterX = screenRect.midX
-            visible = (window.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
-        } else {
-            visible = NSScreen.main?.visibleFrame ?? .zero
-            itemCenterX = visible.midX
-        }
-        // Centered on the arrow, the popover needs half its width on each side;
-        // the tighter side (the right edge, for a menu-bar item) governs.
-        let rightGap = visible.maxX - itemCenterX
-        let leftGap  = itemCenterX - visible.minX
-        let centeredFit = 2 * min(rightGap, leftGap) - margin
-        let available = max(360, min(visible.width - 2 * margin, centeredFit))
-        UserDefaults.standard.set(Double(available), forKey: "popover.availableWidth")
-    }
-    
     func closePopover() {
         popover.performClose(nil)
+    }
+}
+
+// MARK: - NSPopoverDelegate
+
+extension StatusBarController: NSPopoverDelegate {
+    /// Timing-independent safety net for edge clipping. Fires once the
+    /// presentation animation has settled, so `win.frame` is final.
+    func popoverDidShow(_ notification: Notification) {
+        guard let win = popover.contentViewController?.view.window else { return }
+        let visible = (win.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
+        var frame = win.frame
+        frame.origin.x = PopoverGeometry.clampedOriginX(
+            idealX: frame.origin.x, width: frame.width, visible: visible
+        )
+        guard frame.origin.x != win.frame.origin.x else { return }
+        win.setFrame(frame, display: true, animate: false)
     }
 }
 
