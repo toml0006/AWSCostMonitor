@@ -50,6 +50,9 @@ class AWSManager: ObservableObject {
     }
     @Published var isLoading = false
     @Published var errorMessage: String?
+    /// Set alongside errorMessage when the failure was a credential problem, so
+    /// the popover can offer a sign-in action rather than plain text.
+    @Published var credentialError: AWSCostFetchError?
     @Published var profileBudgets: [String: ProfileBudget] = [:]
     @Published var lastAPICallTime: Date?
     @Published var isRateLimited: Bool = false
@@ -507,6 +510,7 @@ class AWSManager: ObservableObject {
         
         // Clear any previous error
         errorMessage = nil
+        credentialError = nil
         
         // Clear all demo data and caches
         costData = []
@@ -570,6 +574,7 @@ class AWSManager: ObservableObject {
         
         // Clear any previous error
         errorMessage = nil
+        credentialError = nil
         
         // Clear any existing real profile data
         costData = []
@@ -945,11 +950,13 @@ class AWSManager: ObservableObject {
             isLoading = false
             isLoadingServices = false
             errorMessage = nil
+            credentialError = nil
             isRateLimited = false
             return
         }
 
         errorMessage = nil
+        credentialError = nil
         isRateLimited = false
 
         let budget = getBudget(for: profile.name)
@@ -2070,6 +2077,12 @@ class AWSManager: ObservableObject {
         }
     }
     
+    /// Implemented in Task 12 (SSOLoginService). Until then, direct the user to
+    /// the CLI rather than silently doing nothing.
+    func signInToSSO(session: String) async {
+        errorMessage = "Run 'aws sso login --sso-session \(session)' in Terminal, then refresh."
+    }
+
     // Enhanced single-call data strategy with intelligent caching
     func fetchCostForSelectedProfile(force: Bool = false, bypassTeamCache: Bool = false) async {
         guard let profile = selectedProfile else {
@@ -2177,6 +2190,7 @@ class AWSManager: ObservableObject {
             self.isLoading = true
             self.isLoadingServices = true
             self.errorMessage = nil
+            self.credentialError = nil
             self.isRateLimited = false
         }
         
@@ -2566,6 +2580,9 @@ class AWSManager: ObservableObject {
             }
             
             await MainActor.run {
+                if self.selectedProfile?.name == profile.name {
+                    self.credentialError = error as? AWSCostFetchError
+                }
                 self.handleAPIFailure(
                     duration: duration,
                     profile: profile.name,
@@ -3381,6 +3398,7 @@ class AWSManager: ObservableObject {
             self.isLoading = true
             self.isLoadingServices = true
             self.errorMessage = nil
+            self.credentialError = nil
             self.isRateLimited = false
         }
         
@@ -3595,6 +3613,7 @@ class AWSManager: ObservableObject {
             self.isLoading = false
             self.isLoadingServices = false
             self.errorMessage = nil
+            self.credentialError = nil
             
             // Record successful "API" request for demo
             self.recordAPIRequest(profile: "acme", endpoint: "Demo Data", success: true, duration: 0.5)
@@ -4683,6 +4702,7 @@ class AWSManager: ObservableObject {
         await MainActor.run {
             self.isLoading = true
             self.errorMessage = nil
+            self.credentialError = nil
         }
         
         // Generate realistic demo data

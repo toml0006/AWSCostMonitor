@@ -21,6 +21,12 @@ struct PopoverContentView: View {
                 onRefresh: { Task { await awsManager.fetchCostForSelectedProfile(force: true) } }
             )
 
+            if let banner = bannerContent {
+                StatusBanner(message: banner.message,
+                             actionTitle: banner.actionTitle,
+                             action: banner.action)
+            }
+
             LedgerHairlineDivider()
 
             HeroSplit(
@@ -88,6 +94,40 @@ struct PopoverContentView: View {
     }
 
     // MARK: - Derived
+
+    private struct BannerContent {
+        let message: String
+        let actionTitle: String?
+        let action: (() -> Void)?
+    }
+
+    /// Credential failures get an action; everything else is plain text.
+    private var bannerContent: BannerContent? {
+        if case .ssoNotLoggedIn(let session)? = awsManager.credentialError {
+            return BannerContent(
+                message: "Not signed in to '\(session)'.",
+                actionTitle: "Sign In",
+                action: {
+                    Task {
+                        await awsManager.signInToSSO(session: session)
+                        awsManager.credentialError = nil
+                    }
+                })
+        }
+        if case .ssoSessionExpired(let session)? = awsManager.credentialError {
+            return BannerContent(
+                message: "SSO session '\(session)' expired.",
+                actionTitle: "Sign In",
+                action: {
+                    Task {
+                        await awsManager.signInToSSO(session: session)
+                        awsManager.credentialError = nil
+                    }
+                })
+        }
+        guard let message = awsManager.errorMessage, !message.isEmpty else { return nil }
+        return BannerContent(message: message, actionTitle: nil, action: nil)
+    }
 
     private var mtd: Double {
         guard let profile = awsManager.selectedProfile,
@@ -178,6 +218,7 @@ struct PopoverContentView: View {
     private var totalHeight: CGFloat {
         let rowH = LedgerTokens.Layout.rowHeight(appearance.appearance)
         return 36          // ProfileRow
+             + (bannerContent != nil ? StatusBanner.height : 0)
              + 1           // hairline
              + HeroSplit.panelHeight(leftCount: actualRows.count, rightCount: forecastRows.count)
              + 1           // hairline
