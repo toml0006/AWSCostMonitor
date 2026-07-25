@@ -49,6 +49,15 @@ struct LayeredTokenStore: SSOTokenProviding {
 
         // A refresh token needs no user interaction, so do not ask the user to
         // sign in again merely because the access token aged out overnight.
+        //
+        // Deliberately only the Keychain token, never the CLI's. Verified
+        // 2026-07-25 against a real expired CLI token carrying refresh
+        // material: presenting it to CreateToken returns
+        // InvalidGrantException "Invalid refresh token provided". SSO refresh
+        // tokens are bound to the registration that minted them and are
+        // rotated on use, so the copy sitting in ~/.aws/sso/cache is generally
+        // already spent. Attempting it would add a doomed network round-trip
+        // to every expired-token path and still end at the sign-in prompt.
         if let mine,
            mine.refreshToken != nil,
            let session = sessions[key],
