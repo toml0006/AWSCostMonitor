@@ -26,6 +26,14 @@ class AWSManager: ObservableObject {
     /// How each profile's credentials are obtained, keyed by profile name.
     /// Populated by loadProfiles; read by CredentialResolver.
     @Published var profileConfigs: [String: AWSProfileConfig] = [:]
+    /// Rebuilt whenever the parsed config changes, so a profile added to
+    /// ~/.aws/config while the app runs is resolvable without a restart.
+    private(set) var credentialResolver = CredentialResolver(
+        configs: [:],
+        ssoTokens: CLITokenStore(),
+        ssoRoles: LiveSSORoleFetcher(),
+        sts: LiveSTSAssumer()
+    )
     /// SSO sessions declared in ~/.aws/config, keyed by session name.
     @Published var ssoSessions: [String: SSOSession] = [:]
     @Published var isDemoMode: Bool = false
@@ -683,6 +691,12 @@ class AWSManager: ObservableObject {
             "Found \(parsed.profiles.count) profiles and \(parsed.ssoSessions.count) SSO sessions in AWS config")
 
         self.profileConfigs = Dictionary(uniqueKeysWithValues: parsed.profiles.map { ($0.name, $0) })
+        self.credentialResolver = CredentialResolver(
+            configs: self.profileConfigs,
+            ssoTokens: CLITokenStore(),
+            ssoRoles: LiveSSORoleFetcher(),
+            sts: LiveSTSAssumer()
+        )
         self.ssoSessions = parsed.ssoSessions
         self.realProfiles = parsed.profiles.map { AWSProfile(name: $0.name, region: $0.region) }
         
@@ -2263,14 +2277,8 @@ class AWSManager: ObservableObject {
             log(.debug, category: "API", "  AWS_SHARED_CREDENTIALS_FILE: \(ProcessInfo.processInfo.environment["AWS_SHARED_CREDENTIALS_FILE"] ?? "not set")")
             log(.debug, category: "API", "  AWS_PROFILE: \(ProcessInfo.processInfo.environment["AWS_PROFILE"] ?? "not set")")
             
-            // Create credentials provider using helper function
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
-            
-            if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
-                log(.debug, category: "API", "✅ Successfully created StaticAWSCredentialIdentityResolver for sandboxed environment")
-            } else {
-                log(.debug, category: "API", "✅ Successfully created ProfileAWSCredentialIdentityResolver for non-sandboxed environment")
-            }
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
+            log(.debug, category: "API", "✅ Resolved credentials for profile '\(profile.name)'")
             
             log(.debug, category: "API", "Creating CostExplorerClient configuration for region: \(profile.region ?? "us-east-1")")
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
@@ -2661,7 +2669,7 @@ class AWSManager: ObservableObject {
         }
         
         do {
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
@@ -2801,7 +2809,7 @@ class AWSManager: ObservableObject {
         }
         
         do {
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
@@ -2889,7 +2897,7 @@ class AWSManager: ObservableObject {
         }
 
         do {
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region ?? "us-east-1"
@@ -2957,7 +2965,7 @@ class AWSManager: ObservableObject {
         }
 
         do {
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region ?? "us-east-1"
@@ -3019,7 +3027,7 @@ class AWSManager: ObservableObject {
         log(.info, category: "API", "Fetching Cost Explorer anomalies for profile: \(profile.name)")
 
         do {
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region ?? "us-east-1"
@@ -3096,7 +3104,7 @@ class AWSManager: ObservableObject {
         log(.info, category: "API", "Fetching commitment summary for profile: \(profile.name)")
 
         do {
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region ?? "us-east-1"
@@ -3298,7 +3306,7 @@ class AWSManager: ObservableObject {
     private func fetchSavingsPlansExistence(for profile: AWSProfile) async -> (exists: Bool, count: Int)? {
         let startTime = Date()
         do {
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             let config = try await SavingsplansClient.SavingsplansClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: "us-east-1"
@@ -3323,7 +3331,7 @@ class AWSManager: ObservableObject {
         
         do {
             // Configure AWS credentials provider to use the specific profile
-            let credentialsProvider = try createAWSCredentialsProvider(for: profile.name)
+            let credentialsProvider = try await credentialResolver.resolver(for: profile.name)
             
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
@@ -3669,7 +3677,7 @@ class AWSManager: ObservableObject {
         
         do {
             // Configure AWS credentials provider
-            let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
+            let credentialsProvider = try await credentialResolver.resolver(for: profileName)
             let config = try await CostExplorerClient.CostExplorerClientConfiguration(
                 awsCredentialIdentityResolver: credentialsProvider,
                 region: profile.region
@@ -4143,7 +4151,7 @@ class AWSManager: ObservableObject {
                 if settings.teamCacheEnabled, let config = settings.teamCacheConfig, config.isValid {
                     do {
                         // Create credentials provider for this profile
-                        let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
+                        let credentialsProvider = try await credentialResolver.resolver(for: profileName)
                         
                         // Initialize S3 service with profile-specific credentials
                         let s3Service = try await S3CacheService(config: config, profileName: profileName, credentialsProvider: credentialsProvider)
@@ -4360,7 +4368,7 @@ class AWSManager: ObservableObject {
     private func resolveAccountId(for profileName: String) async -> String? {
         do {
             // Create credentials provider for the specific profile
-            let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
+            let credentialsProvider = try await credentialResolver.resolver(for: profileName)
             
             // Use AWS STS to get account ID with profile-specific credentials
             let stsConfig = try await STSClient.STSClientConfiguration(
@@ -4522,7 +4530,7 @@ class AWSManager: ObservableObject {
             // Try to initialize the service
             if let config = settings.teamCacheConfig, config.isValid {
                 do {
-                    let credentialsProvider = try createAWSCredentialsProvider(for: profileName)
+                    let credentialsProvider = try await credentialResolver.resolver(for: profileName)
                     cacheService = try await S3CacheService(config: config, profileName: profileName, credentialsProvider: credentialsProvider)
                     // @Published mutation must hop to main actor.
                     let serviceForCache = cacheService
