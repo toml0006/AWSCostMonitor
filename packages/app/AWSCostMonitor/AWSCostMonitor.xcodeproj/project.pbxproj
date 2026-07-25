@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		7A8F6BFD2E3D716300A26D48 /* AWSCostExplorer in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6BFC2E3D716300A26D48 /* AWSCostExplorer */; };
 		7A8F6BFF2E3D716300A26D48 /* AWSSTS in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6BFE2E3D716300A26D48 /* AWSSTS */; };
+		7A5A99AD2E3D716400A26D48 /* AWSSSOOIDC in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5A99AC2E3D716400A26D48 /* AWSSSOOIDC */; };
+		7A5A99AB2E3D716400A26D48 /* AWSSSO in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5A99AA2E3D716400A26D48 /* AWSSSO */; };
 		7A8F6C002E3D716400A26D48 /* AWSS3 in Frameworks */ = {isa = PBXBuildFile; productRef = 7A8F6C012E3D716400A26D48 /* AWSS3 */; };
 		7A5A99022E3D716400A26D48 /* AWSSavingsplans in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5A99012E3D716400A26D48 /* AWSSavingsplans */; };
 		7AC2E7452E57A55900B1CF89 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AC2E7442E57A55900B1CF89 /* StoreKit.framework */; };
@@ -63,6 +65,8 @@
 			files = (
 				7A8F6BFD2E3D716300A26D48 /* AWSCostExplorer in Frameworks */,
 				7A8F6BFF2E3D716300A26D48 /* AWSSTS in Frameworks */,
+				7A5A99AD2E3D716400A26D48 /* AWSSSOOIDC in Frameworks */,
+				7A5A99AB2E3D716400A26D48 /* AWSSSO in Frameworks */,
 				7A8F6C002E3D716400A26D48 /* AWSS3 in Frameworks */,
 				7A5A99022E3D716400A26D48 /* AWSSavingsplans in Frameworks */,
 				7AC2E7452E57A55900B1CF89 /* StoreKit.framework in Frameworks */,
@@ -137,6 +141,8 @@
 			packageProductDependencies = (
 				7A8F6BFC2E3D716300A26D48 /* AWSCostExplorer */,
 				7A8F6BFE2E3D716300A26D48 /* AWSSTS */,
+				7A5A99AC2E3D716400A26D48 /* AWSSSOOIDC */,
+				7A5A99AA2E3D716400A26D48 /* AWSSSO */,
 				7A8F6C012E3D716400A26D48 /* AWSS3 */,
 				7A5A99012E3D716400A26D48 /* AWSSavingsplans */,
 			);
@@ -622,6 +628,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
 			productName = AWSSTS;
+		};
+		7A5A99AC2E3D716400A26D48 /* AWSSSOOIDC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
+			productName = AWSSSOOIDC;
+		};
+		7A5A99AA2E3D716400A26D48 /* AWSSSO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A8F6BFB2E3D716300A26D48 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
+			productName = AWSSSO;
 		};
 		7A8F6C012E3D716400A26D48 /* AWSS3 */ = {
 			isa = XCSwiftPackageProductDependency;

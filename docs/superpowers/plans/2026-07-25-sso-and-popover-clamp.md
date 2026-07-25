@@ -28,7 +28,7 @@
   cd packages/app/AWSCostMonitor && xcodebuild build-for-testing \
     -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS' -quiet
   ```
-- **New files must be added to the `AWSCostMonitor` target** (or `AWSCostMonitorTests` for tests) in `AWSCostMonitor.xcodeproj`. This project does not use a filesystem-synchronized group; a new `.swift` file that is not registered in `project.pbxproj` will not compile and the failure looks like "cannot find X in scope". Add the file reference, then verify with a build before writing more code.
+- **Do NOT edit `project.pbxproj` to register new files.** This project uses `PBXFileSystemSynchronizedRootGroup` for both targets, so a `.swift` file placed anywhere under `AWSCostMonitor/` or `AWSCostMonitorTests/` joins its target automatically. Adding a manual file reference creates a duplicate registration. (Verified 2026-07-25 by two independent implementations; an earlier version of this plan asserted the opposite and was wrong.)
 - **Rate limiting is a product invariant** (`.agent-os/product/decisions.md` DEC-002): never introduce a code path that issues more AWS API calls per refresh than the one it replaces. Credential caching in Tasks 8 and 9 exists to satisfy this.
 - **Privacy is a product invariant** (DEC-003): no telemetry, no external services. Tokens and credentials stay on the machine.
 - **The entitlements file stays read-only.** Do not add `com.apple.security.files.user-selected.read-write` to `AWSCostMonitor/AWSCostMonitor.entitlements`. App-minted SSO tokens go to the Keychain; the AWS CLI's cache is read but never written.
@@ -222,8 +222,6 @@ final class PopoverSizing: ObservableObject {
 }
 ```
 
-Register both files in `AWSCostMonitor.xcodeproj` — `PopoverSizing.swift` in the `AWSCostMonitor` target, `PopoverGeometryTests.swift` in `AWSCostMonitorTests`.
-
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
@@ -236,8 +234,7 @@ Expected: PASS, 11 tests.
 
 ```bash
 git add AWSCostMonitor/Utilities/PopoverSizing.swift \
-        AWSCostMonitorTests/PopoverGeometryTests.swift \
-        AWSCostMonitor.xcodeproj/project.pbxproj
+        AWSCostMonitorTests/PopoverGeometryTests.swift
 git commit -m "feat(popover): pure geometry for width and origin clamping"
 ```
 
@@ -942,8 +939,6 @@ enum AWSConfigParser {
 }
 ```
 
-Register both new files in the `AWSCostMonitor` target and the test file in `AWSCostMonitorTests`.
-
 - [ ] **Step 5: Run test to verify it passes**
 
 ```bash
@@ -957,8 +952,7 @@ Expected: PASS, 18 tests.
 ```bash
 git add AWSCostMonitor/Models/AWSProfileConfig.swift \
         AWSCostMonitor/Utilities/AWSConfigParser.swift \
-        AWSCostMonitorTests/AWSConfigParserTests.swift \
-        AWSCostMonitor.xcodeproj/project.pbxproj
+        AWSCostMonitorTests/AWSConfigParserTests.swift
 git commit -m "feat(config): section-aware parser classifying credential sources"
 ```
 
@@ -1416,8 +1410,7 @@ Expected: PASS, 12 tests.
 
 ```bash
 git add AWSCostMonitor/Utilities/SSOTokenCache.swift \
-        AWSCostMonitorTests/SSOTokenCacheTests.swift \
-        AWSCostMonitor.xcodeproj/project.pbxproj
+        AWSCostMonitorTests/SSOTokenCacheTests.swift
 git commit -m "feat(sso): read the AWS CLI's SSO token cache"
 ```
 
@@ -1428,7 +1421,6 @@ git commit -m "feat(sso): read the AWS CLI's SSO token cache"
 **Files:**
 - Create: `AWSCostMonitor/Managers/CredentialResolver.swift`
 - Test: `AWSCostMonitorTests/CredentialResolverTests.swift`
-- Modify: `AWSCostMonitor.xcodeproj` — add `AWSSSO` to the `AWSCostMonitor` target's package product dependencies (alongside the existing `AWSCostExplorer`, `AWSSTS`, `AWSSavingsplans`)
 
 **Interfaces:**
 - Consumes: `AWSProfileConfig`, `ProfileCredentialSource`, `SSOProfileRef` (Task 4); `SSOToken`, `SSOTokenCache` (Task 7); `AWSCostFetchError` (Task 6); `parseAWSCredentials(content:profileName:)` from the existing `AWSCostMonitor/Utilities/AWSCredentialsHelper.swift`.
@@ -1692,7 +1684,7 @@ Expected: compile failure, "cannot find 'CredentialResolver' in scope".
 
 - [ ] **Step 3: Add the AWSSSO package product**
 
-In Xcode: select the project, the `AWSCostMonitor` target, General → Frameworks, Libraries, and Embedded Content → `+` → `aws-sdk-swift` → `AWSSSO`. Verify the resulting `project.pbxproj` diff adds an `AWSSSO` entry mirroring the existing `AWSSTS` one.
+**Already done** — `AWSSSO` and `AWSSSOOIDC` were both wired into the `AWSCostMonitor` target in commit `pbxproj: add AWSSSO and AWSSSOOIDC package products`, since a headless agent cannot drive the Xcode GUI and both Task 8 and Task 12 need them. Verified by compiling a probe referencing `GetRoleCredentialsInput`, `RegisterClientInput`, `StartDeviceAuthorizationInput`, and `CreateTokenInput` — all four resolve under exactly those names, so the signatures used in Tasks 8, 9 and 12 are sound. Nothing to do; skip to the next step.
 
 - [ ] **Step 4: Write the implementation**
 
@@ -1866,8 +1858,7 @@ Expected: PASS, 10 tests.
 
 ```bash
 git add AWSCostMonitor/Managers/CredentialResolver.swift \
-        AWSCostMonitorTests/CredentialResolverTests.swift \
-        AWSCostMonitor.xcodeproj/project.pbxproj
+        AWSCostMonitorTests/CredentialResolverTests.swift
 git commit -m "feat(auth): credential resolver for SSO and assume-role chains
 
 Caches per-profile credentials until 5 minutes before expiry. Without this,
@@ -1966,7 +1957,7 @@ Expected: BUILD SUCCEEDED. If `GetRoleCredentialsInput` or `RoleCredentials` fie
 - [ ] **Step 3: Commit**
 
 ```bash
-git add AWSCostMonitor/Managers/CredentialAdapters.swift AWSCostMonitor.xcodeproj/project.pbxproj
+git add AWSCostMonitor/Managers/CredentialAdapters.swift
 git commit -m "feat(auth): live SSO and STS adapters for the credential resolver"
 ```
 
@@ -2226,7 +2217,7 @@ Let an SSO session expire (or rename its cache file in `~/.aws/sso/cache/` to si
 
 ```bash
 git add AWSCostMonitor/Popover/StatusBanner.swift AWSCostMonitor/Views/PopoverContentView.swift \
-        AWSCostMonitor/Managers/AWSManager.swift AWSCostMonitor.xcodeproj/project.pbxproj
+        AWSCostMonitor/Managers/AWSManager.swift
 git commit -m "feat(popover): surface credential errors with an actionable banner"
 ```
 
@@ -2243,7 +2234,6 @@ Removes the Terminal dependency.
 - Create: `AWSCostMonitor/Managers/SSOLoginService.swift`
 - Test: `AWSCostMonitorTests/SSOTokenStoreTests.swift`
 - Modify: `AWSCostMonitor/Managers/AWSManager.swift` (replace the Task 11 stub)
-- Modify: `AWSCostMonitor.xcodeproj` — add `AWSSSOOIDC` to the `AWSCostMonitor` target
 
 **Interfaces:**
 - Consumes: `SSOToken` (Task 7), `SSOSession` (Task 4), `SSOTokenProviding` (Task 8).
@@ -2458,7 +2448,7 @@ Expected: PASS, 6 tests. A sandboxed test host needs the keychain-access-group e
 
 - [ ] **Step 5: Add the AWSSSOOIDC package product**
 
-Xcode → target `AWSCostMonitor` → General → Frameworks, Libraries, and Embedded Content → `+` → `aws-sdk-swift` → `AWSSSOOIDC`.
+**Already done** — see Task 8, Step 3. `AWSSSOOIDC` is already a package product dependency of the `AWSCostMonitor` target. Nothing to do.
 
 - [ ] **Step 6: Write the login service**
 
@@ -2681,8 +2671,7 @@ git add AWSCostMonitor/Utilities/SSOTokenStore.swift \
         AWSCostMonitor/Managers/CredentialAdapters.swift \
         AWSCostMonitor/Managers/AWSManager.swift \
         AWSCostMonitor/Views/PopoverContentView.swift \
-        AWSCostMonitorTests/SSOTokenStoreTests.swift \
-        AWSCostMonitor.xcodeproj/project.pbxproj
+        AWSCostMonitorTests/SSOTokenStoreTests.swift
 git commit -m "feat(sso): in-app device-authorization sign-in
 
 Tokens go to the Keychain rather than ~/.aws/sso/cache so the sandbox
@@ -2983,8 +2972,7 @@ Open Settings. Expected: both `ams` and `middleout` sessions listed, each showin
 - [ ] **Step 5: Commit**
 
 ```bash
-git add AWSCostMonitor/Views/SSOSettingsSection.swift AWSCostMonitor/SettingsView.swift \
-        AWSCostMonitor.xcodeproj/project.pbxproj
+git add AWSCostMonitor/Views/SSOSettingsSection.swift AWSCostMonitor/SettingsView.swift
 git commit -m "feat(settings): SSO session list with sign in and sign out"
 ```
 
