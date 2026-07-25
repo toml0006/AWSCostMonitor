@@ -171,6 +171,29 @@ class AWSConfigAccessManager: ObservableObject {
         }
     }
     
+    /// Run `body` with the security-scoped `~/.aws` directory URL. The bookmark
+    /// covers the folder, not individual files, so anything beneath it —
+    /// including sso/cache — is reachable without a new entitlement.
+    /// Returns nil when access is unavailable.
+    func withScopedAccess<T>(_ body: (URL) throws -> T) rethrows -> T? {
+        if !ProcessInfo.processInfo.environment.keys.contains("APP_SANDBOX_CONTAINER_ID") {
+            let url = URL(fileURLWithPath: NSString("~/.aws").expandingTildeInPath)
+            return try body(url)
+        }
+        guard let url = securityScopedURL else {
+            logger.error("No security-scoped URL available")
+            needsAccessGrant = true
+            return nil
+        }
+        guard url.startAccessingSecurityScopedResource() else {
+            logger.error("Failed to start accessing security-scoped resource")
+            needsAccessGrant = true
+            return nil
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
+        return try body(url)
+    }
+
     /// Read AWS config file with security-scoped access
     func readConfigFile() -> String? {
         // If not sandboxed, read directly
