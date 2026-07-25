@@ -14,6 +14,7 @@ import AWSSavingsplans
 import AWSSTS
 import AWSSDKIdentity
 import AWSClientRuntime
+import Combine
 
 // MARK: - AWS Manager
 // This class handles all the AWS SDK logic.
@@ -30,12 +31,13 @@ class AWSManager: ObservableObject {
     /// ~/.aws/config while the app runs is resolvable without a restart.
     private(set) var credentialResolver = CredentialResolver(
         configs: [:],
-        ssoTokens: CLITokenStore(),
+        ssoTokens: LayeredTokenStore(),
         ssoRoles: LiveSSORoleFetcher(),
         sts: LiveSTSAssumer()
     )
     /// SSO sessions declared in ~/.aws/config, keyed by session name.
     @Published var ssoSessions: [String: SSOSession] = [:]
+    let ssoLogin = SSOLoginService()
     @Published var isDemoMode: Bool = false
     @Published var selectedProfile: AWSProfile? {
         didSet {
@@ -189,6 +191,7 @@ class AWSManager: ObservableObject {
     
     // UserDefaults - use app-specific suite where data is actually stored
     private let userDefaults = UserDefaults(suiteName: "middleout.AWSCostMonitor") ?? UserDefaults.standard
+    private var cancellables = Set<AnyCancellable>()
     
     // Profile Management
     private let profileManager = ProfileManager()
@@ -268,6 +271,14 @@ class AWSManager: ObservableObject {
         
         log(.info, category: "Config", "AWSManager initialized - telemetry disabled")
         print("DEBUG: AWSManager init() called at \(Date())")
+
+        // SSOLoginService is held rather than observed directly by the popover,
+        // so relay its in-flight state changes through AWSManager.
+        ssoLogin.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
 
         // Migrate: remove obsolete AutoRefreshEnabled flag (auto-refresh is now always on).
         // Historical installs could have this set to false and silently disable refreshes.
@@ -693,7 +704,7 @@ class AWSManager: ObservableObject {
         self.profileConfigs = Dictionary(uniqueKeysWithValues: parsed.profiles.map { ($0.name, $0) })
         self.credentialResolver = CredentialResolver(
             configs: self.profileConfigs,
-            ssoTokens: CLITokenStore(),
+            ssoTokens: LayeredTokenStore(),
             ssoRoles: LiveSSORoleFetcher(),
             sts: LiveSTSAssumer()
         )
@@ -2091,10 +2102,22 @@ class AWSManager: ObservableObject {
         }
     }
     
-    /// Implemented in Task 12 (SSOLoginService). Until then, direct the user to
-    /// the CLI rather than silently doing nothing.
     func signInToSSO(session: String) async {
-        errorMessage = "Run 'aws sso login --sso-session \(session)' in Terminal, then refresh."
+        guard let ssoSession = ssoSessions[session] else {
+            errorMessage = "No sso-session named '\(session)' in ~/.aws/config."
+            return
+        }
+        do {
+            _ = try await ssoLogin.signIn(session: ssoSession)
+            // Credentials minted from the old access token must not survive a
+            // successful sign-in.
+            await credentialResolver.invalidateCache()
+            credentialError = nil
+            errorMessage = nil
+            await fetchCostForSelectedProfile(force: true)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     // Enhanced single-call data strategy with intelligent caching

@@ -103,6 +103,14 @@ struct PopoverContentView: View {
 
     /// Credential failures get an action; everything else is plain text.
     private var bannerContent: BannerContent? {
+        if awsManager.ssoLogin.isSigningIn {
+            let code = awsManager.ssoLogin.userCode.map { " — code \($0)" } ?? ""
+            return BannerContent(
+                message: "Waiting for browser sign-in\(code)",
+                actionTitle: "Cancel",
+                action: { awsManager.ssoLogin.cancel() }
+            )
+        }
         if case .ssoNotLoggedIn(let session)? = awsManager.credentialError {
             return BannerContent(
                 message: "Not signed in to '\(session)'.",
