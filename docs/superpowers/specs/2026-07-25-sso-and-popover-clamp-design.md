@@ -19,10 +19,18 @@ same moment (opening the menu bar popover against a real-world AWS config):
 
 ## Part A: Popover Width Clamp
 
+### Prior Art
+
+This bug has been attacked three times already on `main`: `39ab91f`
+("clamp width to screen so it can't clip off a display edge"), `04d1aaf`, `2a56c3d`
+("size at show-time, not via live-resize"), and `cb744d1` ("robustly prevent right-edge
+clipping"). The machinery those commits added is still present and is part of the current
+root cause. This design replaces it rather than adding a fourth layer.
+
 ### Root Cause
 
-`Views/PopoverContentView.swift:176` derives the popover width from the length of the
-formatted cost string:
+`Views/PopoverContentView.swift:187` derives the ideal width from the length of the
+formatted cost string, then clamps it against a value published by the controller:
 
 ```swift
 private var windowWidth: CGFloat {
@@ -30,27 +38,170 @@ private var windowWidth: CGFloat {
     let projStr = projectedDouble.map { CurrencyFormatter.format($0) } ?? mtdStr
     let heroChars = max(mtdStr.count, projStr.count)
     let columnWidth = CGFloat(heroChars) * 20 + 44
-    return max(500, columnWidth * 2 + 1)
+    let ideal = max(500, columnWidth * 2 + 1)
+    return availableWidth > 0 ? min(ideal, CGFloat(availableWidth)) : ideal
 }
 ```
 
-This yields 500pt for `$1,234.56` and roughly 610pt for a seven-figure month-to-date total.
+`ideal` is 500pt for `$1,234.56` and roughly 610pt for a seven-figure month-to-date total.
 
-`Controllers/StatusBarController.swift:37` sets `popover.contentSize` to
-`NSSize(width: 360, height: 500)` once during `init`, and line 138 calls
-`popover.show(relativeTo:of:preferredEdge:)`.
+Three defects compound.
 
-`NSPopover` performs its screen-edge clamping exactly once, at `show()` time, using the
-`contentSize` in effect at that moment. It therefore clamps for a 360pt popover. Afterwards
-`NSHostingController` reports the true SwiftUI `fittingSize` through `preferredContentSize`,
-the popover grows outward from an anchor that was already committed, and no re-clamp runs.
-The resulting overhang past the right screen edge is approximately
-`(actualWidth - 360) / 2`.
+**A1 — The clamp shrinks the content instead of moving the window.**
+`Controllers/StatusBarController.swift:181` computes the published width:
 
-This explains the intermittence: whether the overhang is visible depends jointly on how far
-right the status item sits in the menu bar and on how many digits the currently selected
-profile's MTD total has. Switching profiles while the popover is open resizes it live and
-reproduces the same bug without any re-clamp at all.
+```swift
+let rightGap = visible.maxX - itemCenterX
+let leftGap  = itemCenterX - visible.minX
+let centeredFit = 2 * min(rightGap, leftGap) - margin
+let available = max(360, min(visible.width - 2 * margin, centeredFit))
+```
+
+`centeredFit` assumes the popover must stay centered on its arrow. For a menu bar item near
+the right edge — which is the normal case for this app — `rightGap` is small, so
+`centeredFit` is small, and `available` floors out at 360. `windowWidth` then returns
+`min(ideal, 360)` = 360.
+
+But `Popover/HeroSplit.swift:174` lays out each hero column at `.frame(width: 210,
+alignment: .leading)`, with `.fixedSize()` text inside, and SwiftUI does not clip children
+that overflow their parent frame. Roughly 420pt of intrinsic content is therefore rendered
+inside a 360pt popover and spills past its right edge. **The anti-clipping mechanism is what
+produces the visible clipping.**
+
+**A2 — The width channel is asynchronous, so the first show uses stale data.**
+`updateAvailableWidth` writes to `UserDefaults` under key `popover.availableWidth`;
+`PopoverContentView.swift:10` reads it back through
+`@AppStorage("popover.availableWidth")`. `NSPopover` measures its content synchronously
+inside `show()`. The existing comment at `StatusBarController.swift:153-157` already concedes
+that "a given show can use the previous show's width". Moving between displays, or switching
+to a profile with a different digit count, is wrong on the first open and right on the
+second.
+
+**A3 — The safety net's precondition was silently revoked.**
+`cb744d1` introduced `clampPopoverOnScreen()` and, in the same commit, set
+`popover.animates = false`. The doc comment at `StatusBarController.swift:158` records the
+dependency in prose: "With animations off the window is already at its final frame here, so
+this is a stable, one-shot adjustment." Commit `9f1c3c9` ("restore glow + fade") flipped
+`popover.animates` back to `true` (line 44) and left the clamp untouched. The clamp now reads
+`win.frame` while the popover is mid-fade, and the presentation animation overwrites the
+corrected origin.
+
+Nothing in the type system or the test suite tied the clamp to `animates == false`, which is
+why a polish commit could revert the precondition from a distance. The fix must be
+independent of animation timing so that this cannot recur.
+
+### Design
+
+The governing correction is **stop shrinking, start moving**. A 610pt popover fits
+comfortably on any display the app supports; what it needs is to be shifted left, not
+squeezed below the width its own content requires.
+
+Three changes, each addressing one defect.
+
+**A1 — Remove the centered-fit squeeze and enforce a content floor.**
+The published width is constrained only by the total usable screen width, never by where the
+status item happens to sit:
+
+```swift
+// Utilities/PopoverSizing.swift
+enum PopoverGeometry {
+    static let minWidth: CGFloat = 500      // below this, HeroSplit's columns overflow
+    static let edgeMargin: CGFloat = 12
+
+    /// Horizontal space a popover may occupy on a given screen.
+    static func availableWidth(screenWidth: CGFloat) -> CGFloat {
+        screenWidth - 2 * edgeMargin
+    }
+
+    /// Width the content wants, floored at `minWidth` and capped to what the screen allows.
+    /// The screen cap wins over `minWidth` only on displays too narrow to honour both.
+    static func clampedWidth(desired: CGFloat, availableWidth: CGFloat) -> CGFloat {
+        min(max(desired, minWidth), availableWidth)
+    }
+
+    /// Origin.x that keeps `width` fully on screen, preferring `idealX`.
+    static func clampedOriginX(idealX: CGFloat, width: CGFloat, visible: NSRect) -> CGFloat {
+        let maxX = visible.maxX - edgeMargin - width
+        let minX = visible.minX + edgeMargin
+        return max(minX, min(idealX, maxX))
+    }
+}
+```
+
+`minWidth` rises from the old 360 floor to 500, matching the value `windowWidth` already
+treats as its own minimum. The two are now the same constant rather than two numbers that
+disagree.
+
+**A2 — Replace the UserDefaults channel with a synchronous one.**
+
+```swift
+@MainActor
+final class PopoverSizing: ObservableObject {
+    /// Published by the controller from the status item's current screen.
+    @Published var availableWidth: CGFloat = .greatestFiniteMagnitude
+}
+```
+
+`StatusBarController` owns the instance, injects it via `.environmentObject`, and retains a
+reference to the `NSHostingController` (it currently constructs one inline at line 48 and
+discards the reference). `PopoverContentView` drops
+`@AppStorage("popover.availableWidth")` in favour of `@EnvironmentObject var sizing:
+PopoverSizing`, and routes its computed `ideal` through
+`PopoverGeometry.clampedWidth(desired:availableWidth:)`.
+
+```swift
+func showPopover() {
+    guard let button = statusItem.button else { return }
+    let screen = button.window?.screen ?? NSScreen.main
+    sizing.availableWidth = PopoverGeometry.availableWidth(
+        screenWidth: screen?.visibleFrame.width ?? 1440
+    )
+    // Force SwiftUI to re-lay-out against the new cap before measuring. Without
+    // this, fittingSize reports the previous layout pass and the stale-width bug
+    // (A2) reappears through a different route.
+    hostingController.view.layoutSubtreeIfNeeded()
+    popover.contentSize = hostingController.view.fittingSize
+    popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+}
+```
+
+Setting `contentSize` explicitly before `show()` means AppKit performs its own edge
+clamping against the true size rather than a stale one.
+
+**A3 — Make the window clamp independent of animation timing.**
+`clampPopoverOnScreen()` moves from an inline call after `show()` to the
+`NSPopoverDelegate` callback `popoverDidShow(_:)`, which fires after the presentation
+animation completes regardless of the `animates` setting. `StatusBarController` adopts
+`NSPopoverDelegate` and sets `popover.delegate = self`. The body is rewritten in terms of
+`PopoverGeometry.clampedOriginX` so the geometry is testable:
+
+```swift
+func popoverDidShow(_ notification: Notification) {
+    guard let win = popover.contentViewController?.view.window else { return }
+    let visible = (win.screen ?? NSScreen.main ?? NSScreen.screens.first!).visibleFrame
+    var frame = win.frame
+    frame.origin.x = PopoverGeometry.clampedOriginX(
+        idealX: frame.origin.x, width: frame.width, visible: visible
+    )
+    if frame.origin.x != win.frame.origin.x {
+        win.setFrame(frame, display: true, animate: false)
+    }
+}
+```
+
+`popover.animates` is left at `true`; the fade restored in `9f1c3c9` is preserved. The stale
+doc comment at `StatusBarController.swift:153-159` asserting a dependency on animations being
+off is deleted, since the dependency no longer exists.
+
+Live resizing (switching from a low-cost profile to a high-cost one while the popover is
+open) re-runs the measure-and-show sequence. This attaches to the existing debounced
+`Publishers.MergeMany` pipeline at `Controllers/StatusBarController.swift:92` — one
+additional sink, not a new mechanism — so it inherits the 50ms debounce that was added to
+prevent overlapping AppKit mutations. Display topology changes are handled by observing
+`NSApplication.didChangeScreenParametersNotification`.
+
+The `popover.availableWidth` UserDefaults key is removed. No migration is needed; a stale
+value left in the domain is simply never read again.
 
 ### Design
 
@@ -122,13 +273,24 @@ Display topology changes are handled by observing
 
 ### Testing
 
-`PopoverGeometryTests` covers the two pure functions:
+`PopoverGeometryTests` covers the three pure functions:
 
 - `availableWidth` subtracts `2 * edgeMargin` from the screen width
 - `clampedWidth` with a desired width below `minWidth` returns `minWidth`
 - `clampedWidth` with a desired width above the allowance returns `availableWidth`
 - `clampedWidth` with a desired width that fits returns it unchanged
-- a narrow external display forces a result below `minWidth` (screen cap wins)
+- `clampedWidth` on a display too narrow for `minWidth` returns the screen cap
+- **Regression for A1:** a status item near the right edge must not reduce the width. The
+  old `centeredFit` path is gone, so `clampedWidth` takes no item position at all; the test
+  asserts the signature carries only `desired` and `availableWidth`, and that a 610pt
+  desired width on a 1440pt display returns 610 — not 360.
+- `clampedOriginX` shifts a frame left when it overruns `visible.maxX - edgeMargin`
+- `clampedOriginX` shifts a frame right when it underruns `visible.minX + edgeMargin`
+- `clampedOriginX` returns `idealX` unchanged when the frame already fits
+- `clampedOriginX` prefers the left edge when the frame is wider than the visible area
+
+`NSPopover` placement and the `popoverDidShow` delegate hook are not unit tested; the logic
+under test is the pure geometry.
 
 `NSPopover` placement itself is not unit tested; the logic under test is the pure function.
 
@@ -379,8 +541,10 @@ falls back to demo data or to a different profile.
 
 Each step is independently releasable and independently testable.
 
-1. **Popover clamp** — `PopoverGeometry`, `PopoverSizing`, `StatusBarController` changes.
-   No dependency on the rest.
+1. **Popover clamp** — `PopoverGeometry`, `PopoverSizing`, `StatusBarController` and
+   `PopoverContentView` changes, removing the `centeredFit` squeeze, the
+   `popover.availableWidth` UserDefaults channel, and the inline post-show clamp. No
+   dependency on the rest.
 2. **Config parser** — `AWSConfigParser`, `AWSManager.loadProfiles` migration. Fixes the
    phantom `sso-session` profile immediately and is a prerequisite for steps 3 and 4.
 3. **SSO via cached token** — `SSOTokenCache`, `CredentialResolver` SSO path, typed errors,
