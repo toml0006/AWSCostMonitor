@@ -704,7 +704,7 @@ class AWSManager: ObservableObject {
         self.profileConfigs = Dictionary(uniqueKeysWithValues: parsed.profiles.map { ($0.name, $0) })
         self.credentialResolver = CredentialResolver(
             configs: self.profileConfigs,
-            ssoTokens: LayeredTokenStore(),
+            ssoTokens: LayeredTokenStore(sessions: parsed.ssoSessions),
             ssoRoles: LiveSSORoleFetcher(),
             sts: LiveSTSAssumer()
         )

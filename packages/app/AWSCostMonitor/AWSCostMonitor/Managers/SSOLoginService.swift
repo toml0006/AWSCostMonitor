@@ -141,6 +141,50 @@ final class SSOLoginService: ObservableObject {
         throw SSOLoginError.timedOut
     }
 
+    /// Renew an expired token without user interaction. This requires both the
+    /// refresh token and the client registration that minted it.
+    func refresh(
+        session: SSOSession,
+        token: SSOToken
+    ) async throws -> SSOToken {
+        guard let refreshToken = token.refreshToken,
+              let clientId = token.clientId,
+              let clientSecret = token.clientSecret else {
+            throw AWSCostFetchError.ssoSessionExpired(session: session.name)
+        }
+
+        let config = try await SSOOIDCClient.SSOOIDCClientConfiguration(
+            region: session.ssoRegion
+        )
+        let client = SSOOIDCClient(config: config)
+        let output = try await client.createToken(
+            input: CreateTokenInput(
+                clientId: clientId,
+                clientSecret: clientSecret,
+                grantType: "refresh_token",
+                refreshToken: refreshToken
+            )
+        )
+        guard let accessToken = output.accessToken else {
+            throw AWSCostFetchError.ssoSessionExpired(session: session.name)
+        }
+        let lifetime = TimeInterval(
+            output.expiresIn > 0 ? output.expiresIn : 28_800
+        )
+        let renewed = SSOToken(
+            accessToken: accessToken,
+            expiresAt: Date().addingTimeInterval(lifetime),
+            region: session.ssoRegion,
+            startUrl: session.startUrl,
+            // The service may rotate the refresh token.
+            refreshToken: output.refreshToken ?? refreshToken,
+            clientId: clientId,
+            clientSecret: clientSecret
+        )
+        try store.save(renewed, forKey: session.name)
+        return renewed
+    }
+
     /// Registrations last roughly 90 days; reuse one until it expires.
     private func registration(
         for session: SSOSession,

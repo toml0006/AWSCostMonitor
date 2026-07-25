@@ -85,4 +85,76 @@ final class SSOTokenStoreTests: XCTestCase {
             "an expired client registration must be re-created, not reused"
         )
     }
+
+    func testLayeredStorePrefersAnUnexpiredKeychainToken() async throws {
+        try store.save(
+            token(expiresIn: 3600, access: "keychain"),
+            forKey: key
+        )
+        let layered = LayeredTokenStore(
+            keychain: store,
+            cli: StubCLIStore(token: nil),
+            sessions: [:]
+        )
+        let loaded = await layered.token(forKey: key)
+        XCTAssertEqual(loaded?.accessToken, "keychain")
+    }
+
+    func testLayeredStoreFallsBackToTheCLIWhenKeychainIsStale() async throws {
+        try store.save(
+            token(expiresIn: -60, access: "stale-keychain"),
+            forKey: key
+        )
+        let cliToken = SSOToken(
+            accessToken: "from-cli",
+            expiresAt: Date().addingTimeInterval(3600),
+            region: nil,
+            startUrl: nil,
+            refreshToken: nil,
+            clientId: nil,
+            clientSecret: nil
+        )
+        let layered = LayeredTokenStore(
+            keychain: store,
+            cli: StubCLIStore(token: cliToken),
+            sessions: [:]
+        )
+        let loaded = await layered.token(forKey: key)
+        XCTAssertEqual(loaded?.accessToken, "from-cli")
+    }
+
+    /// Both stale: return the expired token anyway so the caller reports
+    /// "expired" (offer Sign In) rather than "never signed in".
+    func testLayeredStoreReturnsAnExpiredTokenWhenNoLiveOneExists() async throws {
+        try store.save(
+            token(expiresIn: -60, access: "stale-keychain"),
+            forKey: key
+        )
+        let layered = LayeredTokenStore(
+            keychain: store,
+            cli: StubCLIStore(token: nil),
+            sessions: [:]
+        )
+        let loaded = await layered.token(forKey: key)
+        XCTAssertEqual(loaded?.accessToken, "stale-keychain")
+        XCTAssertTrue(loaded?.isExpired == true)
+    }
+
+    func testLayeredStoreReturnsNilWhenNeitherSourceHasAToken() async {
+        let layered = LayeredTokenStore(
+            keychain: store,
+            cli: StubCLIStore(token: nil),
+            sessions: [:]
+        )
+        let loaded = await layered.token(forKey: "absent")
+        XCTAssertNil(loaded)
+    }
+}
+
+private struct StubCLIStore: SSOTokenProviding {
+    let token: SSOToken?
+
+    func token(forKey key: String) async -> SSOToken? {
+        token
+    }
 }

@@ -19,27 +19,49 @@ struct CLITokenStore: SSOTokenProviding {
     }
 }
 
-/// Prefer a token this app minted; fall back to one the AWS CLI wrote. Either
-/// direction of "who signed in last" then works, without writing the CLI cache.
-/// Task 13 replaces this with an injectable, refresh-aware version.
+/// Prefer a token this app minted; fall back to one the AWS CLI wrote; try a
+/// silent refresh before giving up. Never writes the CLI cache.
 struct LayeredTokenStore: SSOTokenProviding {
-    let keychain = SSOTokenStore()
-    let cli = CLITokenStore()
+    let keychain: SSOTokenStore
+    let cli: any SSOTokenProviding
+    /// The OIDC endpoint region and start URL needed for refresh live here.
+    let sessions: [String: SSOSession]
+
+    init(
+        keychain: SSOTokenStore = SSOTokenStore(),
+        cli: any SSOTokenProviding = CLITokenStore(),
+        sessions: [String: SSOSession] = [:]
+    ) {
+        self.keychain = keychain
+        self.cli = cli
+        self.sessions = sessions
+    }
 
     func token(forKey key: String) async -> SSOToken? {
-        if let mine = await keychain.token(forKey: key), !mine.isExpired {
+        let mine = await keychain.token(forKey: key)
+        if let mine, !mine.isExpired {
             return mine
         }
-        if let theirs = await cli.token(forKey: key), !theirs.isExpired {
+        let theirs = await cli.token(forKey: key)
+        if let theirs, !theirs.isExpired {
             return theirs
         }
 
-        // Both stale: return whichever exists so the caller can report expired
-        // rather than never signed in, which implies different user action.
-        if let mine = await keychain.token(forKey: key) {
-            return mine
+        // A refresh token needs no user interaction, so do not ask the user to
+        // sign in again merely because the access token aged out overnight.
+        if let mine,
+           mine.refreshToken != nil,
+           let session = sessions[key],
+           let renewed = try? await SSOLoginService(store: keychain).refresh(
+               session: session,
+               token: mine
+           ) {
+            return renewed
         }
-        return await cli.token(forKey: key)
+
+        // Return an expired token so the caller reports expired rather than
+        // never signed in, which implies different user action.
+        return mine ?? theirs
     }
 }
 
