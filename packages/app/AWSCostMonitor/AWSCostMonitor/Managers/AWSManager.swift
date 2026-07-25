@@ -23,6 +23,11 @@ class AWSManager: ObservableObject {
     @Published var profiles: [AWSProfile] = []
     @Published var realProfiles: [AWSProfile] = []
     @Published var demoProfiles: [AWSProfile] = []
+    /// How each profile's credentials are obtained, keyed by profile name.
+    /// Populated by loadProfiles; read by CredentialResolver.
+    @Published var profileConfigs: [String: AWSProfileConfig] = [:]
+    /// SSO sessions declared in ~/.aws/config, keyed by session name.
+    @Published var ssoSessions: [String: SSOSession] = [:]
     @Published var isDemoMode: Bool = false
     @Published var selectedProfile: AWSProfile? {
         didSet {
@@ -665,16 +670,16 @@ class AWSManager: ObservableObject {
             return
         }
         
-        // Parse the config content
-        let parsedProfiles = INIParser.parseString(configContent)
-        log(.info, category: "Config", "Found \(parsedProfiles.count) profiles in AWS config")
-        
-        // Populate the profiles array from the parsed data.
-        self.realProfiles = parsedProfiles.keys.map { profileName in
-            let profileConfig = parsedProfiles[profileName]
-            let region = profileConfig?["region"]
-            return AWSProfile(name: profileName, region: region)
-        }.sorted { $0.name < $1.name }
+        // AWSConfigParser, not INIParser: the latter treats every bracketed
+        // section as a profile, so [sso-session x] blocks appeared in the picker
+        // as phantom profiles named "sso-session x".
+        let parsed = AWSConfigParser.parse(configContent: configContent)
+        log(.info, category: "Config",
+            "Found \(parsed.profiles.count) profiles and \(parsed.ssoSessions.count) SSO sessions in AWS config")
+
+        self.profileConfigs = Dictionary(uniqueKeysWithValues: parsed.profiles.map { ($0.name, $0) })
+        self.ssoSessions = parsed.ssoSessions
+        self.realProfiles = parsed.profiles.map { AWSProfile(name: $0.name, region: $0.region) }
         
         // Add the ACME demo profile
         self.demoProfiles = [AWSProfile(name: "acme", region: "us-east-1")]
