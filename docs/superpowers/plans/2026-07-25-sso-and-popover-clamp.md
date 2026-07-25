@@ -13,15 +13,21 @@
 - **Spec:** `docs/superpowers/specs/2026-07-25-sso-and-popover-clamp-design.md`. Read it before starting.
 - **Project root for all paths below:** `packages/app/AWSCostMonitor/`.
 - **Source dir:** `packages/app/AWSCostMonitor/AWSCostMonitor/`. **Test dir:** `packages/app/AWSCostMonitor/AWSCostMonitorTests/`.
-- **Test command:** run from `packages/app/AWSCostMonitor/`:
+- **Test command — use the script, not `xcodebuild test`.** Run from the repo root:
   ```bash
-  xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
-    -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/<TestClass>
+  ./scripts/run-tests.sh                       # whole suite
+  ./scripts/run-tests.sh PopoverGeometryTests  # one class
+  ./scripts/run-tests.sh PopoverGeometryTests/testDesiredThatFitsIsReturnedUnchanged
   ```
-  The first build compiles the whole AWS SDK and takes several minutes. Later runs are incremental. Drop `-only-testing:` to run the full suite.
-- **Tests must run from a logged-in GUI session.** Verified 2026-07-25: invoking the command above from a headless/background context compiles fine but fails to launch the test host with
+  The first build compiles the whole AWS SDK and takes several minutes. Later runs are incremental (~20s).
+- **Do not use `xcodebuild test`.** It fails in any non-GUI context with
   `Failed to install or launch the test runner … LaunchServices has returned error -10699 … Launch prevented due to "prevent launch" assertion`.
-  The test host is the app itself, which is a menu bar agent, and macOS refuses to launch it without a GUI session. `** TEST FAILED **` from this cause is an environment failure, not a red test — check for the `-10699` string before debugging the test. If you hit it, run the command from Terminal.app in the user's own session.
+  The test host is the app itself, a menu bar agent (`LSUIElement`), and macOS refuses to launch it headlessly. This is an environment failure, not a red test. `scripts/run-tests.sh` sidesteps it by loading the bundle with `xcrun xctest`, which never involves LaunchServices; it also symlinks the host's `AWSCostMonitor.debug.dylib` into `PackageFrameworks/` because the bundle links it via `@rpath`.
+- **Build-only check** (faster than a test run when you just want compile errors):
+  ```bash
+  cd packages/app/AWSCostMonitor && xcodebuild build-for-testing \
+    -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS' -quiet
+  ```
 - **New files must be added to the `AWSCostMonitor` target** (or `AWSCostMonitorTests` for tests) in `AWSCostMonitor.xcodeproj`. This project does not use a filesystem-synchronized group; a new `.swift` file that is not registered in `project.pbxproj` will not compile and the failure looks like "cannot find X in scope". Add the file reference, then verify with a build before writing more code.
 - **Rate limiting is a product invariant** (`.agent-os/product/decisions.md` DEC-002): never introduce a code path that issues more AWS API calls per refresh than the one it replaces. Credential caching in Tasks 8 and 9 exists to satisfy this.
 - **Privacy is a product invariant** (DEC-003): no telemetry, no external services. Tokens and credentials stay on the machine.
@@ -156,7 +162,7 @@ final class PopoverGeometryTests: XCTestCase {
 
 Run from `packages/app/AWSCostMonitor/`:
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/PopoverGeometryTests
 ```
 Expected: compile failure, "cannot find 'PopoverGeometry' in scope".
@@ -221,7 +227,7 @@ Register both files in `AWSCostMonitor.xcodeproj` — `PopoverSizing.swift` in t
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/PopoverGeometryTests
 ```
 Expected: PASS, 11 tests.
@@ -361,7 +367,7 @@ Expected: BUILD SUCCEEDED.
 - [ ] **Step 6: Run the existing suite for regressions**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS. `MenuBarPresenterTests` and `LedgerTokensTests` in particular must be unaffected.
 
@@ -474,7 +480,7 @@ In `init`, add a second sink on the existing merged publisher (after the `render
 - [ ] **Step 5: Build and run the suite**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS.
 
@@ -729,7 +735,7 @@ final class AWSConfigParserTests: XCTestCase {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/AWSConfigParserTests
 ```
 Expected: compile failure, "cannot find 'AWSConfigParser' in scope".
@@ -941,7 +947,7 @@ Register both new files in the `AWSCostMonitor` target and the test file in `AWS
 - [ ] **Step 5: Run test to verify it passes**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/AWSConfigParserTests
 ```
 Expected: PASS, 18 tests.
@@ -1031,7 +1037,7 @@ Append to `AWSConfigParserTests`:
 - [ ] **Step 4: Run tests**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS. `AWSManagerProfileTests` and `ProfileManagementTests` must still pass — if either asserts on `INIParser` output shape, update it to the new source of truth rather than reverting this change.
 
@@ -1294,7 +1300,7 @@ The digest should match one of the filenames (minus `.json`). If it does not, tr
 - [ ] **Step 3: Run test to verify it fails**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/SSOTokenCacheTests
 ```
 Expected: compile failure, "cannot find 'SSOTokenCache' in scope".
@@ -1401,7 +1407,7 @@ enum SSOTokenCache {
 - [ ] **Step 5: Run test to verify it passes**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/SSOTokenCacheTests
 ```
 Expected: PASS, 12 tests.
@@ -1679,7 +1685,7 @@ func XCTAssertThrowsErrorAsync<T>(
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/CredentialResolverTests
 ```
 Expected: compile failure, "cannot find 'CredentialResolver' in scope".
@@ -1851,7 +1857,7 @@ actor CredentialResolver {
 - [ ] **Step 5: Run test to verify it passes**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/CredentialResolverTests
 ```
 Expected: PASS, 10 tests.
@@ -2049,7 +2055,7 @@ Expected: no matches.
 - [ ] **Step 6: Build and test**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS.
 
@@ -2208,7 +2214,7 @@ Place it directly after the `36 // ProfileRow` term, matching the view order. Ge
 - [ ] **Step 6: Build and test**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS.
 
@@ -2318,7 +2324,7 @@ final class SSOTokenStoreTests: XCTestCase {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/SSOTokenStoreTests
 ```
 Expected: compile failure, "cannot find 'SSOTokenStore' in scope".
@@ -2445,7 +2451,7 @@ struct SSOTokenStore: SSOTokenProviding {
 - [ ] **Step 4: Run the Keychain test**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/SSOTokenStoreTests
 ```
 Expected: PASS, 6 tests. A sandboxed test host needs the keychain-access-group entitlement to be absent (it is) and will use the app's own keychain — if all tests fail with `errSecMissingEntitlement`, run the test target unsandboxed rather than adding an entitlement.
@@ -2659,7 +2665,7 @@ In `PopoverContentView.bannerContent`, put the in-flight case first so it wins o
 - [ ] **Step 10: Build and test**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS. Fix any exception-type mismatches against the generated `AWSSSOOIDC` headers — the exception names above (`AuthorizationPendingException`, `SlowDownException`, `ExpiredTokenException`) must match what the SDK actually throws; jump to definition on `SSOOIDCClient.createToken` to confirm.
 
@@ -2753,7 +2759,7 @@ extension SSOTokenStoreTests {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor \
+./scripts/run-tests.sh \
   -destination 'platform=macOS' -only-testing:AWSCostMonitorTests/SSOTokenStoreTests
 ```
 Expected: compile failure — `LayeredTokenStore` has no `init(keychain:cli:sessions:)`.
@@ -2852,7 +2858,7 @@ In `AWSManager.loadProfiles`, update the resolver construction from Task 10 Step
 - [ ] **Step 6: Run tests**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS. Verify the `CreateTokenInput` label set for the refresh grant against the generated `AWSSSOOIDC` headers — `refreshToken` may be spelled differently, and `deviceCode` is absent for this grant type.
 
@@ -2966,7 +2972,7 @@ In `AWSCostMonitor/SettingsView.swift`, find the tab containing AWS/profile conf
 - [ ] **Step 3: Build and test**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 Expected: PASS.
 
@@ -2989,7 +2995,7 @@ git commit -m "feat(settings): SSO session list with sign in and sign out"
 - [ ] **Full suite green**
 
 ```bash
-xcodebuild test -project AWSCostMonitor.xcodeproj -scheme AWSCostMonitor -destination 'platform=macOS'
+./scripts/run-tests.sh
 ```
 
 - [ ] **The open-source scheme still builds** (it has different signing and is what CI uses)
