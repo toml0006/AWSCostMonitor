@@ -1,12 +1,23 @@
-# App Store Release — v1.7.0
+# App Store Release — v1.8.0
 
-Version **1.7.0**, build **12** (build number is overridden by Xcode Cloud's `CI_BUILD_NUMBER` if built there). Scheme: **`AWSCostMonitor`** (App Store, includes the $3.99 Team Cache in-app purchase). Configuration: **Release**.
+> **Why 1.8.0 and not 1.7.0.** This work was originally prepped as 1.7.0. That was wrong:
+> 1.7.0 was already `READY_FOR_SALE` on the App Store with build 109 attached (shipped
+> 2026-07-21). Xcode Cloud run **#112**, triggered by the SSO merge `69617e61`, compiled and
+> exported cleanly but failed at "Preparing build for App Store Connect" — a build declaring
+> `CFBundleShortVersionString = 1.7.0` has no editable version to land in, and no other App
+> Store version is currently editable. Bumping to 1.8.0 is the fix.
+>
+> Note the `Unable to authenticate with App Store Connect` line in
+> `IDEDistribution.critical.log` is a red herring — it appears verbatim in the **successful**
+> runs #109 and #111 too.
+
+Version **1.8.0**, build **113** (build number is overridden by Xcode Cloud's `CI_BUILD_NUMBER` if built there). Scheme: **`AWSCostMonitor`** (App Store, includes the $3.99 Team Cache in-app purchase). Configuration: **Release**.
 
 ## Build & upload
 
 ### Option A — Xcode Cloud (primary)
 
-Xcode Cloud builds the `AWSCostMonitor` scheme per the App Store Connect workflow and uploads to App Store Connect / TestFlight automatically. Confirm a 1.7.0 build appears under **App Store Connect → Xcode Cloud** and **TestFlight**.
+Xcode Cloud builds the `AWSCostMonitor` scheme per the App Store Connect workflow and uploads to App Store Connect / TestFlight automatically. Confirm a 1.8.0 build appears under **App Store Connect → Xcode Cloud** and **TestFlight**.
 
 ### Option B — Local archive (currently NOT possible on this machine)
 
@@ -20,7 +31,7 @@ Either use Xcode Cloud (Option A), or install the missing installer certificate 
 ## App Store Connect — "What's New in This Version"
 
 ```
-What's New in v1.7
+What's New in v1.8
 
 • AWS SSO support — profiles that use `sso_session` (AWS IAM Identity Center) now work. Sign in from the app itself, or reuse the session you already created with `aws sso login`.
 • Assume-role profiles — profiles using `role_arn` with `source_profile` now resolve, including chains that start from an SSO login.
@@ -32,7 +43,7 @@ What's New in v1.7
 
 ## Notes for App Review
 
-> Paste into **App Store Connect → Version 1.7.0 → App Review Information → Notes**.
+> Paste into **App Store Connect → Version 1.8.0 → App Review Information → Notes**.
 
 ```
 ABOUT THE APP
@@ -42,24 +53,24 @@ TESTING WITHOUT AN AWS ACCOUNT
 The app requires AWS credentials with Cost Explorer read permission, which the review team may not have. No credentials are needed to evaluate the UI: on the first-run onboarding screen tap "Use Demo Data" (or "Continue with demo data instead" on the AWS-folder access prompt). The menu bar, popover, and calendar/breakdown views then render with representative sample figures. Live numbers require a configured AWS profile in ~/.aws.
 
 FILE ACCESS (SANDBOX)
-The app is sandboxed. On first run it asks the user to grant read access to the ~/.aws folder using the standard open-file panel; access is then persisted with a security-scoped bookmark (com.apple.security.files.user-selected.read-only + bookmarks.app-scope). The app only reads AWS config/credentials — it never writes to them. This is unchanged in 1.7.0: the new SSO feature reads the AWS CLI's existing token cache at ~/.aws/sso/cache but never writes to it, which is why the entitlement remains read-only.
+The app is sandboxed. On first run it asks the user to grant read access to the ~/.aws folder using the standard open-file panel; access is then persisted with a security-scoped bookmark (com.apple.security.files.user-selected.read-only + bookmarks.app-scope). The app only reads AWS config/credentials — it never writes to them. This is unchanged in 1.8.0: the new SSO feature reads the AWS CLI's existing token cache at ~/.aws/sso/cache but never writes to it, which is why the entitlement remains read-only.
 
-NEW IN 1.7.0 — AWS SSO SIGN-IN OPENS A BROWSER
+NEW IN 1.8.0 — AWS SSO SIGN-IN OPENS A BROWSER
 This version adds support for AWS IAM Identity Center (SSO) profiles. Signing in uses the standard OAuth 2.0 Device Authorization flow: the app calls AWS's SSO OIDC service, then opens the user's default browser to the AWS-hosted approval page (e.g. https://<your-directory>.awsapps.com/start/...) so the user can approve the request with their own organization's identity provider. The app never sees or handles the user's password — approval happens entirely in the browser against AWS. On approval the app receives a short-lived token.
 
 Tokens obtained this way are stored in the macOS Keychain (kSecClassGenericPassword, service "dev.middleout.AWSCostMonitor.sso"), NOT written to disk and NOT written into the AWS CLI's own cache.
 
-NEW IN 1.7.0 — ADDITIONAL NETWORK ENDPOINTS
-Outbound HTTPS only. In addition to the existing AWS endpoints (Cost Explorer, Savings Plans, STS, and optionally S3 for Team Cache), 1.7.0 may contact:
+NEW IN 1.8.0 — ADDITIONAL NETWORK ENDPOINTS
+Outbound HTTPS only. In addition to the existing AWS endpoints (Cost Explorer, Savings Plans, STS, and optionally S3 for Team Cache), 1.8.0 may contact:
   • oidc.<region>.amazonaws.com — AWS SSO OIDC, for the device-authorization sign-in and token refresh
   • portal.sso.<region>.amazonaws.com — AWS SSO, to exchange an SSO token for temporary role credentials
 Both are AWS-operated endpoints reached directly from the user's machine. There are still no analytics, telemetry, or third-party services. ITSAppUsesNonExemptEncryption is false (standard HTTPS only).
 
-NEW IN 1.7.0 — ASSUME-ROLE PROFILES
+NEW IN 1.8.0 — ASSUME-ROLE PROFILES
 Profiles configured with role_arn + source_profile now resolve via sts:AssumeRole, including chains whose source is an SSO profile. Read-only; used solely to obtain credentials for the Cost Explorer read calls.
 
 IN-APP PURCHASE
-"Team Cache" is a $3.99 non-consumable that lets teams share cost data through their own AWS S3 bucket to reduce API calls. All core cost-monitoring features work without the purchase. The purchase requires the user's own AWS S3 bucket; it does not unlock any Apple-hosted content. Unchanged in 1.7.0.
+"Team Cache" is a $3.99 non-consumable that lets teams share cost data through their own AWS S3 bucket to reduce API calls. All core cost-monitoring features work without the purchase. The purchase requires the user's own AWS S3 bucket; it does not unlock any Apple-hosted content. Unchanged in 1.8.0.
 
 CONTACT
 Happy to provide a test AWS profile or a screen recording on request.
@@ -73,8 +84,8 @@ Happy to provide a test AWS profile or a screen recording on request.
 
 ## Pre-release checklist
 
-- [x] `MARKETING_VERSION` = `1.7.0` (all targets)
-- [ ] `CURRENT_PROJECT_VERSION` = `12` (or Xcode Cloud-managed)
+- [x] `MARKETING_VERSION` = `1.8.0` (all targets)
+- [ ] `CURRENT_PROJECT_VERSION` = `113` (Xcode Cloud overrides via CI_BUILD_NUMBER) (or Xcode Cloud-managed)
 - [x] Both schemes compile (`AWSCostMonitor`, `AWSCostMonitor-OpenSource`)
 - [x] Entitlements unchanged — still `files.user-selected.read-only`
 - [x] 118 XCTest assertions pass headlessly (`scripts/run-tests.sh`)
