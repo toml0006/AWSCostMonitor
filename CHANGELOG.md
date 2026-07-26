@@ -2,6 +2,56 @@
 
 All notable changes to AWS Cost Monitor will be documented in this file.
 
+## [1.8.0] - 2026-07-26
+
+### What's New
+
+**AWS SSO and assume-role support.**
+
+v1.8 makes the app work with how most teams actually authenticate to AWS: IAM Identity Center (`sso_session`) profiles and assume-role (`role_arn` + `source_profile`) profiles now resolve, including chains that start from an SSO login. It also fixes the popover clipping off the right edge of the screen — which v1.7 attempted three times without success.
+
+### Features Added
+
+- **AWS SSO (IAM Identity Center) profiles** — profiles declaring `sso_session`, and legacy profiles inlining `sso_start_url`, now authenticate. The app reads the AWS CLI's existing token cache, so an `aws sso login` session is picked up automatically
+- **In-app sign-in** — OAuth 2.0 Device Authorization flow; the app opens your browser to AWS's own approval page. No Terminal required, and the app never handles your password
+- **Silent session renewal** — tokens the app minted are refreshed in the background rather than prompting you
+- **Assume-role profiles** — `role_arn` with `source_profile` resolves via `sts:AssumeRole`, including multi-step chains sourced from an SSO profile, with cycle and depth detection
+- **SSO session management in Settings** — each `sso-session` listed with its state (signed in and expiry, expired, or not signed in) and per-session Sign In / Sign Out
+- **Credential errors are visible** — an expired or missing session shows a banner in the popover with a Sign In button instead of silently rendering zeroes
+
+### Bug Fixes
+
+- **The popover no longer runs off the right edge of the screen.** The earlier attempts shrank the popover to fit beside the menu bar icon; because the hero columns have a fixed intrinsic width and SwiftUI does not clip overflow, the squeezed popover spilled its own contents. It is now measured against the display and repositioned rather than shrunk, and the on-screen correction no longer depends on animation timing
+- **The popover is correct on the first open** — the width previously crossed from controller to view via `UserDefaults` (asynchronous) while the popover measures synchronously, so an open could use the previous open's width
+- **`[sso-session ...]` blocks no longer appear in the profile picker** as unusable entries
+- Unsupported profiles (`credential_process`, `mfa_serial`, `role_arn` without `source_profile`, dangling SSO session references) report a specific reason rather than a generic credentials error
+
+### Privacy & security
+
+- Tokens created by the app are stored in the **macOS Keychain**, never written to disk or into the AWS CLI's cache. The app reads `~/.aws` but never writes to it, so the sandbox entitlement remains read-only
+- Sharing is one-directional by design: a Terminal `aws sso login` is picked up by the app; an in-app sign-in does not alter your CLI session
+- New outbound endpoints, AWS-operated and only for SSO profiles: `oidc.<region>.amazonaws.com` and `portal.sso.<region>.amazonaws.com`
+- No new IAM permissions required
+
+## [1.7.0] - 2026-07-21
+
+### What's New
+
+**Spectrum accent theme and stability fixes.**
+
+### Features Added
+
+- **Spectrum accent theme** matching the app icon
+- **Quieter popover footer** in the Cadence style — navigation links muted on the left, version and Quit anchored right
+
+### Bug Fixes
+
+- Fixed a crash when switching appearance themes, caused by applying theme changes inside the control's own transaction
+- Fixed a crash when closing the Settings window (`isReleasedWhenClosed` double-free)
+- Hardened the Spectrum glow against a popover-animation teardown crash
+- More legible service rows and a balanced forecast column in the popover
+- Initial attempts at fixing right-edge popover clipping — superseded in 1.8.0, which identifies and corrects the actual cause
+
 ## [1.6.0] - 2026-06-24
 
 ### What's New
