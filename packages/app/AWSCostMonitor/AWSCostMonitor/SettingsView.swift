@@ -493,6 +493,10 @@ struct AWSSettingsTab: View {
                     Divider()
                 }
                 
+                SSOSettingsSection()
+
+                Divider()
+
                 // Profile Visibility section
                 Text("Profile Visibility")
                     .font(.headline)

@@ -2,12 +2,10 @@
 //  AWSCredentialsHelper.swift
 //  AWSCostMonitor
 //
-//  AWS Credentials parsing and provider creation
+//  AWS credentials parsing
 //
 
 import Foundation
-import AWSSDKIdentity
-import SmithyIdentity
 
 // Function to parse AWS credentials from credentials file content
 func parseAWSCredentials(content: String, profileName: String) -> ParsedAWSCredentials? {
@@ -63,31 +61,4 @@ func parseAWSCredentials(content: String, profileName: String) -> ParsedAWSCrede
         secretAccessKey: secretKey,
         sessionToken: sessionToken
     )
-}
-
-// Helper function to create appropriate credentials provider for sandbox/non-sandbox
-func createAWSCredentialsProvider(for profileName: String) throws -> any AWSCredentialIdentityResolver {
-    if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
-        // Sandboxed environment - use manual credential parsing
-        let accessManager = AWSConfigAccessManager.shared
-        
-        guard let credentialsContent = accessManager.readCredentialsFile() else {
-            throw AWSCostFetchError.credentialsNotFound("Unable to read credentials file via security-scoped access")
-        }
-        
-        guard let profileCredentials = parseAWSCredentials(content: credentialsContent, profileName: profileName) else {
-            throw AWSCostFetchError.credentialsNotFound("No credentials found for profile '\(profileName)' in credentials file")
-        }
-        
-        let awsCredentials = AWSCredentialIdentity(
-            accessKey: profileCredentials.accessKeyId,
-            secret: profileCredentials.secretAccessKey,
-            sessionToken: profileCredentials.sessionToken
-        )
-        
-        return StaticAWSCredentialIdentityResolver(awsCredentials)
-    } else {
-        // Not sandboxed - use standard ProfileAWSCredentialIdentityResolver
-        return ProfileAWSCredentialIdentityResolver(profileName: profileName)
-    }
 }
